@@ -13,6 +13,7 @@ import {
   BarChart3,
   Globe,
   Megaphone,
+  CalendarClock,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -58,6 +59,13 @@ const sections: Section[] = [
         description: "Open Mintsoft WMS in a new tab.",
         icon: Truck,
         href: "https://om.mintsoft.co.uk/",
+      },
+      {
+        key: "ups-collection",
+        title: "Schedule UPS Collection",
+        description: "Book a UPS pickup on ups.com.",
+        icon: CalendarClock,
+        href: "https://www.ups.com/pickup/schedule",
       },
     ],
   },
