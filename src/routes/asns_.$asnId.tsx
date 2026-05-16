@@ -1,3 +1,4 @@
+import { requireAuth } from "@/lib/require-auth";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -74,6 +75,7 @@ import {
 import { loadSettings } from "@/lib/storage";
 
 export const Route = createFileRoute("/asns_/$asnId")({
+  beforeLoad: ({ location }) => requireAuth(location),
   component: AsnDetailPage,
 });
 
