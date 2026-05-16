@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import ascendLogo from "@/assets/ascend-fba-logo.png";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -37,7 +38,11 @@ function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-sm">
+      <div className="w-full max-w-sm">
+        <div className="mb-6 flex justify-center">
+          <img src={ascendLogo} alt="Ascend FBA" className="h-12 w-auto" />
+        </div>
+        <Card>
         <CardHeader>
           <CardTitle>Sign in</CardTitle>
         </CardHeader>
@@ -54,13 +59,13 @@ function LoginPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Signing in…" : "Sign in"}
             </Button>
-            <div className="flex justify-between text-sm">
-              <Link to="/signup" className="text-muted-foreground hover:underline">Create account</Link>
+            <div className="flex justify-end text-sm">
               <Link to="/forgot-password" className="text-muted-foreground hover:underline">Forgot password?</Link>
             </div>
           </form>
         </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }
