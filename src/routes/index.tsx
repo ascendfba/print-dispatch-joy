@@ -16,7 +16,7 @@ import {
   CalendarClock,
   FileSignature,
   Contact2,
-  Megaphone as MegaphoneIcon,
+  Target,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -98,7 +98,7 @@ const sections: Section[] = [
         key: "google-ads",
         title: "Google Ads",
         description: "Campaigns, keywords and performance.",
-        icon: MegaphoneIcon,
+        icon: Target,
         href: "https://ads.google.com/",
       },
       {
