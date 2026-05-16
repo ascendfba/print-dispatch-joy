@@ -1,8 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { requireAuth } from "@/lib/require-auth";
 
 export const Route = createFileRoute("/")({
-  beforeLoad: () => {
+  beforeLoad: async ({ location }) => {
+    await requireAuth(location);
     throw redirect({ to: "/orders" });
   },
   component: () => null,

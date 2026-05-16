@@ -9,9 +9,12 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AsnsRouteImport } from './routes/asns'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OrdersOrderIdRouteImport } from './routes/orders_.$orderId'
@@ -23,9 +26,19 @@ import { Route as ApiGoogleImageRouteImport } from './routes/api/google-image'
 import { Route as ApiEstimateWeightRouteImport } from './routes/api/estimate-weight'
 import { Route as ApiAmazonImageRouteImport } from './routes/api/amazon-image'
 
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OrdersRoute = OrdersRouteImport.update({
@@ -36,6 +49,11 @@ const OrdersRoute = OrdersRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AsnsRoute = AsnsRouteImport.update({
@@ -92,9 +110,12 @@ const ApiAmazonImageRoute = ApiAmazonImageRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/asns': typeof AsnsRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
+  '/signup': typeof SignupRoute
   '/api/amazon-image': typeof ApiAmazonImageRoute
   '/api/estimate-weight': typeof ApiEstimateWeightRoute
   '/api/google-image': typeof ApiGoogleImageRoute
@@ -107,9 +128,12 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/asns': typeof AsnsRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
+  '/signup': typeof SignupRoute
   '/api/amazon-image': typeof ApiAmazonImageRoute
   '/api/estimate-weight': typeof ApiEstimateWeightRoute
   '/api/google-image': typeof ApiGoogleImageRoute
@@ -123,9 +147,12 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/asns': typeof AsnsRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
+  '/signup': typeof SignupRoute
   '/api/amazon-image': typeof ApiAmazonImageRoute
   '/api/estimate-weight': typeof ApiEstimateWeightRoute
   '/api/google-image': typeof ApiGoogleImageRoute
@@ -140,9 +167,12 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/asns'
+    | '/forgot-password'
     | '/login'
     | '/orders'
+    | '/reset-password'
     | '/settings'
+    | '/signup'
     | '/api/amazon-image'
     | '/api/estimate-weight'
     | '/api/google-image'
@@ -155,9 +185,12 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/asns'
+    | '/forgot-password'
     | '/login'
     | '/orders'
+    | '/reset-password'
     | '/settings'
+    | '/signup'
     | '/api/amazon-image'
     | '/api/estimate-weight'
     | '/api/google-image'
@@ -170,9 +203,12 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/asns'
+    | '/forgot-password'
     | '/login'
     | '/orders'
+    | '/reset-password'
     | '/settings'
+    | '/signup'
     | '/api/amazon-image'
     | '/api/estimate-weight'
     | '/api/google-image'
@@ -186,9 +222,12 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AsnsRoute: typeof AsnsRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   OrdersRoute: typeof OrdersRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SettingsRoute: typeof SettingsRoute
+  SignupRoute: typeof SignupRoute
   ApiAmazonImageRoute: typeof ApiAmazonImageRoute
   ApiEstimateWeightRoute: typeof ApiEstimateWeightRoute
   ApiGoogleImageRoute: typeof ApiGoogleImageRoute
@@ -201,11 +240,25 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/orders': {
@@ -220,6 +273,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/asns': {
@@ -298,9 +358,12 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AsnsRoute: AsnsRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   OrdersRoute: OrdersRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SettingsRoute: SettingsRoute,
+  SignupRoute: SignupRoute,
   ApiAmazonImageRoute: ApiAmazonImageRoute,
   ApiEstimateWeightRoute: ApiEstimateWeightRoute,
   ApiGoogleImageRoute: ApiGoogleImageRoute,
