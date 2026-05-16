@@ -1,11 +1,35 @@
-import { Link, Outlet, useLocation } from "@tanstack/react-router";
-import { Package, Settings as SettingsIcon, Truck } from "lucide-react";
+import { Link, Outlet, useLocation, useNavigate, useRouter } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { Package, Settings as SettingsIcon, Truck, LogOut } from "lucide-react";
 import { isElectron } from "@/lib/printing";
 import { Toaster } from "@/components/ui/sonner";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import ascendLogo from "@/assets/ascend-fba-logo.png";
 
 export function AppLayout() {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const [email, setEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setEmail(data.session?.user.email ?? null));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      setEmail(session?.user.email ?? null);
+      router.invalidate();
+      queryClient.invalidateQueries();
+    });
+    return () => subscription.unsubscribe();
+  }, [router, queryClient]);
+
+  async function signOut() {
+    await supabase.auth.signOut();
+    navigate({ to: "/login" });
+  }
+
   const tabs = [
     { to: "/orders", label: "Orders", icon: Package },
     { to: "/asns", label: "ASNs", icon: Truck },
@@ -43,8 +67,15 @@ export function AppLayout() {
               );
             })}
           </nav>
-          <div className="text-xs text-muted-foreground">
-            {isElectron() ? "Desktop mode" : "Browser preview"}
+          <div className="flex items-center gap-3">
+            <div className="text-xs text-muted-foreground">
+              {email ?? (isElectron() ? "Desktop mode" : "Browser preview")}
+            </div>
+            {email && (
+              <Button variant="ghost" size="sm" onClick={signOut}>
+                <LogOut className="mr-1 h-4 w-4" /> Sign out
+              </Button>
+            )}
           </div>
         </div>
       </header>
