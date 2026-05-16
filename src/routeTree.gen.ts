@@ -15,6 +15,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as DevelopmentRouteImport } from './routes/development'
 import { Route as AsnsRouteImport } from './routes/asns'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OrdersOrderIdRouteImport } from './routes/orders_.$orderId'
@@ -54,6 +55,11 @@ const LoginRoute = LoginRouteImport.update({
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevelopmentRoute = DevelopmentRouteImport.update({
+  id: '/development',
+  path: '/development',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AsnsRoute = AsnsRouteImport.update({
@@ -110,6 +116,7 @@ const ApiAmazonImageRoute = ApiAmazonImageRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/asns': typeof AsnsRoute
+  '/development': typeof DevelopmentRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
@@ -128,6 +135,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/asns': typeof AsnsRoute
+  '/development': typeof DevelopmentRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
@@ -147,6 +155,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/asns': typeof AsnsRoute
+  '/development': typeof DevelopmentRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/asns'
+    | '/development'
     | '/forgot-password'
     | '/login'
     | '/orders'
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/asns'
+    | '/development'
     | '/forgot-password'
     | '/login'
     | '/orders'
@@ -203,6 +214,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/asns'
+    | '/development'
     | '/forgot-password'
     | '/login'
     | '/orders'
@@ -222,6 +234,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AsnsRoute: typeof AsnsRoute
+  DevelopmentRoute: typeof DevelopmentRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   OrdersRoute: typeof OrdersRoute
@@ -280,6 +293,13 @@ declare module '@tanstack/react-router' {
       path: '/forgot-password'
       fullPath: '/forgot-password'
       preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/development': {
+      id: '/development'
+      path: '/development'
+      fullPath: '/development'
+      preLoaderRoute: typeof DevelopmentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/asns': {
@@ -358,6 +378,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AsnsRoute: AsnsRoute,
+  DevelopmentRoute: DevelopmentRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   OrdersRoute: OrdersRoute,
