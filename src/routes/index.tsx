@@ -33,6 +33,10 @@ type Tile = {
   href?: string;
   comingSoon?: boolean;
   extra?: React.ReactNode;
+  /** simple-icons slug for brand logo, e.g. "hubspot" */
+  logoSlug?: string;
+  /** hex without # — used for logo tint and tile accent */
+  brandColor?: string;
 };
 
 type Section = {
@@ -56,6 +60,7 @@ const sections: Section[] = [
         description: "Order splitting, ASNs, printing and rework charges.",
         icon: Boxes,
         to: "/orders",
+        brandColor: "6366f1",
       },
       {
         key: "mintsoft",
@@ -63,6 +68,7 @@ const sections: Section[] = [
         description: "Open Mintsoft WMS in a new tab.",
         icon: Truck,
         href: "https://om.mintsoft.co.uk/",
+        brandColor: "0ea5e9",
       },
       {
         key: "ups-collection",
@@ -71,6 +77,8 @@ const sections: Section[] = [
         icon: CalendarClock,
         href: "https://www.ups.com/pickup/schedule",
         extra: <UpsDeadlineTimer />,
+        logoSlug: "ups",
+        brandColor: "521801",
       },
     ],
   },
@@ -86,6 +94,8 @@ const sections: Section[] = [
         description: "Proposals, quotes and e-signatures.",
         icon: FileSignature,
         href: "https://app.pandadoc.com/",
+        logoSlug: "pandadoc",
+        brandColor: "3a8718",
       },
       {
         key: "hubspot",
@@ -93,6 +103,8 @@ const sections: Section[] = [
         description: "CRM, contacts and deal pipeline.",
         icon: Contact2,
         href: "https://app.hubspot.com/",
+        logoSlug: "hubspot",
+        brandColor: "ff7a59",
       },
       {
         key: "google-ads",
@@ -100,6 +112,8 @@ const sections: Section[] = [
         description: "Campaigns, keywords and performance.",
         icon: Target,
         href: "https://ads.google.com/",
+        logoSlug: "googleads",
+        brandColor: "4285f4",
       },
       {
         key: "reports",
@@ -107,6 +121,7 @@ const sections: Section[] = [
         description: "Revenue, conversion and trends.",
         icon: BarChart3,
         comingSoon: true,
+        brandColor: "f59e0b",
       },
     ],
   },
@@ -122,6 +137,7 @@ const sections: Section[] = [
         description: "Open the live marketing site.",
         icon: Globe,
         href: "https://ascendfba.co.uk/",
+        brandColor: "10b981",
       },
       {
         key: "marketing",
@@ -129,6 +145,7 @@ const sections: Section[] = [
         description: "Campaigns, SEO and content.",
         icon: Megaphone,
         comingSoon: true,
+        brandColor: "ec4899",
       },
     ],
   },
@@ -213,10 +230,18 @@ function HubPage() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {section.tiles.map((t) => {
                 const Icon = t.icon;
+                const brand = t.brandColor ? `#${t.brandColor}` : undefined;
                 const inner = (
             <Card
+              style={
+                brand
+                  ? ({
+                      borderTop: `3px solid ${brand}`,
+                    } as React.CSSProperties)
+                  : undefined
+              }
               className={
-                "h-full transition-colors " +
+                "h-full overflow-hidden transition-colors " +
                 (t.comingSoon
                   ? "opacity-60"
                   : "hover:border-primary/60 hover:bg-accent/40 cursor-pointer")
@@ -224,8 +249,24 @@ function HubPage() {
             >
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <div className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
-                    <Icon className="h-5 w-5" />
+                  <div
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-md"
+                    style={
+                      brand
+                        ? { backgroundColor: `${brand}1a`, color: brand }
+                        : undefined
+                    }
+                  >
+                    {t.logoSlug ? (
+                      <img
+                        src={`https://cdn.simpleicons.org/${t.logoSlug}/${t.brandColor ?? "000"}`}
+                        alt={`${t.title} logo`}
+                        className="h-5 w-5"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <Icon className="h-5 w-5" style={brand ? { color: brand } : undefined} />
+                    )}
                   </div>
                   {t.comingSoon && <Badge variant="secondary">Coming soon</Badge>}
                   {t.href && <ExternalLink className="h-4 w-4 text-muted-foreground" />}
