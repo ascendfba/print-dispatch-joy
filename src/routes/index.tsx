@@ -118,11 +118,61 @@ const sections: Section[] = [
   },
 ];
 
-function HubPage() {
-  return <HubPageInner />;
+function UpsDeadlineTimer() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const next = nextUpsDeadline(now);
+  const diffMs = next.getTime() - now.getTime();
+  const isPast = diffMs <= 0;
+  const totalSec = Math.max(0, Math.floor(diffMs / 1000));
+  const days = Math.floor(totalSec / 86400);
+  const hours = Math.floor((totalSec % 86400) / 3600);
+  const minutes = Math.floor((totalSec % 3600) / 60);
+  const seconds = totalSec % 60;
+
+  const urgent = !isPast && diffMs < 60 * 60 * 1000; // < 1h
+  const label = days > 0 ? `${days}d ${hours}h ${minutes}m` : `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+
+  return (
+    <div
+      onClick={(e) => e.stopPropagation()}
+      className={
+        "rounded-md border px-3 py-2 text-xs " +
+        (urgent
+          ? "border-destructive/40 bg-destructive/10 text-destructive"
+          : "border-border bg-muted/40 text-muted-foreground")
+      }
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-medium">Booking deadline</span>
+        <span className="font-mono tabular-nums">{label}</span>
+      </div>
+      <div className="mt-0.5 text-[10px] opacity-80">
+        Next cutoff: {next.toLocaleString("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit" })}
+      </div>
+    </div>
+  );
 }
 
-function HubPageInner() {
+function nextUpsDeadline(from: Date): Date {
+  const d = new Date(from);
+  // Try today at 12:00; if past or weekend, roll forward to next weekday.
+  d.setHours(12, 0, 0, 0);
+  if (d.getTime() <= from.getTime()) {
+    d.setDate(d.getDate() + 1);
+    d.setHours(12, 0, 0, 0);
+  }
+  while (d.getDay() === 0 || d.getDay() === 6) {
+    d.setDate(d.getDate() + 1);
+  }
+  return d;
+}
+
+function HubPage() {
   return (
     <div className="space-y-10">
       <div>
