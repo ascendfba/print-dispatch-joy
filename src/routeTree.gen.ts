@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as OrdersRouteImport } from './routes/orders'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as AsnsRouteImport } from './routes/asns'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OrdersOrderIdRouteImport } from './routes/orders_.$orderId'
@@ -30,6 +31,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const OrdersRoute = OrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AsnsRoute = AsnsRouteImport.update({
@@ -86,6 +92,7 @@ const ApiAmazonImageRoute = ApiAmazonImageRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/asns': typeof AsnsRoute
+  '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
   '/settings': typeof SettingsRoute
   '/api/amazon-image': typeof ApiAmazonImageRoute
@@ -100,6 +107,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/asns': typeof AsnsRoute
+  '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
   '/settings': typeof SettingsRoute
   '/api/amazon-image': typeof ApiAmazonImageRoute
@@ -115,6 +123,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/asns': typeof AsnsRoute
+  '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
   '/settings': typeof SettingsRoute
   '/api/amazon-image': typeof ApiAmazonImageRoute
@@ -131,6 +140,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/asns'
+    | '/login'
     | '/orders'
     | '/settings'
     | '/api/amazon-image'
@@ -145,6 +155,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/asns'
+    | '/login'
     | '/orders'
     | '/settings'
     | '/api/amazon-image'
@@ -159,6 +170,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/asns'
+    | '/login'
     | '/orders'
     | '/settings'
     | '/api/amazon-image'
@@ -174,6 +186,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AsnsRoute: typeof AsnsRoute
+  LoginRoute: typeof LoginRoute
   OrdersRoute: typeof OrdersRoute
   SettingsRoute: typeof SettingsRoute
   ApiAmazonImageRoute: typeof ApiAmazonImageRoute
@@ -200,6 +213,13 @@ declare module '@tanstack/react-router' {
       path: '/orders'
       fullPath: '/orders'
       preLoaderRoute: typeof OrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/asns': {
@@ -278,6 +298,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AsnsRoute: AsnsRoute,
+  LoginRoute: LoginRoute,
   OrdersRoute: OrdersRoute,
   SettingsRoute: SettingsRoute,
   ApiAmazonImageRoute: ApiAmazonImageRoute,
