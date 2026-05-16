@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { requireAuth } from "@/lib/require-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,7 @@ type Tile = {
   to?: string;
   href?: string;
   comingSoon?: boolean;
+  extra?: React.ReactNode;
 };
 
 type Section = {
@@ -66,6 +68,7 @@ const sections: Section[] = [
         description: "Book a UPS pickup on ups.com.",
         icon: CalendarClock,
         href: "https://www.ups.com/pickup/schedule",
+        extra: <UpsDeadlineTimer />,
       },
     ],
   },
@@ -160,7 +163,7 @@ function HubPage() {
                 <CardTitle className="mt-3">{t.title}</CardTitle>
                 <CardDescription>{t.description}</CardDescription>
               </CardHeader>
-              <CardContent />
+              <CardContent>{t.extra}</CardContent>
             </Card>
           );
 
