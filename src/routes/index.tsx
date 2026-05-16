@@ -39,7 +39,7 @@ const tiles: Tile[] = [
     title: "Mintsoft",
     description: "Open Mintsoft in a new tab.",
     icon: Truck,
-    href: "https://m.mintsoft.co.uk",
+    href: "https://om.mintsoft.co.uk/",
   },
 ];
 
