@@ -12,11 +12,11 @@ import {
   Code2,
   BarChart3,
   Globe,
-  Megaphone,
   CalendarClock,
   FileSignature,
   Contact2,
   Target,
+  FolderCode,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -140,12 +140,12 @@ const sections: Section[] = [
         brandColor: "10b981",
       },
       {
-        key: "marketing",
-        title: "Marketing",
-        description: "Campaigns, SEO and content.",
-        icon: Megaphone,
-        comingSoon: true,
-        brandColor: "ec4899",
+        key: "development",
+        title: "Development",
+        description: "Build and preview mini HTML apps.",
+        icon: FolderCode,
+        to: "/development",
+        brandColor: "8b5cf6",
       },
     ],
   },
