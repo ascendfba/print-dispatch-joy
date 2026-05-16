@@ -10,7 +10,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/signup")({
   beforeLoad: async () => {
     const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: "/orders" });
+    if (data.session) throw redirect({ to: "/" });
   },
   component: SignupPage,
 });
@@ -33,7 +33,7 @@ function SignupPage() {
     if (error) return toast.error(error.message);
     if (data.session) {
       toast.success("Account created");
-      navigate({ to: "/orders" });
+      navigate({ to: "/" });
     } else {
       toast.success("Check your email to confirm your account");
     }
