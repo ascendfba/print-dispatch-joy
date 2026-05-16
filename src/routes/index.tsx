@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   Boxes,
   Truck,
-  Users,
   ExternalLink,
   Warehouse,
   ShoppingCart,
@@ -15,6 +14,9 @@ import {
   Globe,
   Megaphone,
   CalendarClock,
+  FileSignature,
+  Contact2,
+  Target,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -79,11 +81,25 @@ const sections: Section[] = [
     description: "Pipeline, customers and revenue.",
     tiles: [
       {
-        key: "crm",
-        title: "CRM",
-        description: "Customer relationships and accounts.",
-        icon: Users,
-        comingSoon: true,
+        key: "pandadoc",
+        title: "PandaDoc",
+        description: "Proposals, quotes and e-signatures.",
+        icon: FileSignature,
+        href: "https://app.pandadoc.com/",
+      },
+      {
+        key: "hubspot",
+        title: "HubSpot",
+        description: "CRM, contacts and deal pipeline.",
+        icon: Contact2,
+        href: "https://app.hubspot.com/",
+      },
+      {
+        key: "google-ads",
+        title: "Google Ads",
+        description: "Campaigns, keywords and performance.",
+        icon: Target,
+        href: "https://ads.google.com/",
       },
       {
         key: "reports",
