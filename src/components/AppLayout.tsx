@@ -36,6 +36,16 @@ export function AppLayout() {
     { to: "/asns", label: "ASNs", icon: Truck },
     { to: "/settings", label: "Settings", icon: SettingsIcon },
   ];
+  const authRoutes = ["/login", "/signup", "/forgot-password", "/reset-password"];
+  const isAuthRoute = authRoutes.some((r) => pathname === r || pathname.startsWith(r + "/"));
+  if (isAuthRoute) {
+    return (
+      <div className="min-h-screen bg-background text-foreground">
+        <Outlet />
+        <Toaster richColors position="top-right" />
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-card">
