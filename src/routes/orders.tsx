@@ -1,3 +1,4 @@
+import { requireAuth } from "@/lib/require-auth";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -88,6 +89,7 @@ const bucketBadge: Record<ReturnType<typeof ageBucket>, string> = {
 };
 
 export const Route = createFileRoute("/orders")({
+  beforeLoad: ({ location }) => requireAuth(location),
   component: OrdersPage,
 });
 

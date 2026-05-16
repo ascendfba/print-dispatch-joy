@@ -1,3 +1,4 @@
+import { requireAuth } from "@/lib/require-auth";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ function normalizeMintsoftBaseUrl(value: string): string {
 }
 
 export const Route = createFileRoute("/settings")({
+  beforeLoad: ({ location }) => requireAuth(location),
   component: SettingsPage,
 });
 
