@@ -21,7 +21,7 @@ function Page() {
     setLoading(false);
     if (error) return toast.error(error.message);
     toast.success("Password updated");
-    navigate({ to: "/orders" });
+    navigate({ to: "/" });
   }
 
   return (

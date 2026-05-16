@@ -1,6 +1,6 @@
 import { Link, Outlet, useLocation, useNavigate, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Package, Settings as SettingsIcon, Truck, LogOut } from "lucide-react";
+import { Package, Settings as SettingsIcon, Truck, LogOut, LayoutGrid } from "lucide-react";
 import { isElectron } from "@/lib/printing";
 import { Toaster } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ export function AppLayout() {
   }
 
   const tabs = [
+    { to: "/", label: "Hub", icon: LayoutGrid, exact: true },
     { to: "/orders", label: "Orders", icon: Package },
     { to: "/asns", label: "ASNs", icon: Truck },
     { to: "/settings", label: "Settings", icon: SettingsIcon },
@@ -39,7 +40,7 @@ export function AppLayout() {
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-3">
-          <Link to="/orders" className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2">
             <img
               src={ascendLogo}
               alt="Ascend FBA"
@@ -48,7 +49,7 @@ export function AppLayout() {
           </Link>
           <nav className="flex items-center gap-1">
             {tabs.map((t) => {
-              const active = pathname.startsWith(t.to);
+              const active = t.exact ? pathname === t.to : pathname.startsWith(t.to);
               const Icon = t.icon;
               return (
                 <Link
