@@ -119,6 +119,10 @@ const sections: Section[] = [
 ];
 
 function HubPage() {
+  return <HubPageInner />;
+}
+
+function HubPageInner() {
   return (
     <div className="space-y-10">
       <div>
