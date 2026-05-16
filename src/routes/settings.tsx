@@ -25,6 +25,8 @@ import {
 import { isElectron, listInstalledPrinters } from "@/lib/printing";
 import { login, listClients, type MintsoftClient } from "@/lib/mintsoft";
 import { REWORK_CATALOG, DEFAULT_CLIENT_KEY, ratesToCsv, csvToRates } from "@/lib/rework";
+import { listPricing, savePricing } from "@/lib/pricing.functions";
+import { useServerFn } from "@tanstack/react-start";
 import {
   Table,
   TableBody,
@@ -51,6 +53,8 @@ function SettingsPage() {
   const [testing, setTesting] = useState(false);
   const [clients, setClients] = useState<MintsoftClient[]>([]);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const fetchPricing = useServerFn(listPricing);
+  const persistPricing = useServerFn(savePricing);
 
   useEffect(() => {
     const s = loadSettings();
@@ -60,6 +64,22 @@ function SettingsPage() {
     listClients(s)
       .then(setClients)
       .catch(() => {});
+    // Load pricing from database (DB is the source of truth).
+    fetchPricing()
+      .then((rows) => {
+        const rates: ReworkRates = {};
+        for (const r of rows) {
+          (rates[r.client_id] ??= {})[r.rate_code] = Number(r.rate_per_unit);
+        }
+        setSettings((prev) => {
+          const next = { ...prev, reworkRates: rates };
+          saveSettings(next);
+          return next;
+        });
+      })
+      .catch(() => {
+        // Not signed in or table missing — keep localStorage value.
+      });
   }, []);
 
   async function refreshPrinters() {
@@ -75,7 +95,7 @@ function SettingsPage() {
     setSettings((s) => ({ ...s, printers: { ...s.printers, [slot]: value } }));
   }
 
-  function save() {
+  async function save() {
     const cleanSettings = {
       ...settings,
       mintsoftBaseUrl: normalizeMintsoftBaseUrl(settings.mintsoftBaseUrl),
@@ -83,7 +103,35 @@ function SettingsPage() {
     setSettings(cleanSettings);
     saveSettings(cleanSettings);
     tokenStore.clear();
-    toast.success("Settings saved");
+    // Sync pricing rows to the database.
+    try {
+      const rows: Array<{
+        client_id: string;
+        client_name: string | null;
+        rate_code: string;
+        rate_per_unit: number;
+      }> = [];
+      const rates = cleanSettings.reworkRates ?? {};
+      for (const [client_id, row] of Object.entries(rates)) {
+        const client_name =
+          client_id === DEFAULT_CLIENT_KEY
+            ? "Default"
+            : clientNameById.get(client_id) ?? null;
+        for (const [rate_code, rate_per_unit] of Object.entries(row)) {
+          if (typeof rate_per_unit === "number" && Number.isFinite(rate_per_unit)) {
+            rows.push({ client_id, client_name, rate_code, rate_per_unit });
+          }
+        }
+      }
+      await persistPricing({ data: { rows } });
+      toast.success(`Settings saved (${rows.length} pricing row${rows.length === 1 ? "" : "s"} synced)`);
+    } catch (e) {
+      toast.error(
+        e instanceof Error
+          ? `Saved locally; database sync failed: ${e.message}`
+          : "Saved locally; database sync failed",
+      );
+    }
   }
 
   async function testLogin() {
