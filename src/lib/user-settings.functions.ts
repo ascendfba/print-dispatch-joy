@@ -71,3 +71,20 @@ export const saveUserSettings = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const checkUserSettings = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { error, count } = await supabase
+      .from("user_settings")
+      .select("user_id", { head: true, count: "exact" })
+      .eq("user_id", userId);
+    if (error) {
+      return { ok: false as const, message: error.message };
+    }
+    return {
+      ok: true as const,
+      message: `Table reachable. ${count ?? 0} row(s) for you.`,
+    };
+  });
