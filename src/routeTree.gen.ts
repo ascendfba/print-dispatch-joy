@@ -27,6 +27,7 @@ import { Route as ApiMintsoftRouteImport } from './routes/api/mintsoft'
 import { Route as ApiGoogleImageRouteImport } from './routes/api/google-image'
 import { Route as ApiEstimateWeightRouteImport } from './routes/api/estimate-weight'
 import { Route as ApiAmazonImageRouteImport } from './routes/api/amazon-image'
+import { Route as DRouteImport } from './routes/d.'
 import { Route as ApiPublicDSlugRouteImport } from './routes/api/public/d/$slug'
 
 const SignupRoute = SignupRouteImport.update({
@@ -119,6 +120,11 @@ const ApiAmazonImageRoute = ApiAmazonImageRouteImport.update({
   path: '/api/amazon-image',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DRoute = DRouteImport.update({
+  id: '/d/',
+  path: '/d/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicDSlugRoute = ApiPublicDSlugRouteImport.update({
   id: '/api/public/d/$slug',
   path: '/api/public/d/$slug',
@@ -135,6 +141,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/d/': typeof DRoute
   '/api/amazon-image': typeof ApiAmazonImageRoute
   '/api/estimate-weight': typeof ApiEstimateWeightRoute
   '/api/google-image': typeof ApiGoogleImageRoute
@@ -156,6 +163,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/d': typeof DRoute
   '/api/amazon-image': typeof ApiAmazonImageRoute
   '/api/estimate-weight': typeof ApiEstimateWeightRoute
   '/api/google-image': typeof ApiGoogleImageRoute
@@ -178,6 +186,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/d/': typeof DRoute
   '/api/amazon-image': typeof ApiAmazonImageRoute
   '/api/estimate-weight': typeof ApiEstimateWeightRoute
   '/api/google-image': typeof ApiGoogleImageRoute
@@ -201,6 +210,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/settings'
     | '/signup'
+    | '/d/'
     | '/api/amazon-image'
     | '/api/estimate-weight'
     | '/api/google-image'
@@ -222,6 +232,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/settings'
     | '/signup'
+    | '/d'
     | '/api/amazon-image'
     | '/api/estimate-weight'
     | '/api/google-image'
@@ -243,6 +254,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/settings'
     | '/signup'
+    | '/d/'
     | '/api/amazon-image'
     | '/api/estimate-weight'
     | '/api/google-image'
@@ -265,6 +277,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
+  DRoute: typeof DRoute
   ApiAmazonImageRoute: typeof ApiAmazonImageRoute
   ApiEstimateWeightRoute: typeof ApiEstimateWeightRoute
   ApiGoogleImageRoute: typeof ApiGoogleImageRoute
@@ -405,6 +418,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAmazonImageRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/d/': {
+      id: '/d/'
+      path: '/d'
+      fullPath: '/d/'
+      preLoaderRoute: typeof DRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/d/$slug': {
       id: '/api/public/d/$slug'
       path: '/api/public/d/$slug'
@@ -425,6 +445,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
+  DRoute: DRoute,
   ApiAmazonImageRoute: ApiAmazonImageRoute,
   ApiEstimateWeightRoute: ApiEstimateWeightRoute,
   ApiGoogleImageRoute: ApiGoogleImageRoute,
