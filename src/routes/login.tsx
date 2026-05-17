@@ -43,6 +43,11 @@ function LoginPage() {
     if (lockedEmail || list.length > 0) {
       setMode("pin");
       setPinEmail(lockedEmail ?? list[0].email);
+    } else {
+      // No trusted entries on this device/origin — make sure any stale lock
+      // marker is cleared so we don't keep redirecting through PIN mode.
+      deviceTrust.clearLock();
+      setMode("password");
     }
   }, []);
 
@@ -111,7 +116,19 @@ function LoginPage() {
       toast.success("Signed in");
       navigate({ to: redirectTo });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not sign in");
+      const message = err instanceof Error ? err.message : "Could not sign in";
+      toast.error(message);
+      // If the entry was removed or never existed on this device/origin,
+      // drop back to email + password instead of getting stuck on a PIN
+      // form that can never succeed.
+      const remaining = deviceTrust.list();
+      setTrusted(remaining);
+      if (remaining.length === 0 || !deviceTrust.findByEmail(pinEmail)) {
+        deviceTrust.clearLock();
+        setPin("");
+        setMode("password");
+        setEmail(pinEmail);
+      }
     } finally {
       setLoading(false);
     }
