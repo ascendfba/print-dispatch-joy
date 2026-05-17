@@ -60,14 +60,9 @@ function LoginPage() {
     }
     setLoading(false);
     toast.success("Signed in");
-    // Use the actual signed-in account's email, not what was typed.
-    const signedInEmail = data.session.user.email ?? email;
-    if (!deviceTrust.findByEmail(signedInEmail)) {
-      setShowPinSetup(true);
-    } else {
-      toast.info("This device already has a PIN — manage it in Settings.");
-      navigate({ to: redirectTo });
-    }
+    // Always offer to save fresh session tokens after a full sign-in. This
+    // repairs any old trusted-device entry whose refresh token has rotated.
+    setShowPinSetup(true);
   }
 
   async function onPinSubmit(e: FormEvent) {
