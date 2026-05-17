@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import ascendLogo from "@/assets/ascend-fba-logo.png";
+import { deviceTrust } from "@/lib/device-trust";
 
 export function AppLayout() {
   const { pathname } = useLocation();
@@ -26,6 +27,7 @@ export function AppLayout() {
   }, [router, queryClient]);
 
   async function signOut() {
+    if (email && deviceTrust.findByEmail(email)) deviceTrust.lock(email);
     await supabase.auth.signOut({ scope: "local" });
     navigate({ to: "/login" });
   }
