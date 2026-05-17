@@ -26,7 +26,11 @@ import { isElectron, listInstalledPrinters } from "@/lib/printing";
 import { login, listClients, type MintsoftClient } from "@/lib/mintsoft";
 import { REWORK_CATALOG, DEFAULT_CLIENT_KEY, ratesToCsv, csvToRates } from "@/lib/rework";
 import { listPricing, savePricing } from "@/lib/pricing.functions";
-import { loadUserSettings, saveUserSettings } from "@/lib/user-settings.functions";
+import {
+  checkUserSettings,
+  loadUserSettings,
+  saveUserSettings,
+} from "@/lib/user-settings.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { TwoFactorCard } from "@/components/TwoFactorCard";
 import {
@@ -37,7 +41,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { RefreshCw, Save, Plug, Download, Upload } from "lucide-react";
+import { RefreshCw, Save, Plug, Download, Upload, ShieldCheck } from "lucide-react";
 
 function normalizeMintsoftBaseUrl(value: string): string {
   const trimmed = value.trim().replace(/\/+$/, "");
@@ -53,12 +57,14 @@ function SettingsPage() {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [printers, setPrinters] = useState<string[]>([]);
   const [testing, setTesting] = useState(false);
+  const [checkingDb, setCheckingDb] = useState(false);
   const [clients, setClients] = useState<MintsoftClient[]>([]);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const fetchPricing = useServerFn(listPricing);
   const persistPricing = useServerFn(savePricing);
   const fetchSettings = useServerFn(loadUserSettings);
   const persistSettings = useServerFn(saveUserSettings);
+  const checkDb = useServerFn(checkUserSettings);
 
   useEffect(() => {
     const s = loadSettings();
@@ -212,6 +218,19 @@ function SettingsPage() {
     }
   }
 
+  async function runDbCheck() {
+    setCheckingDb(true);
+    try {
+      const res = await checkDb();
+      if (res.ok) toast.success(res.message);
+      else toast.error(`user_settings not ready: ${res.message}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Check failed");
+    } finally {
+      setCheckingDb(false);
+    }
+  }
+
   const electron = isElectron();
 
   const clientNameById = useMemo(() => {
@@ -337,6 +356,14 @@ function SettingsPage() {
             <Button onClick={testLogin} variant="secondary" disabled={testing}>
               <Plug className="mr-2 h-4 w-4" />
               {testing ? "Testing…" : "Test connection"}
+            </Button>
+            <Button
+              onClick={runDbCheck}
+              variant="outline"
+              disabled={checkingDb}
+            >
+              <ShieldCheck className="mr-2 h-4 w-4" />
+              {checkingDb ? "Checking…" : "Check cloud storage"}
             </Button>
           </div>
         </CardContent>
