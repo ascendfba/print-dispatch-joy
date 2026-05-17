@@ -76,7 +76,7 @@ async function deriveKey(pin: string, salt: Uint8Array): Promise<CryptoKey> {
     ["deriveKey"],
   );
   return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt, iterations: PBKDF2_ITERS, hash: "SHA-256" },
+    { name: "PBKDF2", salt: salt as BufferSource, iterations: PBKDF2_ITERS, hash: "SHA-256" },
     baseKey,
     { name: "AES-GCM", length: 256 },
     false,
@@ -117,7 +117,11 @@ export const deviceTrust = {
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const key = await deriveKey(params.pin, salt);
     const plaintext = new TextEncoder().encode(JSON.stringify(params.session));
-    const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plaintext);
+    const ct = await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv: iv as BufferSource },
+      key,
+      plaintext as BufferSource,
+    );
     const entry: TrustedDevice = {
       email: normalizeEmail(params.email),
       userId: params.userId,
@@ -137,9 +141,9 @@ export const deviceTrust = {
     const key = await deriveKey(pin, b64decode(entry.salt));
     try {
       const pt = await crypto.subtle.decrypt(
-        { name: "AES-GCM", iv: b64decode(entry.iv) },
+        { name: "AES-GCM", iv: b64decode(entry.iv) as BufferSource },
         key,
-        b64decode(entry.ciphertext),
+        b64decode(entry.ciphertext) as BufferSource,
       );
       return JSON.parse(new TextDecoder().decode(pt)) as StoredSession;
     } catch {
