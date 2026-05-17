@@ -90,44 +90,40 @@ export function HubOverview() {
   const loading = ordersQuery.isLoading || asnsQuery.isLoading;
 
   return (
-    <section className="space-y-4">
-      <div className="flex items-center gap-3 border-b border-border pb-2">
-        <div className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
-          <Clock className="h-4 w-4" />
+    <section className="space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+          <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Overview
+          </h2>
         </div>
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight">Overview</h2>
-          <p className="text-xs text-muted-foreground">
-            Today's workload at a glance.
-          </p>
-        </div>
-        {loading && <Loader2 className="ml-2 h-4 w-4 animate-spin text-muted-foreground" />}
+        {loading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-3 grid-cols-3">
         {/* Orders due today */}
         <Link to="/orders" className="block">
           <Card className="h-full transition-colors hover:border-primary/60 hover:bg-accent/40">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
-                  <Package className="h-5 w-5" />
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                  <Package className="h-3.5 w-3.5" /> Due today
                 </div>
                 {overdue > 0 && (
-                  <Badge variant="outline" className="border-destructive/30 bg-destructive/10 text-destructive">
-                    <AlertTriangle className="mr-1 h-3 w-3" />
-                    {overdue} overdue
+                  <Badge
+                    variant="outline"
+                    className="h-5 border-destructive/30 bg-destructive/10 px-1.5 text-[10px] text-destructive"
+                  >
+                    <AlertTriangle className="mr-0.5 h-2.5 w-2.5" />
+                    {overdue}
                   </Badge>
                 )}
               </div>
-              <CardTitle className="mt-3">Orders due today</CardTitle>
-              <CardDescription>Open orders received on or before today.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-baseline gap-2">
-                <div className="text-4xl font-semibold tabular-nums">{dueToday}</div>
-                <div className="text-xs text-muted-foreground">
-                  of {orders.length} open
+              <div className="mt-1 flex items-baseline gap-1.5">
+                <div className="text-2xl font-semibold tabular-nums leading-none">{dueToday}</div>
+                <div className="text-[11px] text-muted-foreground">
+                  / {orders.length} open
                 </div>
               </div>
             </CardContent>
@@ -136,25 +132,21 @@ export function HubOverview() {
 
         {/* Order age */}
         <Card className="h-full">
-          <CardHeader>
-            <div className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
-              <Clock className="h-5 w-5" />
+          <CardContent className="p-3">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" /> Order age
             </div>
-            <CardTitle className="mt-3">Order age</CardTitle>
-            <CardDescription>How long open orders have been waiting.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-1.5">
+            <div className="mt-2 space-y-1">
               {(["fresh", "today", "stale", "critical"] as const).map((k) => {
                 const meta = bucketMeta[k];
                 const n = buckets[k];
                 const pct = orders.length ? Math.round((n / orders.length) * 100) : 0;
                 return (
-                  <li key={k} className="flex items-center gap-3">
-                    <Badge variant="outline" className={"w-20 justify-center " + meta.className}>
+                  <div key={k} className="flex items-center gap-2">
+                    <span className={"w-14 rounded-sm border px-1 text-center text-[10px] " + meta.className}>
                       {meta.label}
-                    </Badge>
-                    <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                    </span>
+                    <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
                       <div
                         className={
                           "h-full " +
@@ -169,53 +161,44 @@ export function HubOverview() {
                         style={{ width: `${pct}%` }}
                       />
                     </div>
-                    <div className="w-10 text-right text-sm tabular-nums">{n}</div>
-                  </li>
+                    <span className="w-6 text-right text-[11px] tabular-nums">{n}</span>
+                  </div>
                 );
               })}
-            </ul>
+            </div>
           </CardContent>
         </Card>
 
         {/* ASN calendar */}
         <Link to="/asns" className="block">
           <Card className="h-full transition-colors hover:border-primary/60 hover:bg-accent/40">
-            <CardHeader>
-              <div className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
-                <Truck className="h-5 w-5" />
+            <CardContent className="p-3">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <Truck className="h-3.5 w-3.5" /> ASNs · 7d
               </div>
-              <CardTitle className="mt-3">Inbound ASNs · next 7 days</CardTitle>
-              <CardDescription>Expected supplier deliveries.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-7 gap-1">
+              <div className="mt-2 grid grid-cols-7 gap-1">
                 {asnsByDay.map(({ date, items }) => {
                   const isToday = date.getTime() === today.getTime();
-                  const qty = items.reduce((s, a) => s + (a.TotalQuantity ?? 0), 0);
                   return (
                     <div
                       key={date.toISOString()}
+                      title={`${date.toLocaleDateString()} — ${items.length} ASN(s)`}
                       className={
-                        "rounded-md border p-1.5 text-center " +
+                        "rounded-sm border px-0.5 py-1 text-center leading-tight " +
                         (isToday ? "border-primary/50 bg-primary/5" : "border-border")
                       }
                     >
-                      <div className="text-[10px] uppercase text-muted-foreground">
-                        {date.toLocaleDateString(undefined, { weekday: "short" })}
+                      <div className="text-[9px] uppercase text-muted-foreground">
+                        {date.toLocaleDateString(undefined, { weekday: "narrow" })}
                       </div>
-                      <div className="text-sm font-medium">{date.getDate()}</div>
-                      <div className="mt-0.5 text-xs tabular-nums">
+                      <div className="text-[11px] font-medium">{date.getDate()}</div>
+                      <div className="text-[11px] tabular-nums">
                         {items.length > 0 ? (
                           <span className="font-semibold text-primary">{items.length}</span>
                         ) : (
-                          <span className="text-muted-foreground">—</span>
+                          <span className="text-muted-foreground">·</span>
                         )}
                       </div>
-                      {qty > 0 && (
-                        <div className="text-[10px] text-muted-foreground tabular-nums">
-                          {qty} u
-                        </div>
-                      )}
                     </div>
                   );
                 })}
