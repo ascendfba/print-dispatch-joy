@@ -285,8 +285,8 @@ function AppEditor({
 
   const publicUrl =
     typeof window !== "undefined"
-      ? `${window.location.origin}/api/public/d/${app.slug}`
-      : `/api/public/d/${app.slug}`;
+      ? `${window.location.origin}/d/${app.slug}`
+      : `/d/${app.slug}`;
 
   async function save() {
     const cleanSlug = slugify(slug || name);
