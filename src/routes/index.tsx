@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { requireAuth } from "@/lib/require-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { HubOverview } from "@/components/HubOverview";
 import {
   Boxes,
   Truck,
@@ -214,6 +215,7 @@ function HubPage() {
           Your operational dashboard. Choose an app to get started.
         </p>
       </div>
+      <HubOverview />
       {sections.map((section) => {
         const SectionIcon = section.icon;
         return (
