@@ -8,13 +8,25 @@ import JSZip from "jszip";
 export async function inlineZipSite(file: File): Promise<{ html: string; indexPath: string }> {
   const zip = await JSZip.loadAsync(file);
 
-  // Find index.html (shallowest match wins).
-  const indexEntry = Object.values(zip.files)
-    .filter((f) => !f.dir && /(^|\/)index\.html?$/i.test(f.name))
-    .sort((a, b) => a.name.split("/").length - b.name.split("/").length)[0];
+  const htmlFiles = Object.values(zip.files).filter(
+    (f) => !f.dir && /\.html?$/i.test(f.name),
+  );
+  // Prefer index.html (shallowest); otherwise fall back to the shallowest .html file.
+  const indexEntry =
+    htmlFiles
+      .filter((f) => /(^|\/)index\.html?$/i.test(f.name))
+      .sort((a, b) => a.name.split("/").length - b.name.split("/").length)[0] ??
+    htmlFiles.sort((a, b) => a.name.split("/").length - b.name.split("/").length)[0];
 
   if (!indexEntry) {
-    throw new Error("No index.html found in the ZIP.");
+    const sample = Object.values(zip.files)
+      .filter((f) => !f.dir)
+      .slice(0, 5)
+      .map((f) => f.name)
+      .join(", ");
+    throw new Error(
+      `No HTML file found in the ZIP${sample ? ` (saw: ${sample})` : ""}.`,
+    );
   }
 
   const baseDir = indexEntry.name.includes("/")
