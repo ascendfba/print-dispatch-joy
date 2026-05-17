@@ -17,7 +17,9 @@ export const Route = createFileRoute("/login")({
   }),
   beforeLoad: async ({ search }) => {
     const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: search.redirect });
+    if (data.session && !deviceTrust.isLocked(data.session.user.email)) {
+      throw redirect({ to: search.redirect });
+    }
   },
   component: LoginPage,
 });
@@ -36,10 +38,11 @@ function LoginPage() {
 
   useEffect(() => {
     const list = deviceTrust.list();
+    const lockedEmail = deviceTrust.lockedEmail();
     setTrusted(list);
-    if (list.length > 0) {
+    if (lockedEmail || list.length > 0) {
       setMode("pin");
-      setPinEmail(list[0].email);
+      setPinEmail(lockedEmail ?? list[0].email);
     }
   }, []);
 
@@ -102,6 +105,7 @@ function LoginPage() {
           refresh_token: data.session.refresh_token,
         },
       });
+      deviceTrust.clearLock();
       toast.success("Signed in");
       navigate({ to: redirectTo });
     } catch (err) {
