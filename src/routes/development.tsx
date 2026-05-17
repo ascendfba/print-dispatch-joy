@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, Trash2, Code2, Eye, ArrowLeft, ExternalLink, Save } from "lucide-react";
+import { Plus, Trash2, Code2, Eye, ArrowLeft, ExternalLink, Save, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/development")({
@@ -201,6 +201,7 @@ function AppEditor({
   const [html, setHtml] = useState(app.html);
   const [tab, setTab] = useState<"code" | "preview">("code");
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setName(app.name);
@@ -221,6 +222,28 @@ function AppEditor({
     setTimeout(() => URL.revokeObjectURL(url), 30_000);
   }
 
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("File too large (max 2MB)");
+      return;
+    }
+    try {
+      const text = await file.text();
+      setHtml(text);
+      if (!name || name.startsWith("App ")) {
+        const base = file.name.replace(/\.[^.]+$/, "");
+        if (base) setName(base);
+      }
+      setTab("code");
+      toast.success(`Loaded ${file.name}`);
+    } catch {
+      toast.error("Couldn't read file");
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -236,6 +259,16 @@ function AppEditor({
           />
         </div>
         <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".html,.htm,.txt,.svg,text/html,text/plain,image/svg+xml"
+            className="hidden"
+            onChange={handleUpload}
+          />
+          <Button variant="ghost" size="sm" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="mr-1 h-4 w-4" /> Upload
+          </Button>
           <Button variant="ghost" size="sm" onClick={openInNewTab}>
             <ExternalLink className="mr-1 h-4 w-4" /> Open
           </Button>
