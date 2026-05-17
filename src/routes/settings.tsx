@@ -33,6 +33,7 @@ import {
 } from "@/lib/user-settings.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { TwoFactorCard } from "@/components/TwoFactorCard";
+import { TrustedDeviceCard } from "@/components/TrustedDeviceCard";
 import {
   Table,
   TableBody,
@@ -301,6 +302,8 @@ function SettingsPage() {
       </div>
 
       <TwoFactorCard />
+
+      <TrustedDeviceCard />
 
       <Card>
         <CardHeader>
