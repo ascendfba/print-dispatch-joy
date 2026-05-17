@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import ascendLogo from "@/assets/ascend-fba-logo.png";
+import { deviceTrust, type TrustedDevice } from "@/lib/device-trust";
+import { PinSetupDialog } from "@/components/PinSetupDialog";
+import { KeyRound, Mail } from "lucide-react";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -25,15 +28,54 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [trusted, setTrusted] = useState<TrustedDevice[]>([]);
+  const [mode, setMode] = useState<"pin" | "password">("password");
+  const [pinEmail, setPinEmail] = useState("");
+  const [pin, setPin] = useState("");
+  const [showPinSetup, setShowPinSetup] = useState(false);
+
+  useEffect(() => {
+    const list = deviceTrust.list();
+    setTrusted(list);
+    if (list.length > 0) {
+      setMode("pin");
+      setPinEmail(list[0].email);
+    }
+  }, []);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setLoading(false);
+      return toast.error(error.message);
+    }
     setLoading(false);
-    if (error) return toast.error(error.message);
     toast.success("Signed in");
-    navigate({ to: redirectTo });
+    // Prompt to set up a PIN for this device if there isn't one yet.
+    if (!deviceTrust.findByEmail(email)) {
+      setShowPinSetup(true);
+    } else {
+      navigate({ to: redirectTo });
+    }
+  }
+
+  async function onPinSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (pin.length !== 4) return toast.error("Enter your 4-digit PIN");
+    setLoading(true);
+    try {
+      const session = await deviceTrust.unlock(pinEmail, pin);
+      const { error } = await supabase.auth.setSession(session);
+      if (error) throw error;
+      toast.success("Signed in");
+      navigate({ to: redirectTo });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not sign in");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -44,9 +86,64 @@ function LoginPage() {
         </div>
         <Card>
         <CardHeader>
-          <CardTitle>Sign in</CardTitle>
+          <CardTitle>{mode === "pin" ? "Enter your PIN" : "Sign in"}</CardTitle>
         </CardHeader>
         <CardContent>
+          {mode === "pin" ? (
+            <form onSubmit={onPinSubmit} className="space-y-4">
+              {trusted.length > 1 ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="pinAccount">Account</Label>
+                  <select
+                    id="pinAccount"
+                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    value={pinEmail}
+                    onChange={(e) => setPinEmail(e.target.value)}
+                  >
+                    {trusted.map((t) => (
+                      <option key={t.email} value={t.email}>
+                        {t.email}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Signing in as <strong>{pinEmail}</strong>
+                </p>
+              )}
+              <div className="space-y-1.5">
+                <Label htmlFor="pin">4-digit PIN</Label>
+                <Input
+                  id="pin"
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]{4}"
+                  maxLength={4}
+                  required
+                  autoFocus
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+                  placeholder="••••"
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading || pin.length !== 4}>
+                {loading ? "Signing in…" : "Sign in with PIN"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={() => {
+                  setMode("password");
+                  setPin("");
+                }}
+              >
+                <Mail className="mr-2 h-4 w-4" /> Use email and password
+              </Button>
+            </form>
+          ) : (
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>
@@ -59,13 +156,31 @@ function LoginPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Signing in…" : "Sign in"}
             </Button>
+            {trusted.length > 0 && (
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={() => setMode("pin")}
+              >
+                <KeyRound className="mr-2 h-4 w-4" /> Use device PIN instead
+              </Button>
+            )}
             <div className="flex justify-end text-sm">
               <Link to="/forgot-password" className="text-muted-foreground hover:underline">Forgot password?</Link>
             </div>
           </form>
+          )}
         </CardContent>
         </Card>
       </div>
+      <PinSetupDialog
+        open={showPinSetup}
+        onOpenChange={(o) => {
+          setShowPinSetup(o);
+          if (!o) navigate({ to: redirectTo });
+        }}
+      />
     </div>
   );
 }
