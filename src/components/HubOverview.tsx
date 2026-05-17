@@ -164,32 +164,31 @@ export function HubOverview() {
             <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <Clock className="h-3.5 w-3.5" /> Order age
             </div>
-            <div className="mt-2 space-y-1">
+            <div className="mt-1.5 flex items-center gap-1">
               {(["fresh", "today", "stale", "critical"] as const).map((k) => {
-                const meta = bucketMeta[k];
                 const n = buckets[k];
                 const pct = orders.length ? Math.round((n / orders.length) * 100) : 0;
+                const color =
+                  k === "fresh"
+                    ? "bg-emerald-500"
+                    : k === "today"
+                      ? "bg-amber-500"
+                      : k === "stale"
+                        ? "bg-orange-500"
+                        : "bg-destructive";
                 return (
-                  <div key={k} className="flex items-center gap-2">
-                    <span className={"w-14 rounded-sm border px-1 text-center text-[10px] " + meta.className}>
-                      {meta.label}
-                    </span>
-                    <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className={
-                          "h-full " +
-                          (k === "fresh"
-                            ? "bg-emerald-500"
-                            : k === "today"
-                              ? "bg-amber-500"
-                              : k === "stale"
-                                ? "bg-orange-500"
-                                : "bg-destructive")
-                        }
-                        style={{ width: `${pct}%` }}
-                      />
+                  <div
+                    key={k}
+                    className="flex-1 rounded-sm border border-border px-1.5 py-1 text-center"
+                    title={bucketMeta[k].label}
+                  >
+                    <div className="text-[9px] uppercase text-muted-foreground leading-tight">
+                      {bucketMeta[k].label}
                     </div>
-                    <span className="w-6 text-right text-[11px] tabular-nums">{n}</span>
+                    <div className="text-[11px] font-semibold tabular-nums leading-tight">{n}</div>
+                    <div className="mt-0.5 h-1 overflow-hidden rounded-full bg-muted">
+                      <div className={`h-full ${color}`} style={{ width: `${pct}%` }} />
+                    </div>
                   </div>
                 );
               })}
