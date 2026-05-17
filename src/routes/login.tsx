@@ -59,6 +59,7 @@ function LoginPage() {
       return toast.error("Sign-in completed, but no session was returned. Please try again.");
     }
     setLoading(false);
+    deviceTrust.clearLock();
     toast.success("Signed in");
     // Always offer to save fresh session tokens after a full sign-in. This
     // repairs any old trusted-device entry whose refresh token has rotated.
