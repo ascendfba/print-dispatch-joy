@@ -13,6 +13,7 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as OrdersRouteImport } from './routes/orders'
+import { Route as MfaRouteImport } from './routes/mfa'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as FbaCalculatorRouteImport } from './routes/fba-calculator'
@@ -49,6 +50,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const OrdersRoute = OrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MfaRoute = MfaRouteImport.update({
+  id: '/mfa',
+  path: '/mfa',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -144,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/fba-calculator': typeof FbaCalculatorRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/mfa': typeof MfaRoute
   '/orders': typeof OrdersRoute
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
@@ -167,6 +174,7 @@ export interface FileRoutesByTo {
   '/fba-calculator': typeof FbaCalculatorRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/mfa': typeof MfaRoute
   '/orders': typeof OrdersRoute
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
@@ -191,6 +199,7 @@ export interface FileRoutesById {
   '/fba-calculator': typeof FbaCalculatorRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/mfa': typeof MfaRoute
   '/orders': typeof OrdersRoute
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
@@ -216,6 +225,7 @@ export interface FileRouteTypes {
     | '/fba-calculator'
     | '/forgot-password'
     | '/login'
+    | '/mfa'
     | '/orders'
     | '/reset-password'
     | '/settings'
@@ -239,6 +249,7 @@ export interface FileRouteTypes {
     | '/fba-calculator'
     | '/forgot-password'
     | '/login'
+    | '/mfa'
     | '/orders'
     | '/reset-password'
     | '/settings'
@@ -262,6 +273,7 @@ export interface FileRouteTypes {
     | '/fba-calculator'
     | '/forgot-password'
     | '/login'
+    | '/mfa'
     | '/orders'
     | '/reset-password'
     | '/settings'
@@ -286,6 +298,7 @@ export interface RootRouteChildren {
   FbaCalculatorRoute: typeof FbaCalculatorRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
+  MfaRoute: typeof MfaRoute
   OrdersRoute: typeof OrdersRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SettingsRoute: typeof SettingsRoute
@@ -331,6 +344,13 @@ declare module '@tanstack/react-router' {
       path: '/orders'
       fullPath: '/orders'
       preLoaderRoute: typeof OrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mfa': {
+      id: '/mfa'
+      path: '/mfa'
+      fullPath: '/mfa'
+      preLoaderRoute: typeof MfaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -462,6 +482,7 @@ const rootRouteChildren: RootRouteChildren = {
   FbaCalculatorRoute: FbaCalculatorRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
+  MfaRoute: MfaRoute,
   OrdersRoute: OrdersRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SettingsRoute: SettingsRoute,
