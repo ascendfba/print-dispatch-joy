@@ -69,9 +69,27 @@ function LoginPage() {
     if (pin.length !== 4) return toast.error("Enter your 4-digit PIN");
     setLoading(true);
     try {
-      const session = await deviceTrust.unlock(pinEmail, pin);
-      const { error } = await supabase.auth.setSession(session);
-      if (error) throw error;
+      const stored = await deviceTrust.unlock(pinEmail, pin);
+      // The stored access_token may be expired (we trust for 30 days).
+      // Refresh using the long-lived refresh_token to get a fresh session.
+      const { data, error } = await supabase.auth.refreshSession({
+        refresh_token: stored.refresh_token,
+      });
+      if (error || !data.session) {
+        throw new Error(
+          "Session expired. Please sign in with email and password.",
+        );
+      }
+      // Re-encrypt the new tokens so next PIN unlock has fresh ones.
+      await deviceTrust.save({
+        email: data.session.user.email ?? pinEmail,
+        userId: data.session.user.id,
+        pin,
+        session: {
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        },
+      });
       toast.success("Signed in");
       navigate({ to: redirectTo });
     } catch (err) {
