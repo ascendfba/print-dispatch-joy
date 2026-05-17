@@ -34,7 +34,7 @@ export const defaultSettings: Settings = {
   mintsoftBaseUrl: "https://api.mintsoft.co.uk",
   mintsoftUsername: "",
   mintsoftPassword: "",
-  mintsoftApiKey: "",
+  mintsoftApiKey: "c895de8f-5f33-4d3c-be19-06d69aa1eea7",
   printers: { small: "", large: "", other: "" },
   silentPrint: true,
   reworkClientId: "",
@@ -47,7 +47,15 @@ export function loadSettings(): Settings {
   try {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return defaultSettings;
-    return { ...defaultSettings, ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw);
+    // Always force baked-in Mintsoft credentials so they can't be overridden
+    // by stale localStorage from previous sessions.
+    return {
+      ...defaultSettings,
+      ...parsed,
+      mintsoftBaseUrl: defaultSettings.mintsoftBaseUrl,
+      mintsoftApiKey: defaultSettings.mintsoftApiKey,
+    };
   } catch {
     return defaultSettings;
   }
