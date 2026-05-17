@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/d/$slug")({
+export const Route = createFileRoute("/d/")({
   server: {
     handlers: {
       GET: async (ctx: any) => {

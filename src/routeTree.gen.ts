@@ -15,6 +15,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as FbaCalculatorRouteImport } from './routes/fba-calculator'
 import { Route as DevelopmentRouteImport } from './routes/development'
 import { Route as AsnsRouteImport } from './routes/asns'
 import { Route as IndexRouteImport } from './routes/index'
@@ -58,6 +59,11 @@ const LoginRoute = LoginRouteImport.update({
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FbaCalculatorRoute = FbaCalculatorRouteImport.update({
+  id: '/fba-calculator',
+  path: '/fba-calculator',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DevelopmentRoute = DevelopmentRouteImport.update({
@@ -135,6 +141,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/asns': typeof AsnsRoute
   '/development': typeof DevelopmentRoute
+  '/fba-calculator': typeof FbaCalculatorRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
@@ -157,6 +164,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/asns': typeof AsnsRoute
   '/development': typeof DevelopmentRoute
+  '/fba-calculator': typeof FbaCalculatorRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
@@ -180,6 +188,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/asns': typeof AsnsRoute
   '/development': typeof DevelopmentRoute
+  '/fba-calculator': typeof FbaCalculatorRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
@@ -204,6 +213,7 @@ export interface FileRouteTypes {
     | '/'
     | '/asns'
     | '/development'
+    | '/fba-calculator'
     | '/forgot-password'
     | '/login'
     | '/orders'
@@ -226,6 +236,7 @@ export interface FileRouteTypes {
     | '/'
     | '/asns'
     | '/development'
+    | '/fba-calculator'
     | '/forgot-password'
     | '/login'
     | '/orders'
@@ -248,6 +259,7 @@ export interface FileRouteTypes {
     | '/'
     | '/asns'
     | '/development'
+    | '/fba-calculator'
     | '/forgot-password'
     | '/login'
     | '/orders'
@@ -271,6 +283,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AsnsRoute: typeof AsnsRoute
   DevelopmentRoute: typeof DevelopmentRoute
+  FbaCalculatorRoute: typeof FbaCalculatorRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   OrdersRoute: typeof OrdersRoute
@@ -332,6 +345,13 @@ declare module '@tanstack/react-router' {
       path: '/forgot-password'
       fullPath: '/forgot-password'
       preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fba-calculator': {
+      id: '/fba-calculator'
+      path: '/fba-calculator'
+      fullPath: '/fba-calculator'
+      preLoaderRoute: typeof FbaCalculatorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/development': {
@@ -439,6 +459,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AsnsRoute: AsnsRoute,
   DevelopmentRoute: DevelopmentRoute,
+  FbaCalculatorRoute: FbaCalculatorRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   OrdersRoute: OrdersRoute,
