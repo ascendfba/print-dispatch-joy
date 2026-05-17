@@ -26,6 +26,7 @@ import { Route as ApiMintsoftRouteImport } from './routes/api/mintsoft'
 import { Route as ApiGoogleImageRouteImport } from './routes/api/google-image'
 import { Route as ApiEstimateWeightRouteImport } from './routes/api/estimate-weight'
 import { Route as ApiAmazonImageRouteImport } from './routes/api/amazon-image'
+import { Route as ApiPublicDSlugRouteImport } from './routes/api/public/d/$slug'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -112,6 +113,11 @@ const ApiAmazonImageRoute = ApiAmazonImageRouteImport.update({
   path: '/api/amazon-image',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicDSlugRoute = ApiPublicDSlugRouteImport.update({
+  id: '/api/public/d/$slug',
+  path: '/api/public/d/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/api/suggest-barcode': typeof ApiSuggestBarcodeRoute
   '/asns/$asnId': typeof AsnsAsnIdRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/api/public/d/$slug': typeof ApiPublicDSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -150,6 +157,7 @@ export interface FileRoutesByTo {
   '/api/suggest-barcode': typeof ApiSuggestBarcodeRoute
   '/asns/$asnId': typeof AsnsAsnIdRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/api/public/d/$slug': typeof ApiPublicDSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -170,6 +178,7 @@ export interface FileRoutesById {
   '/api/suggest-barcode': typeof ApiSuggestBarcodeRoute
   '/asns_/$asnId': typeof AsnsAsnIdRoute
   '/orders_/$orderId': typeof OrdersOrderIdRoute
+  '/api/public/d/$slug': typeof ApiPublicDSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -191,6 +200,7 @@ export interface FileRouteTypes {
     | '/api/suggest-barcode'
     | '/asns/$asnId'
     | '/orders/$orderId'
+    | '/api/public/d/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -210,6 +220,7 @@ export interface FileRouteTypes {
     | '/api/suggest-barcode'
     | '/asns/$asnId'
     | '/orders/$orderId'
+    | '/api/public/d/$slug'
   id:
     | '__root__'
     | '/'
@@ -229,6 +240,7 @@ export interface FileRouteTypes {
     | '/api/suggest-barcode'
     | '/asns_/$asnId'
     | '/orders_/$orderId'
+    | '/api/public/d/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -249,6 +261,7 @@ export interface RootRouteChildren {
   ApiSuggestBarcodeRoute: typeof ApiSuggestBarcodeRoute
   AsnsAsnIdRoute: typeof AsnsAsnIdRoute
   OrdersOrderIdRoute: typeof OrdersOrderIdRoute
+  ApiPublicDSlugRoute: typeof ApiPublicDSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -372,6 +385,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAmazonImageRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/d/$slug': {
+      id: '/api/public/d/$slug'
+      path: '/api/public/d/$slug'
+      fullPath: '/api/public/d/$slug'
+      preLoaderRoute: typeof ApiPublicDSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -393,6 +413,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSuggestBarcodeRoute: ApiSuggestBarcodeRoute,
   AsnsAsnIdRoute: AsnsAsnIdRoute,
   OrdersOrderIdRoute: OrdersOrderIdRoute,
+  ApiPublicDSlugRoute: ApiPublicDSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
