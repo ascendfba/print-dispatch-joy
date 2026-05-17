@@ -53,10 +53,13 @@ function LoginPage() {
     }
     setLoading(false);
     toast.success("Signed in");
-    // Prompt to set up a PIN for this device if there isn't one yet.
-    if (!deviceTrust.findByEmail(email)) {
+    // Use the actual signed-in account's email, not what was typed.
+    const { data: sess } = await supabase.auth.getSession();
+    const signedInEmail = sess.session?.user.email ?? email;
+    if (!deviceTrust.findByEmail(signedInEmail)) {
       setShowPinSetup(true);
     } else {
+      toast.info("This device already has a PIN — manage it in Settings.");
       navigate({ to: redirectTo });
     }
   }
