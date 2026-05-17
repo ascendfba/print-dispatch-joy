@@ -5,8 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, Trash2, Code2, Eye, ArrowLeft, ExternalLink, Save, Upload } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Code2,
+  Eye,
+  ArrowLeft,
+  ExternalLink,
+  Save,
+  Upload,
+  FileArchive,
+} from "lucide-react";
 import { toast } from "sonner";
+import { inlineZipSite } from "@/lib/inlineZipSite";
 
 export const Route = createFileRoute("/development")({
   beforeLoad: ({ location }) => requireAuth(location),
@@ -202,6 +213,7 @@ function AppEditor({
   const [tab, setTab] = useState<"code" | "preview">("code");
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const zipInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setName(app.name);
@@ -244,6 +256,37 @@ function AppEditor({
     }
   }
 
+  async function handleZipUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("ZIP too large (max 10MB)");
+      return;
+    }
+    const t = toast.loading(`Unpacking ${file.name}…`);
+    try {
+      const { html: inlined, indexPath } = await inlineZipSite(file);
+      // Inlined assets balloon — warn if the resulting doc is huge.
+      const sizeMb = new Blob([inlined]).size / (1024 * 1024);
+      if (sizeMb > 4) {
+        toast.warning(
+          `Bundled HTML is ${sizeMb.toFixed(1)}MB — may not fit local storage.`,
+        );
+      }
+      setHtml(inlined);
+      if (!name || name.startsWith("App ")) {
+        const base = file.name.replace(/\.[^.]+$/, "");
+        if (base) setName(base);
+      }
+      setTab("preview");
+      toast.success(`Loaded site (entry: ${indexPath})`, { id: t });
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Couldn't read ZIP", { id: t });
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -266,8 +309,18 @@ function AppEditor({
             className="hidden"
             onChange={handleUpload}
           />
+          <input
+            ref={zipInputRef}
+            type="file"
+            accept=".zip,application/zip,application/x-zip-compressed"
+            className="hidden"
+            onChange={handleZipUpload}
+          />
           <Button variant="ghost" size="sm" onClick={() => fileInputRef.current?.click()}>
             <Upload className="mr-1 h-4 w-4" /> Upload
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => zipInputRef.current?.click()}>
+            <FileArchive className="mr-1 h-4 w-4" /> Upload ZIP
           </Button>
           <Button variant="ghost" size="sm" onClick={openInNewTab}>
             <ExternalLink className="mr-1 h-4 w-4" /> Open
