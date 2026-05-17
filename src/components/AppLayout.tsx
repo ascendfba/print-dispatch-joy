@@ -27,7 +27,12 @@ export function AppLayout() {
   }, [router, queryClient]);
 
   async function signOut() {
-    if (email && deviceTrust.findByEmail(email)) deviceTrust.lock(email);
+    if (email && deviceTrust.findByEmail(email)) {
+      deviceTrust.lock(email);
+      queryClient.clear();
+      navigate({ to: "/login" });
+      return;
+    }
     await supabase.auth.signOut({ scope: "local" });
     navigate({ to: "/login" });
   }
