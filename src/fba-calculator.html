@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>FBA Prep Cost Calculator — FastPrep UK clone</title>
+<style>
+  :root{
+    /* Ascend FBA palette */
+    --bg:#f4f7f9; --panel:#ffffff; --ink:#0b1f2a; --muted:#5b6b75;
+    --line:#e3e9ee;
+    --orange:#1aa6d9;       /* primary cyan-blue accent (CTA) */
+    --orange-dark:#0f86b3;  /* darker accent on hover */
+    --purple:#0d3a4a;       /* deep teal for step badges */
+    --soft:#eef4f7;
+    --hero-1:#061f29; --hero-2:#0a3a4a; --hero-3:#0f5d75;
+  }
+  *{box-sizing:border-box}
+  html,body{scrollbar-width:none;-ms-overflow-style:none}
+  html::-webkit-scrollbar,body::-webkit-scrollbar{width:0;height:0;display:none}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.45}
+  header.hero{background:linear-gradient(135deg,var(--hero-1),var(--hero-2) 60%,var(--hero-3));color:#fff;padding:48px 20px 56px;text-align:center}
+  header.hero .chip{display:inline-block;background:linear-gradient(135deg,var(--orange),var(--orange-dark));border:0;padding:8px 20px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#fff;box-shadow:0 4px 14px rgba(26,166,217,.35)}
+  header.hero h1{font-size:38px;margin:14px 0 10px;font-weight:800}
+  header.hero p{color:#b8c7d0;max-width:720px;margin:0 auto;font-size:15px}
+  .badges{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:22px}
+  .badge{background:rgba(26,166,217,.12);border:1px solid rgba(26,166,217,.35);color:#cfeaf5;padding:7px 14px;border-radius:8px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+
+  .wrap{max-width:1200px;margin:-30px auto 60px;padding:0 16px;display:grid;grid-template-columns:1fr 360px;gap:20px}
+  @media(max-width:960px){.wrap{grid-template-columns:1fr}}
+
+  .card{background:var(--panel);border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.06);padding:22px;margin-bottom:18px}
+  .step{display:flex;gap:14px;align-items:flex-start;margin-bottom:14px}
+  .num{width:34px;height:34px;border-radius:50%;background:var(--orange);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+  .num.purple{background:var(--purple)}
+  .step h2{margin:0 0 4px;font-size:20px}
+  .step p{margin:0;color:var(--muted);font-size:14px}
+
+  .tiers{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:6px}
+  @media(max-width:700px){
+    .tiers{grid-template-columns:repeat(2,1fr);gap:8px}
+    .tier{padding:8px 6px}
+    .tier .range{font-size:13px}
+    .tier .save{font-size:11px;margin-top:2px}
+    .medal{font-size:9px;padding:2px 6px;top:-7px;right:-7px}
+  }
+  .tier{position:relative;border:2px solid var(--line);border-radius:12px;padding:12px;text-align:center;cursor:pointer;background:#fff;transition:.15s}
+  .tier:hover{border-color:var(--orange)}
+  .tier.active{border-color:var(--orange);background:#e8f6fb;box-shadow:0 4px 14px rgba(26,166,217,.22)}
+  .tier.contact{border-style:dashed;background:#fff8ef}
+  .tier.contact.active{border-color:var(--orange);background:#ffefdc}
+  .tier .range{font-weight:700;font-size:15px}
+  .tier .save{font-size:12px;color:var(--muted);margin-top:4px}
+  .tier.active .save{color:var(--orange-dark);font-weight:600}
+  .medal{display:none;position:absolute;top:-10px;right:-10px;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+  .tier.active .medal{display:inline-block}
+  .medal.bronze{background:linear-gradient(135deg,#cd7f32,#8c5320)}
+  .medal.silver{background:linear-gradient(135deg,#c0c0c0,#7d7d7d);color:#1a1a1a}
+  .medal.gold{background:linear-gradient(135deg,#ffd54f,#c79100);color:#2a1a00}
+  .medal.platinum{background:linear-gradient(135deg,#e5e4e2,#9aa1a6);color:#1a1a1a}
+
+  .svc.linked-flash{animation:linkedFlash 0.9s ease-out}
+  @keyframes linkedFlash{
+    0%{background:#fff59d}
+    60%{background:#fff9c4}
+    100%{background:transparent}
+  }
+
+  .examples{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:6px 0 18px}
+  @media(max-width:700px){
+    .examples{grid-template-columns:repeat(2,1fr);gap:8px}
+    .ex{padding:8px}
+    .ex .ex-icon{font-size:16px;margin-bottom:2px}
+    .ex .ex-title{font-size:12px}
+    .ex .ex-desc{font-size:10px;line-height:1.3}
+  }
+  .ex{border:2px solid var(--line);background:#fff;border-radius:12px;padding:12px;cursor:pointer;text-align:left;transition:.15s;font-family:inherit}
+  .ex:hover{border-color:var(--orange)}
+  .ex.active{border-color:var(--orange);background:#e8f6fb;box-shadow:0 4px 14px rgba(26,166,217,.22)}
+  .ex .ex-icon{font-size:20px;margin-bottom:4px}
+  .ex .ex-title{font-weight:700;font-size:14px;margin-bottom:2px}
+  .ex .ex-desc{color:var(--muted);font-size:11px;line-height:1.35}
+  .ex.active .ex-desc{color:#0f86b3}
+  .ex-detail{background:#f7fbfd;border:1px solid #d6e9f1;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;display:none}
+  .ex-detail.show{display:block}
+  .ex-detail h4{margin:0 0 6px;font-size:13px;color:var(--orange-dark);text-transform:uppercase;letter-spacing:.05em}
+  .ex-detail ul{margin:0;padding-left:18px;color:#333}
+  .ex-detail li{padding:1px 0}
+
+  .group-title{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:18px 0 8px;font-weight:700}
+  .svc{display:grid;grid-template-columns:1fr 130px 110px 110px;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+  .svc:first-of-type{border-top:0}
+  @media(max-width:700px){.svc{grid-template-columns:1fr 90px;grid-template-rows:auto auto}.svc .price{grid-column:1}.svc .sub{grid-column:2;text-align:right}}
+  .svc .name{font-weight:600;font-size:14px}
+  .svc .desc{color:var(--muted);font-size:12px;margin-top:2px}
+  .svc .price{font-size:13px;color:var(--muted)}
+  .svc input{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;text-align:right}
+  .svc .sub{font-weight:700;font-size:14px;text-align:right}
+  .flat{color:var(--orange-dark);font-size:11px;font-weight:600;text-transform:uppercase;margin-left:6px}
+
+  .returns{background:#eef7fb;border:1px solid #cfe7f1;border-radius:12px;padding:16px;margin-top:8px}
+  .returns h3{margin:0 0 4px;font-size:16px}
+  .returns p.sm{color:var(--muted);font-size:13px;margin:0 0 10px}
+  .toggle{display:inline-flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+  .toggle input{display:none}
+  .switch{width:44px;height:24px;background:#d1d5db;border-radius:999px;position:relative;transition:.2s}
+  .switch::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:.2s}
+  .toggle input:checked + .switch{background:var(--purple)}
+  .toggle input:checked + .switch::after{left:22px}
+
+  aside.total{position:sticky;top:16px;align-self:start}
+  .total-card{background:#fff;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.06);padding:22px}
+  .total-card h3{margin:0 0 4px;font-size:18px}
+  .total-card .sub{color:var(--muted);font-size:13px}
+  .total-card .amount{font-size:44px;font-weight:800;margin:14px 0}
+  .total-card .tier-info{font-size:13px;color:var(--muted);margin-bottom:14px}
+  .btn{display:block;width:100%;padding:13px;border-radius:10px;border:0;font-weight:700;cursor:pointer;text-align:center;text-decoration:none;font-size:15px}
+  .btn.primary{background:var(--orange);color:#fff;margin-bottom:8px}
+  .btn.primary:hover{background:var(--orange-dark)}
+  .btn.ghost{background:#fff;border:1px solid var(--line);color:#111}
+
+  .breakdown{margin:0 0 14px;border-top:1px solid var(--line);padding-top:12px;font-size:13px;max-height:280px;overflow-y:auto}
+  .breakdown h5{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+  .breakdown .row{display:flex;justify-content:space-between;gap:8px;padding:4px 0;color:#222}
+  .breakdown .row .lbl{flex:1;min-width:0}
+  .breakdown .row .lbl small{display:block;color:var(--muted);font-size:11px}
+  .breakdown .row .val{font-weight:600;white-space:nowrap}
+  .breakdown .empty{color:var(--muted);font-style:italic;padding:6px 0}
+  .breakdown .sep{border-top:1px dashed var(--line);margin:6px 0}
+
+  .free{margin-top:18px;background:#fff;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.06);padding:18px}
+  .free h4{margin:0 0 10px;font-size:15px}
+  .free ul{list-style:none;padding:0;margin:0;font-size:14px}
+  .free li{padding:4px 0;color:#222}
+  .free li::before{content:"✓ ";color:#10b981;font-weight:700}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+  th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line)}
+  th:first-child,td:first-child{text-align:left}
+  th{background:#f9fafb;font-weight:700}
+  tr.cat td{background:#fafafa;font-weight:700;color:#444;text-align:left}
+  td.active{background:#e8f6fb;font-weight:700}
+
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:30px}
+
+  /* Mobile sticky total bar */
+  .mobile-total-bar{display:none}
+  @media(max-width:960px){
+    .mobile-total-bar{
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+      position:fixed;left:0;right:0;bottom:0;z-index:50;
+      background:#fff;border-top:1px solid var(--line);
+      box-shadow:0 -6px 20px rgba(0,0,0,.08);
+      padding:10px 14px;
+    }
+    .mobile-total-bar .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;line-height:1.1}
+    .mobile-total-bar .amt{font-size:22px;font-weight:800;color:var(--ink);line-height:1.1}
+    .mobile-total-bar .cta{background:var(--orange);color:#fff;text-decoration:none;font-weight:700;padding:11px 16px;border-radius:10px;font-size:14px;white-space:nowrap}
+    .mobile-total-bar .cta:hover{background:var(--orange-dark)}
+    body{padding-bottom:78px}
+    aside.total{position:static}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <span class="chip">Prep Cost Calculator</span>
+  <h1>Ascend FBA Prep Centre</h1>
+  <p>The only FBA prep system designed for total business optimisation — transparent pricing, no surprises.</p>
+  <div class="badges">
+    <span class="badge">✓ Free WMS access</span>
+    <span class="badge">⊘ No subscriptions</span>
+    <span class="badge">⏱ Fast turnaround</span>
+    <span class="badge">£ Transparent pricing</span>
+  </div>
+</header>
+
+<div class="wrap">
+  <main>
+
+    <!-- Step 1 -->
+    <div class="card">
+      <div class="step">
+        <div class="num">1</div>
+        <div>
+          <h2>Select Your Monthly Volume</h2>
+          <p>Bigger volume = bigger discount. Pick your average monthly units.</p>
+        </div>
+      </div>
+      <div class="tiers" id="tiers"></div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="card">
+      <div class="step">
+        <div class="num">2</div>
+        <div>
+          <h2>Configure Your Services</h2>
+          <p>Enter quantities — hover service names for details.</p>
+        </div>
+      </div>
+      <p style="color:var(--muted);font-size:13px;margin:0 0 8px"><b>Try an example shipment</b> — click one to preview a typical order. You can then adjust quantities below.</p>
+      <div class="examples" id="examples"></div>
+      <div class="ex-detail" id="exDetail"></div>
+      <div id="services"></div>
+    </div>
+
+    
+
+    <!-- Rate card -->
+    <div class="card">
+      <h2 style="margin-top:0">Complete FBA Prep Pricing Reference</h2>
+      <p style="color:var(--muted);font-size:14px">Full per-service rate card across all five monthly volume tiers. All prices in GBP, excluding VAT.</p>
+      <table id="rateCard"></table>
+    </div>
+
+  </main>
+
+  <aside class="total">
+    <div class="total-card">
+      <h3>Your Total Cost</h3>
+      <div class="sub" id="totalSub">Estimated Total (excl. VAT)</div>
+      <div class="amount" id="grandTotal">£0.00</div>
+      <div class="tier-info" id="tierInfo">Tier: 0–500 units (Standard rate)</div>
+      <label class="toggle" style="margin-bottom:12px"><input type="checkbox" id="vatToggle"><span class="switch"></span><span>Include VAT (20%)</span></label>
+      <div id="breakdown" class="breakdown"></div>
+      <a href="https://ascendfba.co.uk/account-setup/" target="_top" rel="noopener" class="btn primary" style="text-decoration:none">💬 Contact Us</a>
+      <button class="btn ghost" id="resetBtn">⟳ Reset</button>
+    </div>
+    <div class="free">
+      <h4>⭐ Why Ascend?</h4>
+      <ul>
+        <li>Free WMS Access</li>
+        <li>Pay As You Go</li>
+        <li>No Collection Scheduling</li>
+        <li>Live Stock Tracking</li>
+        <li>85+ Reports Available</li>
+      </ul>
+    </div>
+  </aside>
+</div>
+
+<footer>All prices excl. VAT.</footer>
+
+<div class="mobile-total-bar" id="mobileTotalBar">
+  <div>
+    <div class="lbl" id="mobileTotalLbl">Total (excl. VAT)</div>
+    <div class="amt" id="mobileTotalAmt">£0.00</div>
+  </div>
+  <a href="https://ascendfba.co.uk/account-setup/" target="_top" rel="noopener" class="cta">Contact Us</a>
+</div>
+
+<script>
+const TIERS = [
+  {label:"0 – 500", save:"Bronze", min:0},
+  {label:"501 – 1 999", save:"Silver", min:501},
+  {label:"2 000 – 4 000", save:"Gold", min:2000},
+  {label:"4 000+", save:"Platinum", min:4001, contact:true},
+];
+
+// services: id, name, desc, unit, prices per tier (3 priced tiers), flat?
+const SERVICES = [
+  {cat:"Receiving & Inspection"},
+  {id:"recv",  name:"Receiving & Inspection", desc:"per unit actually sent to Amazon", unit:"unit", p:[0.39,0.32,0.24]},
+  {id:"fnsku", name:"FNSKU Labeling",         desc:"per unit",                          unit:"unit", p:[0.17,0.16,0.11]},
+  {cat:"Packaging Services"},
+  {id:"pbS", name:"Polybag Small",  desc:"under 5×7 in",   unit:"unit", p:[0.24,0.19,0.15]},
+  {id:"pbM", name:"Polybag Medium", desc:"under 9×12 in",  unit:"unit", p:[0.29,0.24,0.22]},
+  {id:"pbL", name:"Polybag Large",  desc:"over 9×12 in",   unit:"unit", p:[0.37,0.34,0.28]},
+  {id:"bub", name:"Bubble Wrap",    desc:"per unit",       unit:"unit", p:[0.50,0.47,0.37]},
+  {id:"bun", name:"Bundling",       desc:"per bundle, up to 5 units (+£0.05/extra unit handled separately)", unit:"bundle", p:[0.30,0.26,0.18]},
+  {cat:"Processing & Logistics"},
+  {id:"case", name:"Carton Forwarding",   desc:"per carton",   unit:"carton",   p:[2.10,1.90,1.44]},
+  {id:"pal",  name:"Pallet Processing", desc:"per pallet", unit:"pallet", p:[7.00,5.50,4.50]},
+  
+  {id:"fwd",  name:"Only Forwarding Case", desc:"replaces Receiving + Carton Forwarding", unit:"case", p:[5,5,5], flat:true},
+  {cat:"Carton Boxes & Supplies"},
+  {id:"boxS", name:"New Carton Box — Small",  desc:"27cm × 27cm",     unit:"box",    p:[1.70,1.70,1.70], flat:true},
+  {id:"boxM", name:"New Carton Box — Medium", desc:"46cm × 46cm",     unit:"box",    p:[2.75,2.75,2.75], flat:true},
+  {id:"boxL", name:"New Carton Box — Large",  desc:"60cm × 60cm",     unit:"box",    p:[3.55,3.55,3.55], flat:true},
+  {id:"amzPal", name:"Amazon Standard Pallet", desc:"per pallet",     unit:"pallet", p:[9,9,9], flat:true},
+  {cat:"Storage"},
+  {id:"storPal", name:"Pallet Storage", desc:"1.5 m³ pallet · per pallet per day", unit:"pallet·day", p:[1.55,1.30,1.00]},
+  {id:"storCart", name:"Carton Location Storage", desc:"per carton location per day", unit:"carton·day", p:[0.20,0.20,0.20], flat:true},
+  {cat:"Miscellaneous"},
+  {id:"rework", name:"Manual Rework", desc:"hourly rate for ad-hoc manual work", unit:"hour", p:[25,25,25], flat:true},
+];
+
+let tier = 0;
+let bunSize = 5; // units per bundle (base price covers up to 5)
+const qty = {};
+SERVICES.forEach(s=>{ if(s.id) qty[s.id]=0; });
+
+const fmt = n => "£"+n.toFixed(2);
+
+function renderTiers(){
+  const el = document.getElementById("tiers");
+  el.innerHTML = TIERS.map((t,i)=>`
+    <div class="tier ${t.contact?'contact':''} ${i===tier?'active':''}" data-i="${i}">
+      <span class="medal ${t.save.toLowerCase()}">${t.save}</span>
+      <div class="range">${t.label}${t.contact?' units':''}</div>
+      <div class="save">${t.save}</div>
+    </div>`).join("");
+  el.querySelectorAll(".tier").forEach(n=>{
+    n.onclick = ()=>{ tier = +n.dataset.i; renderTiers(); renderExamples(); renderServices(); recalc(); };
+  });
+}
+
+function renderServices(){
+  const el = document.getElementById("services");
+  if(TIERS[tier].contact){
+    el.innerHTML = `<div style="text-align:center;padding:30px 16px;background:#fff8ef;border:1px dashed #f0c98a;border-radius:12px">
+      <h3 style="margin:0 0 8px;font-size:18px">High-volume sellers — let's talk.</h3>
+      <p style="margin:0 0 16px;color:var(--muted);font-size:14px">For 4 000+ units per month we offer custom pricing tailored to your operation.</p>
+      <a href="https://ascendfba.co.uk/account-setup/" target="_top" rel="noopener" class="btn primary" style="display:inline-block;width:auto;padding:12px 28px;text-decoration:none">💬 Contact us for a custom quote</a>
+    </div>`;
+    return;
+  }
+  el.innerHTML = SERVICES.map(s=>{
+    if(s.cat) return `<div class="group-title">${s.cat}</div>`;
+    let price = s.p[tier];
+    let priceLabel = `£${price.toFixed(2)} / ${s.unit}`;
+    let extra = "";
+    if(s.id === "bun"){
+      const extraUnits = Math.max(0, bunSize - 5);
+      const effective = price + extraUnits * 0.05;
+      priceLabel = `£${effective.toFixed(2)} / bundle <small style="display:block;color:var(--muted);font-weight:400">base £${price.toFixed(2)} + ${extraUnits}×£0.05</small>`;
+      extra = `<div style="grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:6px 0 0;font-size:13px;color:var(--muted)">
+        <label for="bunSize">Units per bundle:</label>
+        <input id="bunSize" type="number" min="1" value="${bunSize}" style="width:80px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;text-align:right;font-size:13px">
+        <span>(first 5 included, +£0.05 per extra unit)</span>
+      </div>`;
+    }
+    return `<div class="svc" data-id="${s.id}">
+      <div>
+        <div class="name">${s.name}${s.flat?'<span class="flat">flat</span>':''}</div>
+        <div class="desc">${s.desc}</div>
+      </div>
+      <div class="price">${priceLabel}</div>
+      <input type="number" min="0" value="${qty[s.id]||0}" data-id="${s.id}">
+      <div class="sub" data-sub="${s.id}">£0.00</div>
+      ${extra}
+    </div>`;
+  }).join("");
+  el.querySelectorAll('input[type="number"]').forEach(i=>{
+    if(i.id === "bunSize"){
+      i.oninput = e => {
+        bunSize = Math.max(1, +e.target.value||1);
+        renderServices();
+        recalc();
+        // re-focus the bundle size input after re-render
+        const again = document.getElementById("bunSize");
+        if(again){ again.focus(); again.setSelectionRange(again.value.length, again.value.length); }
+      };
+      return;
+    }
+    i.oninput = e => {
+      const id = e.target.dataset.id;
+      const v = Math.max(0, +e.target.value||0);
+      qty[id] = v;
+      // Pallet Processing ↔ Amazon Standard Pallet are linked 1:1
+      if(id === "pal" || id === "amzPal"){
+        const other = id === "pal" ? "amzPal" : "pal";
+        qty[other] = v;
+        const otherInput = el.querySelector(`input[data-id="${other}"]`);
+        if(otherInput) otherInput.value = v;
+        // Flash both rows yellow
+        ["pal","amzPal"].forEach(rid=>{
+          const row = el.querySelector(`.svc[data-id="${rid}"]`);
+          if(row){ row.classList.remove("linked-flash"); void row.offsetWidth; row.classList.add("linked-flash"); }
+        });
+      }
+      recalc();
+    };
+  });
+}
+
+const PRICE_STORAGE_KEY = "ascend-fba-price-overrides-v1";
+
+function renderRateCard(){
+  const cols = TIERS.length + 1;
+  const head = `<thead><tr><th>Service</th>${TIERS.map((t,i)=>`<th class="${i===tier?'active':''}">${t.label}</th>`).join("")}</tr></thead>`;
+  const body = SERVICES.map((s,si)=>{
+    if(s.cat) return `<tr class="cat"><td colspan="${cols}">${s.cat}</td></tr>`;
+    return `<tr><td>${s.name}<div style="color:var(--muted);font-size:11px">${s.desc}${s.flat?' · flat':''}</div></td>`+
+      s.p.map((v,i)=>`<td class="${i===tier?'active':''}" data-si="${si}" data-pi="${i}" contenteditable="true" style="cursor:text;outline:none" title="Click to edit price">£${v.toFixed(2)}</td>`).join("")+
+      `<td style="font-style:italic;color:var(--muted)">Contact us</td></tr>`;
+  }).join("");
+  const rc = document.getElementById("rateCard");
+  rc.innerHTML = head + "<tbody>"+body+"</tbody>";
+  rc.querySelectorAll("td[contenteditable]").forEach(td=>{
+    td.addEventListener("focus", ()=>{
+      const si=+td.dataset.si, pi=+td.dataset.pi;
+      td.textContent = String(SERVICES[si].p[pi]);
+      requestAnimationFrame(()=>{
+        const r=document.createRange(); r.selectNodeContents(td);
+        const sel=getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      });
+    });
+    td.addEventListener("keydown", e=>{
+      if(e.key==="Enter"){ e.preventDefault(); td.blur(); }
+    });
+    td.addEventListener("blur", ()=>{
+      const si=+td.dataset.si, pi=+td.dataset.pi;
+      const n = parseFloat(td.textContent.replace(/[^0-9.\-]/g,""));
+      if(!isNaN(n) && n>=0){ SERVICES[si].p[pi] = n; }
+      renderServices(); recalc();
+    });
+  });
+}
+
+function recalc(){
+  const isContact = TIERS[tier].contact;
+  let total = 0;
+  const items = [];
+  const bd = document.getElementById("breakdown");
+  if(!isContact){
+    SERVICES.forEach(s=>{
+      if(!s.id) return;
+      const q = qty[s.id]||0;
+      let unitPrice = s.p[tier];
+      if(s.id === "bun"){
+        unitPrice = s.p[tier] + Math.max(0, bunSize - 5) * 0.05;
+      }
+      const sub = q * unitPrice;
+      const node = document.querySelector(`[data-sub="${s.id}"]`);
+      if(node) node.textContent = fmt(sub);
+      total += sub;
+      if(q > 0) items.push({name: s.id==="bun" ? `${s.name} (${bunSize}/bundle)` : s.name, q, unit:s.unit, price:unitPrice, sub});
+    });
+
+    if(items.length === 0){
+      bd.innerHTML = `<h5>Breakdown</h5><div class="empty">No services selected yet.</div>`;
+    } else {
+      const rows = items.map(i=>`<div class="row">
+        <div class="lbl">${i.name}<small>${i.q} × £${i.price.toFixed(2)} / ${i.unit}</small></div>
+        <div class="val">${fmt(i.sub)}</div>
+      </div>`).join("");
+      const incVat = document.getElementById("vatToggle").checked;
+      const vat = total * 0.20;
+      const grand = total + (incVat ? vat : 0);
+      const vatRow = `<div class="row"><div class="lbl">Subtotal (excl. VAT)</div><div class="val">${fmt(total)}</div></div>
+        <div class="row"><div class="lbl">VAT (20%)</div><div class="val">${fmt(vat)}</div></div>`;
+      bd.innerHTML = `<h5>Breakdown</h5>${rows}<div class="sep"></div>${vatRow}<div class="sep"></div>
+        <div class="row"><div class="lbl"><b>Total ${incVat?'(incl. VAT)':'(excl. VAT)'}</b></div><div class="val"><b>${fmt(grand)}</b></div></div>`;
+    }
+  } else {
+    bd.innerHTML = "";
+  }
+
+  const incVat = document.getElementById("vatToggle").checked;
+  const grand = total + (incVat ? total*0.20 : 0);
+  document.getElementById("totalSub").textContent = `Estimated Total (${incVat?'incl.':'excl.'} VAT)`;
+  document.getElementById("grandTotal").textContent = isContact ? "Contact us" : fmt(grand);
+  document.getElementById("mobileTotalLbl").textContent = `Total (${incVat?'incl.':'excl.'} VAT)`;
+  document.getElementById("mobileTotalAmt").textContent = isContact ? "Contact us" : fmt(grand);
+  document.getElementById("tierInfo").textContent = isContact
+    ? `Tier: ${TIERS[tier].label} units — custom quote required`
+    : `Tier: ${TIERS[tier].label} units (${TIERS[tier].save})`;
+  renderRateCard();
+}
+
+document.getElementById("vatToggle").onchange = recalc;
+
+
+
+// Example shipments — click a card to preselect a typical order
+const EXAMPLES = [
+  {
+    id:"small", icon:"📮", title:"Small Shipment",
+    desc:"50 units, FNSKU labelling only",
+    items:[{name:"FNSKU Labeling", detail:"50 units"}],
+    qty:{ fnsku:50 }
+  },
+  {
+    id:"parcel", icon:"📦", title:"Small Parcel",
+    desc:"100 units, polybag + 1 box",
+    items:[
+      {name:"Receiving & Inspection", detail:"100 units"},
+      {name:"FNSKU Labeling", detail:"100 units"},
+      {name:"Polybag Medium", detail:"100 units"},
+      {name:"Carton Box — Medium", detail:"1 box"},
+    ],
+    qty:{ recv:100, fnsku:100, pbM:100, boxM:1 }
+  },
+  {
+    id:"pallet", icon:"▦", title:"Pallet Shipment",
+    desc:"500 units across 2 pallets",
+    items:[
+      {name:"Receiving & Inspection", detail:"500 units"},
+      {name:"FNSKU Labeling", detail:"500 units"},
+      {name:"Polybag Medium", detail:"500 units"},
+      {name:"Pallet Processing", detail:"2 pallets"},
+      {name:"Amazon Standard Pallet", detail:"2 pallets"},
+    ],
+    qty:{ recv:500, fnsku:500, pbM:500, pal:2, amzPal:2 }
+  },
+  {
+    id:"forward", icon:"→", title:"FBA-Ready Forwarding",
+    desc:"10 cases already prepped",
+    items:[
+      {name:"Only Forwarding Case", detail:"10 cases"},
+      {name:"Amazon Standard Pallet", detail:"1 pallet"},
+    ],
+    qty:{ fwd:10, amzPal:1 }
+  },
+];
+let activeExample = null;
+
+function renderExamples(){
+  const el = document.getElementById("examples");
+  const det = document.getElementById("exDetail");
+  if(!el) return;
+  if(TIERS[tier].contact){ el.style.display="none"; det.classList.remove("show"); return; }
+  el.style.display="";
+  el.innerHTML = EXAMPLES.map(ex=>`
+    <button type="button" class="ex ${activeExample===ex.id?'active':''}" data-ex="${ex.id}">
+      <div class="ex-icon">${ex.icon}</div>
+      <div class="ex-title">${ex.title}</div>
+      <div class="ex-desc">${ex.desc}</div>
+    </button>`).join("");
+  el.querySelectorAll(".ex").forEach(btn=>{
+    btn.onclick = ()=>{
+      const ex = EXAMPLES.find(e=>e.id===btn.dataset.ex);
+      Object.keys(qty).forEach(k=>qty[k]=0);
+      Object.assign(qty, ex.qty);
+      activeExample = ex.id;
+      det.classList.add("show");
+      det.innerHTML = `<h4>${ex.icon} ${ex.title} — example contents</h4>
+        <ul>${ex.items.map(i=>`<li><b>${i.name}</b> — ${i.detail}</li>`).join("")}</ul>
+        <div style="margin-top:8px;color:var(--muted);font-size:12px">Quantities are pre-filled below — feel free to tweak them.</div>`;
+      renderExamples(); renderServices(); recalc();
+    };
+  });
+}
+
+document.getElementById("resetBtn").onclick = ()=>{
+  Object.keys(qty).forEach(k=>qty[k]=0);
+  activeExample = null;
+  document.getElementById("exDetail").classList.remove("show");
+  tier=0; renderTiers(); renderExamples(); renderServices(); recalc();
+};
+
+try{ localStorage.removeItem(PRICE_STORAGE_KEY); }catch(e){}
+renderTiers(); renderExamples(); renderServices(); recalc();
+</script>
+<script>
+  (function () {
+    var lastHeight = 0;
+    var queued = false;
+
+    function measureContentHeight() {
+      var children = Array.prototype.slice.call(document.body.children || []);
+      var contentBottom = children.reduce(function (max, el) {
+        var rect = el.getBoundingClientRect();
+        return Math.max(max, rect.bottom + window.scrollY);
+      }, 0);
+
+      return Math.ceil(contentBottom);
+    }
+
+    function postHeight(force) {
+      queued = false;
+      var h = measureContentHeight();
+      if (!force && Math.abs(h - lastHeight) < 2) return;
+      lastHeight = h;
+      try { parent.postMessage({ type: 'ascend-fba-calc:height', height: h }, '*'); } catch(e) {}
+    }
+
+    function schedulePost(force) {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(function () {
+        postHeight(force);
+      });
+    }
+
+    window.addEventListener('load', function () { schedulePost(true); });
+    window.addEventListener('resize', function () { schedulePost(false); });
+
+    if (window.ResizeObserver) {
+      new ResizeObserver(function () { schedulePost(false); }).observe(document.body);
+    }
+
+    new MutationObserver(function () { schedulePost(false); }).observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      characterData: true,
+    });
+
+    // Force-post several times after load so the parent iframe definitely
+    // receives the final height even if it ignored earlier messages.
+    [0, 100, 300, 600, 1200, 2000, 3500].forEach(function (ms) {
+      setTimeout(function () { postHeight(true); }, ms);
+    });
+
+    // Also re-post on tab focus and any click (covers tier/example switches).
+    window.addEventListener('focus', function () { schedulePost(true); });
+    document.addEventListener('click', function () {
+      setTimeout(function () { postHeight(true); }, 50);
+      setTimeout(function () { postHeight(true); }, 250);
+    });
+  })();
+</script>
+</body>
+</html>
