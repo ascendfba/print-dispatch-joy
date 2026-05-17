@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import ascendLogo from "@/assets/ascend-fba-logo.png";
+import { deviceTrust } from "@/lib/device-trust";
 
 export function AppLayout() {
   const { pathname } = useLocation();
@@ -17,7 +18,9 @@ export function AppLayout() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setEmail(data.session?.user.email ?? null));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_e, session) => {
       setEmail(session?.user.email ?? null);
       router.invalidate();
       queryClient.invalidateQueries();
@@ -26,6 +29,12 @@ export function AppLayout() {
   }, [router, queryClient]);
 
   async function signOut() {
+    if (email && deviceTrust.findByEmail(email)) {
+      deviceTrust.lock(email);
+      queryClient.clear();
+      navigate({ to: "/login" });
+      return;
+    }
     await supabase.auth.signOut({ scope: "local" });
     navigate({ to: "/login" });
   }
@@ -51,11 +60,7 @@ export function AppLayout() {
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-3">
           <Link to="/" className="flex items-center gap-2">
-            <img
-              src={ascendLogo}
-              alt="Ascend FBA"
-              className="h-7 w-auto"
-            />
+            <img src={ascendLogo} alt="Ascend FBA" className="h-7 w-auto" />
           </Link>
           <nav className="flex items-center gap-1">
             {tabs.map((t) => {
