@@ -27,6 +27,7 @@ import { login, listClients, type MintsoftClient } from "@/lib/mintsoft";
 import { REWORK_CATALOG, DEFAULT_CLIENT_KEY, ratesToCsv, csvToRates } from "@/lib/rework";
 import { listPricing, savePricing } from "@/lib/pricing.functions";
 import { useServerFn } from "@tanstack/react-start";
+import { TwoFactorCard } from "@/components/TwoFactorCard";
 import {
   Table,
   TableBody,
@@ -227,6 +228,8 @@ function SettingsPage() {
           Configure Mintsoft access and printer routing.
         </p>
       </div>
+
+      <TwoFactorCard />
 
       <Card>
         <CardHeader>
