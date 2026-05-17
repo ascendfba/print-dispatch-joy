@@ -26,6 +26,7 @@ import { isElectron, listInstalledPrinters } from "@/lib/printing";
 import { login, listClients, type MintsoftClient } from "@/lib/mintsoft";
 import { REWORK_CATALOG, DEFAULT_CLIENT_KEY, ratesToCsv, csvToRates } from "@/lib/rework";
 import { listPricing, savePricing } from "@/lib/pricing.functions";
+import { loadUserSettings, saveUserSettings } from "@/lib/user-settings.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { TwoFactorCard } from "@/components/TwoFactorCard";
 import {
@@ -56,15 +57,40 @@ function SettingsPage() {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const fetchPricing = useServerFn(listPricing);
   const persistPricing = useServerFn(savePricing);
+  const fetchSettings = useServerFn(loadUserSettings);
+  const persistSettings = useServerFn(saveUserSettings);
 
   useEffect(() => {
     const s = loadSettings();
     setSettings(s);
     void refreshPrinters();
-    // Best-effort client load for the dropdown.
-    listClients(s)
-      .then(setClients)
-      .catch(() => {});
+    // Pull canonical settings from the database (source of truth across devices).
+    fetchSettings()
+      .then((remote) => {
+        if (remote) {
+          setSettings((prev) => {
+            const merged: Settings = {
+              ...prev,
+              mintsoftBaseUrl: remote.mintsoftBaseUrl || prev.mintsoftBaseUrl,
+              mintsoftUsername: remote.mintsoftUsername ?? prev.mintsoftUsername,
+              mintsoftPassword: remote.mintsoftPassword ?? prev.mintsoftPassword,
+              mintsoftApiKey: remote.mintsoftApiKey ?? prev.mintsoftApiKey,
+              printers: { ...prev.printers, ...(remote.printers ?? {}) },
+              silentPrint: remote.silentPrint ?? prev.silentPrint,
+              reworkClientId: remote.reworkClientId ?? prev.reworkClientId,
+              reworkMap: remote.reworkMap ?? prev.reworkMap,
+            };
+            saveSettings(merged);
+            listClients(merged).then(setClients).catch(() => {});
+            return merged;
+          });
+        } else {
+          listClients(s).then(setClients).catch(() => {});
+        }
+      })
+      .catch(() => {
+        listClients(s).then(setClients).catch(() => {});
+      });
     // Load pricing from database (DB is the source of truth).
     fetchPricing()
       .then((rows) => {
@@ -104,6 +130,30 @@ function SettingsPage() {
     setSettings(cleanSettings);
     saveSettings(cleanSettings);
     tokenStore.clear();
+    // Persist Mintsoft credentials + printer routing to the database so
+    // the API key follows the user across browsers and devices.
+    let dbOk = false;
+    try {
+      await persistSettings({
+        data: {
+          mintsoftBaseUrl: cleanSettings.mintsoftBaseUrl,
+          mintsoftUsername: cleanSettings.mintsoftUsername,
+          mintsoftPassword: cleanSettings.mintsoftPassword,
+          mintsoftApiKey: cleanSettings.mintsoftApiKey,
+          printers: cleanSettings.printers,
+          silentPrint: cleanSettings.silentPrint,
+          reworkClientId: cleanSettings.reworkClientId,
+          reworkMap: cleanSettings.reworkMap,
+        },
+      });
+      dbOk = true;
+    } catch (e) {
+      toast.error(
+        e instanceof Error
+          ? `Saved locally; settings sync failed: ${e.message}`
+          : "Saved locally; settings sync failed",
+      );
+    }
     // Sync pricing rows to the database.
     try {
       const rows: Array<{
@@ -125,7 +175,9 @@ function SettingsPage() {
         }
       }
       await persistPricing({ data: { rows } });
-      toast.success(`Settings saved (${rows.length} pricing row${rows.length === 1 ? "" : "s"} synced)`);
+      toast.success(
+        `Settings saved${dbOk ? " to cloud" : ""} (${rows.length} pricing row${rows.length === 1 ? "" : "s"} synced)`,
+      );
     } catch (e) {
       toast.error(
         e instanceof Error
