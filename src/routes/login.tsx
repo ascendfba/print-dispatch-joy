@@ -74,7 +74,9 @@ function LoginPage() {
       const stored = await deviceTrust.unlock(pinEmail, pin);
       if (!stored.access_token || !stored.refresh_token) {
         deviceTrust.remove(pinEmail);
-        throw new Error("PIN session expired. Please sign in with email and password, then set your PIN again.");
+        throw new Error(
+          "PIN session expired. Please sign in with email and password, then set your PIN again.",
+        );
       }
       // Restore the encrypted session into Supabase storage. setSession refreshes
       // the access token if needed, then saves the usable session before routing.
@@ -84,12 +86,16 @@ function LoginPage() {
       });
       if (error || !data.session) {
         deviceTrust.remove(pinEmail);
-        throw new Error("PIN session expired. Please sign in with email and password, then set your PIN again.");
+        throw new Error(
+          "PIN session expired. Please sign in with email and password, then set your PIN again.",
+        );
       }
       const { data: verified, error: verifyError } = await supabase.auth.getUser();
       if (verifyError || !verified.user) {
         deviceTrust.remove(pinEmail);
-        throw new Error("PIN session could not be restored. Please sign in with email and password.");
+        throw new Error(
+          "PIN session could not be restored. Please sign in with email and password.",
+        );
       }
       // Re-encrypt the new tokens so next PIN unlock has fresh ones.
       await deviceTrust.save({
@@ -118,93 +124,107 @@ function LoginPage() {
           <img src={ascendLogo} alt="Ascend FBA" className="h-12 w-auto" />
         </div>
         <Card>
-        <CardHeader>
-          <CardTitle>{mode === "pin" ? "Enter your PIN" : "Sign in"}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {mode === "pin" ? (
-            <form onSubmit={onPinSubmit} className="space-y-4">
-              {trusted.length > 1 ? (
+          <CardHeader>
+            <CardTitle>{mode === "pin" ? "Enter your PIN" : "Sign in"}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {mode === "pin" ? (
+              <form onSubmit={onPinSubmit} className="space-y-4">
+                {trusted.length > 1 ? (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pinAccount">Account</Label>
+                    <select
+                      id="pinAccount"
+                      className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                      value={pinEmail}
+                      onChange={(e) => setPinEmail(e.target.value)}
+                    >
+                      {trusted.map((t) => (
+                        <option key={t.email} value={t.email}>
+                          {t.email}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Signing in as <strong>{pinEmail}</strong>
+                  </p>
+                )}
                 <div className="space-y-1.5">
-                  <Label htmlFor="pinAccount">Account</Label>
-                  <select
-                    id="pinAccount"
-                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={pinEmail}
-                    onChange={(e) => setPinEmail(e.target.value)}
-                  >
-                    {trusted.map((t) => (
-                      <option key={t.email} value={t.email}>
-                        {t.email}
-                      </option>
-                    ))}
-                  </select>
+                  <Label htmlFor="pin">4-digit PIN</Label>
+                  <Input
+                    id="pin"
+                    type="password"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    pattern="[0-9]{4}"
+                    maxLength={4}
+                    required
+                    autoFocus
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+                    placeholder="••••"
+                  />
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Signing in as <strong>{pinEmail}</strong>
-                </p>
-              )}
-              <div className="space-y-1.5">
-                <Label htmlFor="pin">4-digit PIN</Label>
-                <Input
-                  id="pin"
-                  type="password"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  pattern="[0-9]{4}"
-                  maxLength={4}
-                  required
-                  autoFocus
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-                  placeholder="••••"
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading || pin.length !== 4}>
-                {loading ? "Signing in…" : "Sign in with PIN"}
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                className="w-full"
-                onClick={() => {
-                  setMode("password");
-                  setPin("");
-                }}
-              >
-                <Mail className="mr-2 h-4 w-4" /> Use email and password
-              </Button>
-            </form>
-          ) : (
-          <form onSubmit={onSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Signing in…" : "Sign in"}
-            </Button>
-            {trusted.length > 0 && (
-              <Button
-                type="button"
-                variant="ghost"
-                className="w-full"
-                onClick={() => setMode("pin")}
-              >
-                <KeyRound className="mr-2 h-4 w-4" /> Use device PIN instead
-              </Button>
+                <Button type="submit" className="w-full" disabled={loading || pin.length !== 4}>
+                  {loading ? "Signing in…" : "Sign in with PIN"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => {
+                    setMode("password");
+                    setPin("");
+                  }}
+                >
+                  <Mail className="mr-2 h-4 w-4" /> Use email and password
+                </Button>
+              </form>
+            ) : (
+              <form onSubmit={onSubmit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Signing in…" : "Sign in"}
+                </Button>
+                {trusted.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full"
+                    onClick={() => setMode("pin")}
+                  >
+                    <KeyRound className="mr-2 h-4 w-4" /> Use device PIN instead
+                  </Button>
+                )}
+                <div className="flex justify-end text-sm">
+                  <Link to="/forgot-password" className="text-muted-foreground hover:underline">
+                    Forgot password?
+                  </Link>
+                </div>
+              </form>
             )}
-            <div className="flex justify-end text-sm">
-              <Link to="/forgot-password" className="text-muted-foreground hover:underline">Forgot password?</Link>
-            </div>
-          </form>
-          )}
-        </CardContent>
+          </CardContent>
         </Card>
       </div>
       <PinSetupDialog
