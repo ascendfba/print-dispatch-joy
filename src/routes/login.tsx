@@ -46,16 +46,19 @@ function LoginPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       setLoading(false);
       return toast.error(error.message);
     }
+    if (!data.session) {
+      setLoading(false);
+      return toast.error("Sign-in completed, but no session was returned. Please try again.");
+    }
     setLoading(false);
     toast.success("Signed in");
     // Use the actual signed-in account's email, not what was typed.
-    const { data: sess } = await supabase.auth.getSession();
-    const signedInEmail = sess.session?.user.email ?? email;
+    const signedInEmail = data.session.user.email ?? email;
     if (!deviceTrust.findByEmail(signedInEmail)) {
       setShowPinSetup(true);
     } else {
@@ -70,15 +73,24 @@ function LoginPage() {
     setLoading(true);
     try {
       const stored = await deviceTrust.unlock(pinEmail, pin);
-      // The stored access_token may be expired (we trust for 30 days).
-      // Refresh using the long-lived refresh_token to get a fresh session.
-      const { data, error } = await supabase.auth.refreshSession({
+      if (!stored.access_token || !stored.refresh_token) {
+        deviceTrust.remove(pinEmail);
+        throw new Error("PIN session expired. Please sign in with email and password, then set your PIN again.");
+      }
+      // Restore the encrypted session into Supabase storage. setSession refreshes
+      // the access token if needed, then saves the usable session before routing.
+      const { data, error } = await supabase.auth.setSession({
+        access_token: stored.access_token,
         refresh_token: stored.refresh_token,
       });
       if (error || !data.session) {
-        throw new Error(
-          "Session expired. Please sign in with email and password.",
-        );
+        deviceTrust.remove(pinEmail);
+        throw new Error("PIN session expired. Please sign in with email and password, then set your PIN again.");
+      }
+      const { data: verified, error: verifyError } = await supabase.auth.getUser();
+      if (verifyError || !verified.user) {
+        deviceTrust.remove(pinEmail);
+        throw new Error("PIN session could not be restored. Please sign in with email and password.");
       }
       // Re-encrypt the new tokens so next PIN unlock has fresh ones.
       await deviceTrust.save({
