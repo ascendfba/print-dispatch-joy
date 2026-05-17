@@ -11,6 +11,7 @@
 // removed on access.
 
 const STORAGE_KEY = "ascend.deviceTrust.v1";
+const LOCK_KEY = "ascend.deviceTrust.lockedEmail.v1";
 const TRUST_DAYS = 30;
 const PBKDF2_ITERS = 200_000;
 
@@ -158,6 +159,34 @@ export const deviceTrust = {
 
   removeAll(): void {
     writeAll([]);
+    this.clearLock();
+  },
+
+  lock(email: string): void {
+    if (typeof window === "undefined") return;
+    const entry = this.findByEmail(email);
+    if (entry) window.localStorage.setItem(LOCK_KEY, entry.email);
+  },
+
+  lockedEmail(): string | null {
+    if (typeof window === "undefined") return null;
+    const raw = window.localStorage.getItem(LOCK_KEY);
+    if (!raw) return null;
+    const email = normalizeEmail(raw);
+    if (this.findByEmail(email)) return email;
+    window.localStorage.removeItem(LOCK_KEY);
+    return null;
+  },
+
+  isLocked(email?: string | null): boolean {
+    const locked = this.lockedEmail();
+    if (!locked) return false;
+    return email ? locked === normalizeEmail(email) : true;
+  },
+
+  clearLock(): void {
+    if (typeof window === "undefined") return;
+    window.localStorage.removeItem(LOCK_KEY);
   },
 
   trustDays: TRUST_DAYS,
