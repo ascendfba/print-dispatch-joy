@@ -1052,6 +1052,135 @@ export async function fetchOrderComments(
   }
 }
 
+// ============================================================================
+// Invoices (Accounting)
+// ============================================================================
+
+export type MintsoftInvoice = {
+  ID: number;
+  InvoiceNumber?: string | null;
+  ClientId?: number | null;
+  ClientName?: string | null;
+  InvoiceDate?: string | null;
+  Status?: string | null;
+  TotalValue?: number | null;
+  TotalNet?: number | null;
+  TotalTax?: number | null;
+  [k: string]: unknown;
+};
+
+export type MintsoftInvoiceItem = {
+  ID?: number;
+  InvoiceId?: number | null;
+  OrderId?: number | null;
+  OrderNumber?: string | null;
+  Description?: string | null;
+  Quantity?: number | null;
+  UnitPrice?: number | null;
+  TotalPrice?: number | null;
+  ReworkCost?: number | null;
+  [k: string]: unknown;
+};
+
+function normaliseInvoice(r: Record<string, unknown>): MintsoftInvoice {
+  const id = Number(r.ID ?? r.Id ?? r.InvoiceId);
+  return {
+    ...r,
+    ID: Number.isFinite(id) ? id : 0,
+    InvoiceNumber:
+      (typeof r.InvoiceNumber === "string" && r.InvoiceNumber) ||
+      (typeof r.Number === "string" && r.Number) ||
+      null,
+    ClientId:
+      typeof r.ClientId === "number"
+        ? r.ClientId
+        : typeof r.ClientID === "number"
+          ? r.ClientID
+          : null,
+    ClientName:
+      (typeof r.ClientName === "string" && r.ClientName) ||
+      (typeof r.Client === "string" && r.Client) ||
+      null,
+    InvoiceDate:
+      (typeof r.InvoiceDate === "string" && r.InvoiceDate) ||
+      (typeof r.Date === "string" && r.Date) ||
+      (typeof r.CreatedDate === "string" && r.CreatedDate) ||
+      null,
+    Status:
+      (typeof r.Status === "string" && r.Status) ||
+      (typeof r.InvoiceStatus === "string" && r.InvoiceStatus) ||
+      null,
+    TotalValue:
+      typeof r.TotalValue === "number"
+        ? r.TotalValue
+        : typeof r.Total === "number"
+          ? r.Total
+          : null,
+    TotalNet: typeof r.TotalNet === "number" ? r.TotalNet : null,
+    TotalTax: typeof r.TotalTax === "number" ? r.TotalTax : null,
+  };
+}
+
+/**
+ * List invoices from the Mintsoft accounting module.
+ * Tries a couple of common endpoint paths to be resilient against tenant
+ * configuration differences.
+ */
+export async function listInvoices(
+  settings: Settings,
+  opts: { take?: number; from?: string; to?: string } = {},
+): Promise<MintsoftInvoice[]> {
+  const take = opts.take ?? 100;
+  const qs = new URLSearchParams();
+  qs.set("Take", String(take));
+  if (opts.from) qs.set("DateFrom", opts.from);
+  if (opts.to) qs.set("DateTo", opts.to);
+  const paths = [
+    `/api/Account/Invoice?${qs.toString()}`,
+    `/api/Account/Invoice/List?${qs.toString()}`,
+    `/api/Accounting/Invoice?${qs.toString()}`,
+  ];
+  for (const p of paths) {
+    try {
+      const data = await authedJson<
+        MintsoftInvoice[] | { Results?: MintsoftInvoice[] }
+      >(settings, p);
+      const arr = Array.isArray(data) ? data : (data?.Results ?? []);
+      if (Array.isArray(arr)) {
+        return arr.map((r) => normaliseInvoice(r as Record<string, unknown>));
+      }
+    } catch {
+      /* try next */
+    }
+  }
+  return [];
+}
+
+export async function fetchInvoiceItems(
+  settings: Settings,
+  invoiceId: number,
+): Promise<MintsoftInvoiceItem[]> {
+  const paths = [
+    `/api/Account/Invoice/${invoiceId}/Items`,
+    `/api/Account/Invoice/${invoiceId}`,
+    `/api/Accounting/Invoice/${invoiceId}/Items`,
+  ];
+  for (const p of paths) {
+    try {
+      const data = await authedJson<
+        | MintsoftInvoiceItem[]
+        | { Items?: MintsoftInvoiceItem[]; InvoiceItems?: MintsoftInvoiceItem[] }
+      >(settings, p);
+      if (Array.isArray(data)) return data;
+      if (Array.isArray(data?.Items)) return data.Items;
+      if (Array.isArray(data?.InvoiceItems)) return data.InvoiceItems;
+    } catch {
+      /* try next */
+    }
+  }
+  return [];
+}
+
 export async function addTrackingNumber(
   settings: Settings,
   orderId: number,
