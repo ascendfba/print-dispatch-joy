@@ -80,6 +80,10 @@ export function HubOverview() {
     (s, q) => s + (q.data?.reduce((n, it) => n + (it.Quantity ?? 0), 0) ?? 0),
     0,
   );
+  const dueTodayBundles = itemQueries.reduce(
+    (n, q) => n + (q.data && q.data.length > 1 ? 1 : 0),
+    0,
+  );
   const unitsLoading = itemQueries.some((q) => q.isLoading);
 
   const buckets = { fresh: 0, today: 0, stale: 0, critical: 0 };
