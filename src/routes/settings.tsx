@@ -476,10 +476,13 @@ function SettingsPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {!electron && (
+              {!electron && printers.length === 0 && (
                 <p className="rounded-md border border-dashed border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-                  You're in browser preview — printer enumeration only works in the packaged desktop
-                  app. For now, enter printer names manually below.
+                  No printers detected. Run the local print agent on this PC
+                  (<code>node agent.cjs</code> from the{" "}
+                  <code>local-print-agent</code> folder), then click{" "}
+                  <strong>Refresh</strong>. Alternatively, type printer names
+                  manually below.
                 </p>
               )}
               {printerSlots.map((slot) => (
