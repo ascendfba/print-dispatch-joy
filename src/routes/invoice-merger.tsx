@@ -133,6 +133,8 @@ function downloadBlob(blob: Blob, filename: string) {
 
 function InvoiceMergerPage() {
   const [take, setTake] = useState(50);
+  const [days, setDays] = useState<number>(30);
+  const [onePerClient, setOnePerClient] = useState(true);
   const [invoices, setInvoices] = useState<MintsoftInvoice[]>([]);
   const [items, setItems] = useState<ItemWithComment[]>([]);
   const [loadingInvoices, setLoadingInvoices] = useState(false);
@@ -151,14 +153,39 @@ function InvoiceMergerPage() {
     setItems([]);
     setSelectedClient("");
     try {
-      const all = await listInvoices(settings, { take });
-      const confirmed = all.filter((i) => isConfirmed(i.Status));
+      const opts: { take: number; from?: string; to?: string } = { take };
+      if (days > 0) {
+        const to = new Date();
+        const from = new Date();
+        from.setDate(from.getDate() - days);
+        opts.from = from.toISOString().slice(0, 10);
+        opts.to = to.toISOString().slice(0, 10);
+      }
+      const all = await listInvoices(settings, opts);
+      // Belt-and-braces client-side date filter in case the API ignored it.
+      const cutoff =
+        days > 0 ? Date.now() - days * 24 * 60 * 60 * 1000 : 0;
+      const inWindow = all.filter((i) => {
+        if (cutoff === 0) return true;
+        const t = i.InvoiceDate ? new Date(i.InvoiceDate).getTime() : 0;
+        return t >= cutoff;
+      });
+      let confirmed = inWindow.filter((i) => isConfirmed(i.Status));
       // sort newest first
       confirmed.sort((a, b) => {
         const ta = a.InvoiceDate ? new Date(a.InvoiceDate).getTime() : 0;
         const tb = b.InvoiceDate ? new Date(b.InvoiceDate).getTime() : 0;
         return tb - ta;
       });
+      if (onePerClient) {
+        const seen = new Set<string>();
+        confirmed = confirmed.filter((i) => {
+          const key = String(i.ClientId ?? i.ClientName ?? "unknown");
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      }
       setInvoices(confirmed);
       if (confirmed.length === 0) {
         toast.warning(
@@ -370,8 +397,23 @@ function InvoiceMergerPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex flex-wrap items-end gap-3">
+            <div className="grid w-36 gap-1">
+              <Label htmlFor="days">Date range</Label>
+              <select
+                id="days"
+                className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                value={days}
+                onChange={(e) => setDays(Number(e.target.value))}
+              >
+                <option value={7}>Last 7 days</option>
+                <option value={30}>Last 30 days</option>
+                <option value={60}>Last 60 days</option>
+                <option value={90}>Last 90 days</option>
+                <option value={0}>All (use limit)</option>
+              </select>
+            </div>
             <div className="grid w-32 gap-1">
-              <Label htmlFor="take">Look at latest</Label>
+              <Label htmlFor="take">Max to scan</Label>
               <Input
                 id="take"
                 type="number"
@@ -382,6 +424,14 @@ function InvoiceMergerPage() {
                 onChange={(e) => setTake(Math.max(10, Number(e.target.value) || 50))}
               />
             </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={onePerClient}
+                onChange={(e) => setOnePerClient(e.target.checked)}
+              />
+              Most recent per client only
+            </label>
             <Button onClick={pullInvoices} disabled={loadingInvoices}>
               {loadingInvoices ? (
                 <Loader2 className="mr-1 h-4 w-4 animate-spin" />
