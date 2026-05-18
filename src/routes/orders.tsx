@@ -743,32 +743,81 @@ function OrdersPage() {
       </div>
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <Card className="py-0">
-          <CardContent className="p-3">
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">
-              Ready for dispatch
-            </div>
-            <div className="grid grid-cols-5 gap-2">
-              {statCards.map((s) => (
-                <div key={s.key} className="rounded-md border px-2 py-1.5">
+        <div className="space-y-3">
+          <Card className="py-0">
+            <CardContent className="p-3">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">
+                Ready for dispatch
+              </div>
+              <div className="grid grid-cols-5 gap-2">
+                {statCards.map((s) => (
+                  <div key={s.key} className="rounded-md border px-2 py-1.5">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">
+                        {s.label}
+                      </span>
+                      {s.key === "total" ? (
+                        <Package className="h-3 w-3 text-muted-foreground shrink-0" />
+                      ) : (
+                        <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
+                      )}
+                    </div>
+                    <div className={`text-lg font-semibold tabular-nums leading-tight ${s.tone}`}>
+                      {s.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="py-0">
+            <CardContent className="p-3">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">
+                Order volume rate <span className="normal-case tracking-normal">(09:00–17:00)</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="rounded-md border px-2 py-1.5">
                   <div className="flex items-center justify-between gap-1">
                     <span className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">
-                      {s.label}
+                      Actual /hr
                     </span>
-                    {s.key === "total" ? (
-                      <Package className="h-3 w-3 text-muted-foreground shrink-0" />
-                    ) : (
-                      <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
-                    )}
+                    <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
                   </div>
-                  <div className={`text-lg font-semibold tabular-nums leading-tight ${s.tone}`}>
-                    {s.value}
+                  <div className="text-lg font-semibold tabular-nums leading-tight">
+                    {todayTotals.loading ? "…" : volumeRate.actual}
                   </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                <div className="rounded-md border px-2 py-1.5">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">
+                      Required /hr
+                    </span>
+                    <Package className="h-3 w-3 text-muted-foreground shrink-0" />
+                  </div>
+                  <div
+                    className={`text-lg font-semibold tabular-nums leading-tight ${
+                      volumeRate.required > volumeRate.actual ? "text-destructive" : "text-emerald-600"
+                    }`}
+                  >
+                    {outstandingUnits.loading ? "…" : volumeRate.required}
+                  </div>
+                </div>
+                <div className="rounded-md border px-2 py-1.5">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">
+                      Hours left
+                    </span>
+                    <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
+                  </div>
+                  <div className="text-lg font-semibold tabular-nums leading-tight">
+                    {volumeRate.hoursLeft}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         <div className="space-y-3">
           <Card className="py-0">
