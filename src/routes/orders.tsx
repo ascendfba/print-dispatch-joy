@@ -655,15 +655,15 @@ function OrdersPage() {
   ];
 
   const todayCards: Array<{ key: string; label: string; value: number | string }> = [
-    { key: "orders-today", label: "Orders despatched today", value: despatchedToday.length },
+    { key: "orders-today", label: "Orders", value: despatchedToday.length },
     {
       key: "units-today",
-      label: "Units despatched today",
+      label: "Units",
       value: todayTotals.loading ? "…" : todayTotals.units,
     },
     {
       key: "bundles-today",
-      label: "Bundles despatched today",
+      label: "Bundles",
       value: todayTotals.loading ? "…" : todayTotals.bundles,
     },
   ];
