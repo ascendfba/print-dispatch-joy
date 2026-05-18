@@ -152,6 +152,22 @@ const sections: Section[] = [
       },
     ],
   },
+  {
+    key: "finance",
+    title: "Finance",
+    icon: Wallet,
+    description: "Invoicing, charges and accounting.",
+    tiles: [
+      {
+        key: "invoice-merger",
+        title: "Invoice Merger",
+        description: "Combine Mintsoft invoice CSV with rework charges and order comments.",
+        icon: Receipt,
+        href: "https://invoice-merger.lovable.app/",
+        brandColor: "059669",
+      },
+    ],
+  },
 ];
 
 function UpsDeadlineTimer() {
