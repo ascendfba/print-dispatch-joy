@@ -1029,6 +1029,29 @@ export async function addOrderComment(
   });
 }
 
+export type MintsoftOrderComment = {
+  Comment?: string | null;
+  CreatedDate?: string | null;
+  CreatedBy?: string | null;
+  Admin?: boolean | null;
+  [k: string]: unknown;
+};
+
+export async function fetchOrderComments(
+  settings: Settings,
+  orderId: number,
+): Promise<MintsoftOrderComment[]> {
+  try {
+    const data = await authedJson<MintsoftOrderComment[] | { Results?: MintsoftOrderComment[] }>(
+      settings,
+      `/api/Order/${orderId}/Comments`,
+    );
+    return Array.isArray(data) ? data : (data?.Results ?? []);
+  } catch {
+    return [];
+  }
+}
+
 export async function addTrackingNumber(
   settings: Settings,
   orderId: number,

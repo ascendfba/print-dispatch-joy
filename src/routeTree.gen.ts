@@ -15,6 +15,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as MfaRouteImport } from './routes/mfa'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as InvoiceMergerRouteImport } from './routes/invoice-merger'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as FbaCalculatorRouteImport } from './routes/fba-calculator'
 import { Route as DevelopmentRouteImport } from './routes/development'
@@ -60,6 +61,11 @@ const MfaRoute = MfaRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvoiceMergerRoute = InvoiceMergerRouteImport.update({
+  id: '/invoice-merger',
+  path: '/invoice-merger',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -149,6 +155,7 @@ export interface FileRoutesByFullPath {
   '/development': typeof DevelopmentRoute
   '/fba-calculator': typeof FbaCalculatorRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/invoice-merger': typeof InvoiceMergerRoute
   '/login': typeof LoginRoute
   '/mfa': typeof MfaRoute
   '/orders': typeof OrdersRoute
@@ -173,6 +180,7 @@ export interface FileRoutesByTo {
   '/development': typeof DevelopmentRoute
   '/fba-calculator': typeof FbaCalculatorRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/invoice-merger': typeof InvoiceMergerRoute
   '/login': typeof LoginRoute
   '/mfa': typeof MfaRoute
   '/orders': typeof OrdersRoute
@@ -198,6 +206,7 @@ export interface FileRoutesById {
   '/development': typeof DevelopmentRoute
   '/fba-calculator': typeof FbaCalculatorRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/invoice-merger': typeof InvoiceMergerRoute
   '/login': typeof LoginRoute
   '/mfa': typeof MfaRoute
   '/orders': typeof OrdersRoute
@@ -224,6 +233,7 @@ export interface FileRouteTypes {
     | '/development'
     | '/fba-calculator'
     | '/forgot-password'
+    | '/invoice-merger'
     | '/login'
     | '/mfa'
     | '/orders'
@@ -248,6 +258,7 @@ export interface FileRouteTypes {
     | '/development'
     | '/fba-calculator'
     | '/forgot-password'
+    | '/invoice-merger'
     | '/login'
     | '/mfa'
     | '/orders'
@@ -272,6 +283,7 @@ export interface FileRouteTypes {
     | '/development'
     | '/fba-calculator'
     | '/forgot-password'
+    | '/invoice-merger'
     | '/login'
     | '/mfa'
     | '/orders'
@@ -297,6 +309,7 @@ export interface RootRouteChildren {
   DevelopmentRoute: typeof DevelopmentRoute
   FbaCalculatorRoute: typeof FbaCalculatorRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  InvoiceMergerRoute: typeof InvoiceMergerRoute
   LoginRoute: typeof LoginRoute
   MfaRoute: typeof MfaRoute
   OrdersRoute: typeof OrdersRoute
@@ -358,6 +371,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invoice-merger': {
+      id: '/invoice-merger'
+      path: '/invoice-merger'
+      fullPath: '/invoice-merger'
+      preLoaderRoute: typeof InvoiceMergerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -481,6 +501,7 @@ const rootRouteChildren: RootRouteChildren = {
   DevelopmentRoute: DevelopmentRoute,
   FbaCalculatorRoute: FbaCalculatorRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  InvoiceMergerRoute: InvoiceMergerRoute,
   LoginRoute: LoginRoute,
   MfaRoute: MfaRoute,
   OrdersRoute: OrdersRoute,
