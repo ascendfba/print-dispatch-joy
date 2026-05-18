@@ -73,6 +73,10 @@ function SettingsPage() {
   const [testing, setTesting] = useState(false);
   const [checkingDb, setCheckingDb] = useState(false);
   const [clients, setClients] = useState<MintsoftClient[]>([]);
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    if (typeof window === "undefined") return "system";
+    return (localStorage.getItem(THEME_KEY) as ThemeMode | null) ?? "system";
+  });
   const fileRef = useRef<HTMLInputElement | null>(null);
   const fetchPricing = useServerFn(listPricing);
   const persistPricing = useServerFn(savePricing);
@@ -128,6 +132,16 @@ function SettingsPage() {
         // Not signed in or table missing — keep localStorage value.
       });
   }, []);
+
+  useEffect(() => {
+    applyTheme(theme);
+    localStorage.setItem(THEME_KEY, theme);
+    if (theme !== "system") return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => applyTheme("system");
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, [theme]);
 
   async function refreshPrinters() {
     const list = await listInstalledPrinters();
