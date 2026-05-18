@@ -567,36 +567,16 @@ function InvoiceMergerPage() {
                           )}
                         </td>
                         <td className="px-3 py-2 text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setSelectedClient(key);
-                                downloadClientCsv(key);
-                              }}
-                            >
-                              <Download className="mr-1 h-3 w-3" /> CSV
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              disabled={!webhookUrl || sendingClient === key}
-                              onClick={() => sendClientToWebhook(g)}
-                              title={
-                                webhookUrl
-                                  ? "Send to your webhook (Zapier → QuickBooks)"
-                                  : "Add a webhook URL below first"
-                              }
-                            >
-                              {sendingClient === key ? (
-                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                              ) : (
-                                <Send className="mr-1 h-3 w-3" />
-                              )}
-                              Send
-                            </Button>
-                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedClient(key);
+                              downloadClientCsv(key);
+                            }}
+                          >
+                            <Download className="mr-1 h-3 w-3" /> CSV
+                          </Button>
                         </td>
                       </tr>
                     );
@@ -612,23 +592,6 @@ function InvoiceMergerPage() {
                   ?.clientName ?? ""}
               </p>
             )}
-
-            <div className="mt-4 rounded-md border bg-muted/30 p-3">
-              <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-                <Webhook className="h-4 w-4" /> QuickBooks webhook (Zapier / Make)
-              </div>
-              <p className="mb-2 text-xs text-muted-foreground">
-                Paste a webhook URL that creates an invoice in QuickBooks (e.g.
-                a Zapier "Webhooks by Zapier → QuickBooks Online: Create
-                Invoice" Zap). Each <em>Send</em> posts the client's merged
-                invoice JSON to this URL.
-              </p>
-              <Input
-                placeholder="https://hooks.zapier.com/hooks/catch/..."
-                value={webhookUrl}
-                onChange={(e) => saveWebhookUrl(e.target.value)}
-              />
-            </div>
           </CardContent>
         </Card>
       )}
