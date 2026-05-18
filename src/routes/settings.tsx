@@ -488,7 +488,7 @@ function SettingsPage() {
                     <div className="text-sm font-medium">{slot.title}</div>
                     <div className="text-xs text-muted-foreground">{slot.desc}</div>
                   </div>
-                  {electron && printers.length > 0 ? (
+                  {printers.length > 0 ? (
                     <Select
                       value={settings.printers[slot.key] || undefined}
                       onValueChange={(v) => setPrinter(slot.key, v)}
