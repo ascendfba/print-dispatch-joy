@@ -983,6 +983,16 @@ function ReworkChargesCard({
       return;
     }
     const settings = loadSettings();
+    const missingRates = entries.filter(
+      (e) => getRate(settings.reworkRates ?? {}, clientId, e.key) == null,
+    );
+    if (missingRates.length > 0) {
+      const list = missingRates.map((m) => `• ${m.label}`).join("\n");
+      const ok = window.confirm(
+        `Warning: no rate is set for this client on the following lines:\n\n${list}\n\nThese will be submitted with no charge applied. Proceed anyway?`,
+      );
+      if (!ok) return;
+    }
     setSubmitting(true);
     try {
       // Uniform inline format, e.g.:
