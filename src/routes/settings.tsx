@@ -324,15 +324,44 @@ function SettingsPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
         <p className="text-sm text-muted-foreground">
-          Configure Mintsoft access and printer routing.
+          Appearance, security, integrations and client pricing — all in one place.
         </p>
       </div>
 
-      <TwoFactorCard />
+      <Tabs defaultValue="general" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="pricing">Client Pricing</TabsTrigger>
+        </TabsList>
 
-      <TrustedDeviceCard />
+        <TabsContent value="general" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Appearance</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Label htmlFor="theme">App color theme</Label>
+              <Select
+                value={theme}
+                onValueChange={(v) => setTheme(v as ThemeMode)}
+              >
+                <SelectTrigger id="theme" className="w-60">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="light">Light</SelectItem>
+                  <SelectItem value="dark">Dark</SelectItem>
+                  <SelectItem value="system">Match system</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Saved on this device and applied instantly.
+              </p>
+            </CardContent>
+          </Card>
 
-      <Card>
+          <Card>
         <CardHeader>
           <CardTitle>Mintsoft API</CardTitle>
         </CardHeader>
@@ -461,8 +490,15 @@ function SettingsPage() {
           </Button>
         </CardContent>
       </Card>
+        </TabsContent>
 
-      <Card>
+        <TabsContent value="security" className="space-y-6">
+          <TwoFactorCard />
+          <TrustedDeviceCard />
+        </TabsContent>
+
+        <TabsContent value="pricing" className="space-y-6">
+          <Card>
         <CardHeader className="flex-row items-center justify-between">
           <CardTitle>Rework charges (per client)</CardTitle>
           <div className="flex gap-2">
@@ -592,6 +628,8 @@ function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
