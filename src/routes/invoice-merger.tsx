@@ -22,8 +22,6 @@ import {
   FileArchive,
   CheckCircle2,
   AlertTriangle,
-  Webhook,
-  Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import { loadSettings } from "@/lib/storage";
@@ -143,75 +141,6 @@ function InvoiceMergerPage() {
   const [fetchingComments, setFetchingComments] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number; label: string } | null>(null);
   const [selectedClient, setSelectedClient] = useState<string>("");
-  const [webhookUrl, setWebhookUrl] = useState<string>(() => {
-    if (typeof window === "undefined") return "";
-    return window.localStorage.getItem("qb-webhook-url") ?? "";
-  });
-  const [sendingClient, setSendingClient] = useState<string | null>(null);
-
-  function saveWebhookUrl(v: string) {
-    setWebhookUrl(v);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem("qb-webhook-url", v);
-    }
-  }
-
-  async function sendClientToWebhook(g: ClientGroup) {
-    if (!webhookUrl) {
-      toast.error("Add a webhook URL first.");
-      return;
-    }
-    const key = String(g.clientId);
-    setSendingClient(key);
-    const invById = new Map<number, MintsoftInvoice>();
-    for (const inv of g.invoices) invById.set(inv.ID, inv);
-    const payload = {
-      source: "ascend-invoice-merger",
-      sentAt: new Date().toISOString(),
-      client: { id: g.clientId, name: g.clientName },
-      invoices: g.invoices.map((inv) => ({
-        id: inv.ID,
-        number: inv.InvoiceNumber ?? String(inv.ID),
-        date: inv.InvoiceDate,
-        status: inv.Status,
-      })),
-      totals: {
-        lineItems: g.items.length,
-        reworkCharges: g.items.reduce((s, it) => s + (it._charge ?? 0), 0),
-      },
-      items: g.items.map((it) => {
-        const inv = it.InvoiceId != null ? invById.get(it.InvoiceId) : undefined;
-        return {
-          invoiceId: it.InvoiceId,
-          invoiceNumber: inv?.InvoiceNumber ?? (inv ? String(inv.ID) : null),
-          orderId: it.OrderId,
-          orderNumber: it.OrderNumber,
-          description: it.Description,
-          quantity: it.Quantity,
-          unitPrice: it.UnitPrice,
-          totalPrice: it.TotalPrice,
-          reworkCost: it.ReworkCost,
-          parsedReworkCharge: it._charge,
-          comment: it._comment,
-        };
-      }),
-    };
-    try {
-      await fetch(webhookUrl, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      toast.success(
-        `Sent ${g.clientName} to webhook — check your Zap history to confirm.`,
-      );
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Webhook send failed");
-    } finally {
-      setSendingClient(null);
-    }
-  }
 
   async function pullInvoices() {
     const settings = loadSettings();
