@@ -48,6 +48,7 @@ import { Clock, Loader2, Package, Printer, RefreshCw, Truck, X } from "lucide-re
 import { PDFDocument } from "pdf-lib";
 import { PdfPreview } from "@/components/PdfPreview";
 import { useQueries } from "@tanstack/react-query";
+import { QuickPrintCard } from "@/components/QuickPrintCard";
 
 const isPickingListDoc = (d: { label: string; fileName?: string }) =>
   /pick(ing)?\s*list|despatch\s*note|dispatch\s*note/i.test(d.label) ||
@@ -841,6 +842,7 @@ function OrdersPage() {
               </div>
             </CardContent>
           </Card>
+          <QuickPrintCard mode="print" />
         </div>
       </div>
 
