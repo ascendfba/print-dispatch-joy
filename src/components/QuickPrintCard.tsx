@@ -13,6 +13,7 @@ type Slot = {
   key: string;
   title: string;
   description: string;
+  printerKind: "small" | "large" | "other";
 };
 
 const SLOTS: Slot[] = [
@@ -20,11 +21,13 @@ const SLOTS: Slot[] = [
     key: "carton",
     title: "Carton warning labels (+15kg)",
     description: "Heavy-carton warning sticker.",
+    printerKind: "large",
   },
   {
     key: "poly",
     title: "Poly Bag Suffocation Labels",
     description: "Suffocation warning for poly bags.",
+    printerKind: "small",
   },
 ];
 
@@ -129,11 +132,10 @@ function QuickPrintSlot({ slot }: { slot: Slot }) {
       }
       const out = await merged.save();
       const settings = loadSettings();
-      const size = await detectFromBytes(out);
-      const printer = pickPrinter(settings, size.kind);
+      const printer = pickPrinter(settings, slot.printerKind);
       if (!printer) {
         throw new Error(
-          `No printer set for ${size.kind} (${size.widthMm}×${size.heightMm} mm). Set one in Settings.`,
+          `No ${slot.printerKind} printer configured. Set one in Settings.`,
         );
       }
       await printPdfBytes(out, printer, settings.silentPrint);
