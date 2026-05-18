@@ -22,6 +22,8 @@ import {
   FileArchive,
   CheckCircle2,
   AlertTriangle,
+  Webhook,
+  Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import { loadSettings } from "@/lib/storage";
@@ -141,6 +143,75 @@ function InvoiceMergerPage() {
   const [fetchingComments, setFetchingComments] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number; label: string } | null>(null);
   const [selectedClient, setSelectedClient] = useState<string>("");
+  const [webhookUrl, setWebhookUrl] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return window.localStorage.getItem("qb-webhook-url") ?? "";
+  });
+  const [sendingClient, setSendingClient] = useState<string | null>(null);
+
+  function saveWebhookUrl(v: string) {
+    setWebhookUrl(v);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("qb-webhook-url", v);
+    }
+  }
+
+  async function sendClientToWebhook(g: ClientGroup) {
+    if (!webhookUrl) {
+      toast.error("Add a webhook URL first.");
+      return;
+    }
+    const key = String(g.clientId);
+    setSendingClient(key);
+    const invById = new Map<number, MintsoftInvoice>();
+    for (const inv of g.invoices) invById.set(inv.ID, inv);
+    const payload = {
+      source: "ascend-invoice-merger",
+      sentAt: new Date().toISOString(),
+      client: { id: g.clientId, name: g.clientName },
+      invoices: g.invoices.map((inv) => ({
+        id: inv.ID,
+        number: inv.InvoiceNumber ?? String(inv.ID),
+        date: inv.InvoiceDate,
+        status: inv.Status,
+      })),
+      totals: {
+        lineItems: g.items.length,
+        reworkCharges: g.items.reduce((s, it) => s + (it._charge ?? 0), 0),
+      },
+      items: g.items.map((it) => {
+        const inv = it.InvoiceId != null ? invById.get(it.InvoiceId) : undefined;
+        return {
+          invoiceId: it.InvoiceId,
+          invoiceNumber: inv?.InvoiceNumber ?? (inv ? String(inv.ID) : null),
+          orderId: it.OrderId,
+          orderNumber: it.OrderNumber,
+          description: it.Description,
+          quantity: it.Quantity,
+          unitPrice: it.UnitPrice,
+          totalPrice: it.TotalPrice,
+          reworkCost: it.ReworkCost,
+          parsedReworkCharge: it._charge,
+          comment: it._comment,
+        };
+      }),
+    };
+    try {
+      await fetch(webhookUrl, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      toast.success(
+        `Sent ${g.clientName} to webhook — check your Zap history to confirm.`,
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Webhook send failed");
+    } finally {
+      setSendingClient(null);
+    }
+  }
 
   async function pullInvoices() {
     const settings = loadSettings();
@@ -567,16 +638,36 @@ function InvoiceMergerPage() {
                           )}
                         </td>
                         <td className="px-3 py-2 text-right">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedClient(key);
-                              downloadClientCsv(key);
-                            }}
-                          >
-                            <Download className="mr-1 h-3 w-3" /> CSV
-                          </Button>
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedClient(key);
+                                downloadClientCsv(key);
+                              }}
+                            >
+                              <Download className="mr-1 h-3 w-3" /> CSV
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              disabled={!webhookUrl || sendingClient === key}
+                              onClick={() => sendClientToWebhook(g)}
+                              title={
+                                webhookUrl
+                                  ? "Send to your webhook (Zapier → QuickBooks)"
+                                  : "Add a webhook URL below first"
+                              }
+                            >
+                              {sendingClient === key ? (
+                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                              ) : (
+                                <Send className="mr-1 h-3 w-3" />
+                              )}
+                              Send
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -592,6 +683,23 @@ function InvoiceMergerPage() {
                   ?.clientName ?? ""}
               </p>
             )}
+
+            <div className="mt-4 rounded-md border bg-muted/30 p-3">
+              <div className="mb-2 flex items-center gap-2 text-sm font-medium">
+                <Webhook className="h-4 w-4" /> QuickBooks webhook (Zapier / Make)
+              </div>
+              <p className="mb-2 text-xs text-muted-foreground">
+                Paste a webhook URL that creates an invoice in QuickBooks (e.g.
+                a Zapier "Webhooks by Zapier → QuickBooks Online: Create
+                Invoice" Zap). Each <em>Send</em> posts the client's merged
+                invoice JSON to this URL.
+              </p>
+              <Input
+                placeholder="https://hooks.zapier.com/hooks/catch/..."
+                value={webhookUrl}
+                onChange={(e) => saveWebhookUrl(e.target.value)}
+              />
+            </div>
           </CardContent>
         </Card>
       )}
