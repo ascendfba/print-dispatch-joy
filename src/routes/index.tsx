@@ -18,6 +18,8 @@ import {
   Contact2,
   Target,
   FolderCode,
+  Wallet,
+  Receipt,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -147,6 +149,22 @@ const sections: Section[] = [
         icon: FolderCode,
         to: "/development",
         brandColor: "8b5cf6",
+      },
+    ],
+  },
+  {
+    key: "finance",
+    title: "Finance",
+    icon: Wallet,
+    description: "Invoicing, charges and accounting.",
+    tiles: [
+      {
+        key: "invoice-merger",
+        title: "Invoice Merger",
+        description: "Combine Mintsoft invoice CSV with rework charges and order comments.",
+        icon: Receipt,
+        href: "https://invoice-merger.lovable.app/",
+        brandColor: "059669",
       },
     ],
   },
