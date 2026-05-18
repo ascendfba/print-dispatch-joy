@@ -613,9 +613,11 @@ function SettingsPage() {
           })()}
           <p className="text-xs text-muted-foreground">
             Rates in GBP per unit. Blank = no rate (falls back to Default).
-            CSV columns: <code>ClientID, ClientName, Code, Label, RatePerUnit</code>.
-            Use <code>*</code> as ClientID for the Default row. Codes:{" "}
-            {REWORK_CATALOG.map((c) => c.key).join(", ")}.
+            CSV layout: services across the top row, clients down the left
+            column (<code>ClientID</code>, <code>ClientName</code>, then one
+            column per service). Use <code>*</code> as ClientID for the
+            Default row. The hidden second row carries machine codes — leave
+            it in place when re-importing.
             {clients.length === 0 && (
               <> Connect to Mintsoft to load your client list.</>
             )}
