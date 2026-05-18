@@ -78,10 +78,23 @@ function isConfirmed(status: string | null | undefined): boolean {
 }
 
 function buildClientCsv(group: ClientGroup): string {
-  const headers = [
+  const invById = new Map<number, MintsoftInvoice>();
+  for (const inv of group.invoices) invById.set(inv.ID, inv);
+
+  // Invoice-level columns we always lead with.
+  const invoiceCols = [
     "InvoiceNumber",
     "InvoiceDate",
     "InvoiceStatus",
+    "InvoiceTotalNet",
+    "InvoiceTotalTax",
+    "InvoiceTotalValue",
+  ];
+
+  // Preferred order for the most-used line-item columns; any remaining keys
+  // from the raw Mintsoft payload (storage charges, pick/pack fees, etc.)
+  // are appended after, alphabetically, so nothing is dropped.
+  const preferredItemCols = [
     "OrderId",
     "OrderNumber",
     "Description",
@@ -89,30 +102,59 @@ function buildClientCsv(group: ClientGroup): string {
     "UnitPrice",
     "TotalPrice",
     "ReworkCost",
-    "ParsedReworkCharge",
-    "OrderComment",
   ];
-  const invById = new Map<number, MintsoftInvoice>();
-  for (const inv of group.invoices) invById.set(inv.ID, inv);
+  const skipItemCols = new Set([
+    "InvoiceId",
+    "InvoiceSummaryId",
+    "_comment",
+    "_charge",
+  ]);
+
+  const extraKeys = new Set<string>();
+  for (const it of group.items) {
+    for (const k of Object.keys(it)) {
+      if (skipItemCols.has(k)) continue;
+      if (preferredItemCols.includes(k)) continue;
+      extraKeys.add(k);
+    }
+  }
+  const itemCols = [
+    ...preferredItemCols,
+    ...Array.from(extraKeys).sort((a, b) => a.localeCompare(b)),
+  ];
+
+  const trailingCols = ["ParsedReworkCharge", "OrderComment"];
+  const headers = [...invoiceCols, ...itemCols, ...trailingCols];
+
+  const formatCell = (v: unknown): string => {
+    if (v == null) return "";
+    if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") {
+      return csvField(v as string | number);
+    }
+    try {
+      return csvField(JSON.stringify(v));
+    } catch {
+      return "";
+    }
+  };
+
   const lines: string[] = [headers.join(",")];
   for (const it of group.items) {
     const inv = it.InvoiceId != null ? invById.get(it.InvoiceId) : undefined;
-    lines.push(
-      [
-        csvField(inv?.InvoiceNumber ?? ""),
-        csvField(inv?.InvoiceDate ?? ""),
-        csvField(inv?.Status ?? ""),
-        csvField(it.OrderId ?? ""),
-        csvField(it.OrderNumber ?? ""),
-        csvField(it.Description ?? ""),
-        csvField(it.Quantity ?? ""),
-        csvField(it.UnitPrice ?? ""),
-        csvField(it.TotalPrice ?? ""),
-        csvField(it.ReworkCost ?? ""),
-        csvField(it._charge != null ? it._charge.toFixed(2) : ""),
-        csvField(it._comment ?? ""),
-      ].join(","),
-    );
+    const row: string[] = [
+      csvField(inv?.InvoiceNumber ?? ""),
+      csvField(inv?.InvoiceDate ?? ""),
+      csvField(inv?.Status ?? ""),
+      csvField(inv?.TotalNet ?? ""),
+      csvField(inv?.TotalTax ?? ""),
+      csvField(inv?.TotalValue ?? ""),
+    ];
+    for (const col of itemCols) {
+      row.push(formatCell((it as Record<string, unknown>)[col]));
+    }
+    row.push(csvField(it._charge != null ? it._charge.toFixed(2) : ""));
+    row.push(csvField(it._comment ?? ""));
+    lines.push(row.join(","));
   }
   return lines.join("\n") + "\n";
 }
