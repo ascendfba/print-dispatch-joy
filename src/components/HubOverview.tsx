@@ -158,6 +158,13 @@ export function HubOverview() {
                 <span>units total</span>
                 {unitsLoading && <Loader2 className="h-3 w-3 animate-spin" />}
               </div>
+              <div className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
+                <span className="tabular-nums font-medium text-foreground">
+                  {dueTodayBundles.toLocaleString()}
+                </span>
+                <span>bundles</span>
+                {unitsLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+              </div>
             </CardContent>
           </Card>
         </Link>
