@@ -163,7 +163,7 @@ const sections: Section[] = [
         title: "Invoice Merger",
         description: "Combine Mintsoft invoice CSV with rework charges and order comments.",
         icon: Receipt,
-        href: "https://invoice-merger.lovable.app/",
+        to: "/invoice-merger",
         brandColor: "059669",
       },
     ],
