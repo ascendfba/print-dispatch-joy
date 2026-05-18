@@ -145,8 +145,25 @@ function SettingsPage() {
   }, [theme]);
 
   async function refreshPrinters() {
-    const list = await listInstalledPrinters();
-    setPrinters(list);
+    const installed = await listInstalledPrinters();
+    let merged = [...installed];
+    // Also try the local print agent (http://127.0.0.1:9911/printers).
+    try {
+      const agentPort = localStorage.getItem("printAgentPort") || "9911";
+      const res = await fetch(`http://127.0.0.1:${agentPort}/printers`, {
+        signal: AbortSignal.timeout(3000),
+      });
+      if (res.ok) {
+        const json = (await res.json()) as { printers?: string[] };
+        if (Array.isArray(json.printers)) {
+          merged = Array.from(new Set([...merged, ...json.printers]));
+          if (!installed.length) toast.success(`Found ${json.printers.length} printer(s) via local agent`);
+        }
+      }
+    } catch {
+      /* agent not running — silent */
+    }
+    setPrinters(merged);
   }
 
   function update<K extends keyof Settings>(key: K, value: Settings[K]) {
