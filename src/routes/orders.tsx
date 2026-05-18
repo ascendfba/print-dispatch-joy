@@ -398,6 +398,52 @@ function OrdersPage() {
     return { units, bundles, loading };
   }, [todayItemsQueries]);
 
+  // Sum outstanding units across all ready-for-dispatch orders so we can
+  // compute the required throughput rate.
+  const outstandingItemsQueries = useQueries({
+    queries: (ordersQuery.data ?? []).map((o) => ({
+      queryKey: ["order-items", o.ID],
+      queryFn: () => fetchOrderItems(loadSettings(), o.ID),
+      staleTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+    })),
+  });
+
+  const outstandingUnits = useMemo(() => {
+    let units = 0;
+    let loading = false;
+    for (const q of outstandingItemsQueries) {
+      if (q.isLoading) loading = true;
+      for (const it of q.data ?? []) units += it.Quantity ?? 0;
+    }
+    return { units, loading };
+  }, [outstandingItemsQueries]);
+
+  // Order volume rate — staff shift is 09:00–17:00 (8 hours).
+  const volumeRate = useMemo(() => {
+    const now = new Date();
+    const shiftStart = new Date(now);
+    shiftStart.setHours(9, 0, 0, 0);
+    const shiftEnd = new Date(now);
+    shiftEnd.setHours(17, 0, 0, 0);
+    const msPerHour = 3_600_000;
+    const hoursWorked = Math.min(
+      8,
+      Math.max(0, (now.getTime() - shiftStart.getTime()) / msPerHour),
+    );
+    const hoursLeft = Math.max(
+      0,
+      Math.min(8, (shiftEnd.getTime() - now.getTime()) / msPerHour),
+    );
+    const actual = hoursWorked > 0 ? todayTotals.units / hoursWorked : 0;
+    const required = hoursLeft > 0 ? outstandingUnits.units / hoursLeft : outstandingUnits.units;
+    return {
+      actual: Math.round(actual),
+      required: Math.round(required),
+      hoursLeft: Math.round(hoursLeft * 10) / 10,
+    };
+  }, [todayTotals.units, outstandingUnits.units]);
+
   // Lazily fetch order items for each visible order so we can show units & FNSKU counts.
   function OrderItemsCell({ orderId, fallbackUnits }: { orderId: number; fallbackUnits?: number }) {
     const q = useQuery({
@@ -697,32 +743,81 @@ function OrdersPage() {
       </div>
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <Card className="py-0">
-          <CardContent className="p-3">
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">
-              Ready for dispatch
-            </div>
-            <div className="grid grid-cols-5 gap-2">
-              {statCards.map((s) => (
-                <div key={s.key} className="rounded-md border px-2 py-1.5">
+        <div className="space-y-3">
+          <Card className="py-0">
+            <CardContent className="p-3">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">
+                Ready for dispatch
+              </div>
+              <div className="grid grid-cols-5 gap-2">
+                {statCards.map((s) => (
+                  <div key={s.key} className="rounded-md border px-2 py-1.5">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">
+                        {s.label}
+                      </span>
+                      {s.key === "total" ? (
+                        <Package className="h-3 w-3 text-muted-foreground shrink-0" />
+                      ) : (
+                        <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
+                      )}
+                    </div>
+                    <div className={`text-lg font-semibold tabular-nums leading-tight ${s.tone}`}>
+                      {s.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="py-0">
+            <CardContent className="p-3">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">
+                Order volume rate <span className="normal-case tracking-normal">(09:00–17:00)</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="rounded-md border px-2 py-1.5">
                   <div className="flex items-center justify-between gap-1">
                     <span className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">
-                      {s.label}
+                      Actual /hr
                     </span>
-                    {s.key === "total" ? (
-                      <Package className="h-3 w-3 text-muted-foreground shrink-0" />
-                    ) : (
-                      <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
-                    )}
+                    <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
                   </div>
-                  <div className={`text-lg font-semibold tabular-nums leading-tight ${s.tone}`}>
-                    {s.value}
+                  <div className="text-lg font-semibold tabular-nums leading-tight">
+                    {todayTotals.loading ? "…" : volumeRate.actual}
                   </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                <div className="rounded-md border px-2 py-1.5">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">
+                      Required /hr
+                    </span>
+                    <Package className="h-3 w-3 text-muted-foreground shrink-0" />
+                  </div>
+                  <div
+                    className={`text-lg font-semibold tabular-nums leading-tight ${
+                      volumeRate.required > volumeRate.actual ? "text-destructive" : "text-emerald-600"
+                    }`}
+                  >
+                    {outstandingUnits.loading ? "…" : volumeRate.required}
+                  </div>
+                </div>
+                <div className="rounded-md border px-2 py-1.5">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">
+                      Hours left
+                    </span>
+                    <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
+                  </div>
+                  <div className="text-lg font-semibold tabular-nums leading-tight">
+                    {volumeRate.hoursLeft}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         <div className="space-y-3">
           <Card className="py-0">
