@@ -35,6 +35,7 @@ import {
 import { useServerFn } from "@tanstack/react-start";
 import { TwoFactorCard } from "@/components/TwoFactorCard";
 import { TrustedDeviceCard } from "@/components/TrustedDeviceCard";
+import { QuickPrintCard } from "@/components/QuickPrintCard";
 import {
   Table,
   TableBody,
@@ -437,6 +438,7 @@ function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="printer" className="space-y-6">
+          <QuickPrintCard />
           <Card>
             <CardHeader className="flex-row items-center justify-between">
               <CardTitle>Printer routing</CardTitle>
