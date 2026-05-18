@@ -332,6 +332,7 @@ function SettingsPage() {
         <TabsList>
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="printer">Printer</TabsTrigger>
           <TabsTrigger value="pricing">Client Pricing</TabsTrigger>
         </TabsList>
 
@@ -428,73 +429,76 @@ function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="flex-row items-center justify-between">
-          <CardTitle>Printer routing</CardTitle>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Switch
-                id="silent"
-                checked={settings.silentPrint}
-                onCheckedChange={(v) => update("silentPrint", !!v)}
-              />
-              <Label htmlFor="silent" className="text-sm">
-                Silent print
-              </Label>
-            </div>
-            <Button variant="outline" size="sm" onClick={refreshPrinters}>
-              <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {!electron && (
-            <p className="rounded-md border border-dashed border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-              You're in browser preview — printer enumeration only works in the packaged desktop
-              app. For now, enter printer names manually below.
-            </p>
-          )}
-          {printerSlots.map((slot) => (
-            <div key={slot.key} className="grid gap-2 md:grid-cols-[1fr_2fr] md:items-center">
-              <div>
-                <div className="text-sm font-medium">{slot.title}</div>
-                <div className="text-xs text-muted-foreground">{slot.desc}</div>
-              </div>
-              {electron && printers.length > 0 ? (
-                <Select
-                  value={settings.printers[slot.key] || undefined}
-                  onValueChange={(v) => setPrinter(slot.key, v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a printer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {printers.map((p) => (
-                      <SelectItem key={p} value={p}>
-                        {p}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Input
-                  value={settings.printers[slot.key]}
-                  onChange={(e) => setPrinter(slot.key, e.target.value)}
-                  placeholder="Printer name"
-                />
-              )}
-            </div>
-          ))}
-          <Button onClick={save}>
-            <Save className="mr-2 h-4 w-4" /> Save
-          </Button>
-        </CardContent>
-      </Card>
         </TabsContent>
 
         <TabsContent value="security" className="space-y-6">
           <TwoFactorCard />
           <TrustedDeviceCard />
+        </TabsContent>
+
+        <TabsContent value="printer" className="space-y-6">
+          <Card>
+            <CardHeader className="flex-row items-center justify-between">
+              <CardTitle>Printer routing</CardTitle>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="silent"
+                    checked={settings.silentPrint}
+                    onCheckedChange={(v) => update("silentPrint", !!v)}
+                  />
+                  <Label htmlFor="silent" className="text-sm">
+                    Silent print
+                  </Label>
+                </div>
+                <Button variant="outline" size="sm" onClick={refreshPrinters}>
+                  <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!electron && (
+                <p className="rounded-md border border-dashed border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+                  You're in browser preview — printer enumeration only works in the packaged desktop
+                  app. For now, enter printer names manually below.
+                </p>
+              )}
+              {printerSlots.map((slot) => (
+                <div key={slot.key} className="grid gap-2 md:grid-cols-[1fr_2fr] md:items-center">
+                  <div>
+                    <div className="text-sm font-medium">{slot.title}</div>
+                    <div className="text-xs text-muted-foreground">{slot.desc}</div>
+                  </div>
+                  {electron && printers.length > 0 ? (
+                    <Select
+                      value={settings.printers[slot.key] || undefined}
+                      onValueChange={(v) => setPrinter(slot.key, v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a printer" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {printers.map((p) => (
+                          <SelectItem key={p} value={p}>
+                            {p}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      value={settings.printers[slot.key]}
+                      onChange={(e) => setPrinter(slot.key, e.target.value)}
+                      placeholder="Printer name"
+                    />
+                  )}
+                </div>
+              ))}
+              <Button onClick={save}>
+                <Save className="mr-2 h-4 w-4" /> Save
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="pricing" className="space-y-6">
