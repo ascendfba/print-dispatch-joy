@@ -1100,6 +1100,7 @@ function normaliseInvoice(r: Record<string, unknown>): MintsoftInvoice {
     ClientName:
       (typeof r.ClientName === "string" && r.ClientName) ||
       (typeof r.Client === "string" && r.Client) ||
+      (typeof r.Name === "string" && r.Name) ||
       null,
     InvoiceDate:
       (typeof r.InvoiceDate === "string" && r.InvoiceDate) ||
@@ -1109,7 +1110,7 @@ function normaliseInvoice(r: Record<string, unknown>): MintsoftInvoice {
     Status:
       (typeof r.Status === "string" && r.Status) ||
       (typeof r.InvoiceStatus === "string" && r.InvoiceStatus) ||
-      null,
+      "Confirmed",
     TotalValue:
       typeof r.TotalValue === "number"
         ? r.TotalValue
@@ -1132,13 +1133,12 @@ export async function listInvoices(
 ): Promise<MintsoftInvoice[]> {
   const take = opts.take ?? 100;
   const qs = new URLSearchParams();
-  qs.set("Take", String(take));
-  if (opts.from) qs.set("DateFrom", opts.from);
-  if (opts.to) qs.set("DateTo", opts.to);
+  qs.set("PageNo", "1");
+  qs.set("Limit", String(take));
+  if (opts.from) qs.set("SinceDate", opts.from);
   const paths = [
-    `/api/Account/Invoice?${qs.toString()}`,
-    `/api/Account/Invoice/List?${qs.toString()}`,
-    `/api/Accounting/Invoice?${qs.toString()}`,
+    `/api/Accounting/Invoice/List?${qs.toString()}`,
+    `/api/Accounting/Invoice/All`,
   ];
   for (const p of paths) {
     try {
@@ -1161,24 +1161,53 @@ export async function fetchInvoiceItems(
   invoiceId: number,
 ): Promise<MintsoftInvoiceItem[]> {
   const paths = [
-    `/api/Account/Invoice/${invoiceId}/Items`,
-    `/api/Account/Invoice/${invoiceId}`,
-    `/api/Accounting/Invoice/${invoiceId}/Items`,
+    `/api/Accounting/Invoice/${invoiceId}/Orders`,
+    `/api/Accounting/Invoice/${invoiceId}`,
   ];
   for (const p of paths) {
     try {
       const data = await authedJson<
-        | MintsoftInvoiceItem[]
-        | { Items?: MintsoftInvoiceItem[]; InvoiceItems?: MintsoftInvoiceItem[] }
+        | Record<string, unknown>[]
+        | {
+            Items?: Record<string, unknown>[];
+            InvoiceItems?: Record<string, unknown>[];
+            Orders?: Record<string, unknown>[];
+          }
       >(settings, p);
-      if (Array.isArray(data)) return data;
-      if (Array.isArray(data?.Items)) return data.Items;
-      if (Array.isArray(data?.InvoiceItems)) return data.InvoiceItems;
+      const arr = Array.isArray(data)
+        ? data
+        : (data?.Orders ?? data?.Items ?? data?.InvoiceItems ?? null);
+      if (Array.isArray(arr)) {
+        return arr.map((r) => normaliseInvoiceItem(r, invoiceId));
+      }
     } catch {
       /* try next */
     }
   }
   return [];
+}
+
+function normaliseInvoiceItem(
+  r: Record<string, unknown>,
+  invoiceId: number,
+): MintsoftInvoiceItem {
+  const num = (v: unknown): number | null =>
+    typeof v === "number" && Number.isFinite(v) ? v : null;
+  const str = (v: unknown): string | null =>
+    typeof v === "string" && v ? v : null;
+  return {
+    ...r,
+    ID: typeof r.ID === "number" ? r.ID : undefined,
+    InvoiceId:
+      num(r.InvoiceSummaryId) ?? num(r.InvoiceId) ?? invoiceId,
+    OrderId: num(r.OrderId),
+    OrderNumber: str(r.OrderNumber) ?? str(r.OrderRef),
+    Description: str(r.Description) ?? str(r.Comments),
+    Quantity: num(r.Quantity) ?? num(r.NumberOfPicks),
+    UnitPrice: num(r.UnitPrice),
+    TotalPrice: num(r.TotalPrice) ?? num(r.TotalCost),
+    ReworkCost: num(r.ReworkCost),
+  };
 }
 
 export async function addTrackingNumber(
