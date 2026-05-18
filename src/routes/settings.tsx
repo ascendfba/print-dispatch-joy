@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   defaultSettings,
@@ -49,6 +50,18 @@ function normalizeMintsoftBaseUrl(value: string): string {
   return trimmed.replace(/\/api\/auth$/i, "").replace(/\/api$/i, "");
 }
 
+type ThemeMode = "light" | "dark" | "system";
+const THEME_KEY = "app:theme";
+
+function applyTheme(mode: ThemeMode) {
+  const root = document.documentElement;
+  const isDark =
+    mode === "dark" ||
+    (mode === "system" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches);
+  root.classList.toggle("dark", isDark);
+}
+
 export const Route = createFileRoute("/settings")({
   beforeLoad: ({ location }) => requireAuth(location),
   component: SettingsPage,
@@ -60,6 +73,10 @@ function SettingsPage() {
   const [testing, setTesting] = useState(false);
   const [checkingDb, setCheckingDb] = useState(false);
   const [clients, setClients] = useState<MintsoftClient[]>([]);
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    if (typeof window === "undefined") return "system";
+    return (localStorage.getItem(THEME_KEY) as ThemeMode | null) ?? "system";
+  });
   const fileRef = useRef<HTMLInputElement | null>(null);
   const fetchPricing = useServerFn(listPricing);
   const persistPricing = useServerFn(savePricing);
@@ -115,6 +132,16 @@ function SettingsPage() {
         // Not signed in or table missing — keep localStorage value.
       });
   }, []);
+
+  useEffect(() => {
+    applyTheme(theme);
+    localStorage.setItem(THEME_KEY, theme);
+    if (theme !== "system") return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => applyTheme("system");
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, [theme]);
 
   async function refreshPrinters() {
     const list = await listInstalledPrinters();
@@ -297,15 +324,44 @@ function SettingsPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
         <p className="text-sm text-muted-foreground">
-          Configure Mintsoft access and printer routing.
+          Appearance, security, integrations and client pricing — all in one place.
         </p>
       </div>
 
-      <TwoFactorCard />
+      <Tabs defaultValue="general" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="pricing">Client Pricing</TabsTrigger>
+        </TabsList>
 
-      <TrustedDeviceCard />
+        <TabsContent value="general" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Appearance</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Label htmlFor="theme">App color theme</Label>
+              <Select
+                value={theme}
+                onValueChange={(v) => setTheme(v as ThemeMode)}
+              >
+                <SelectTrigger id="theme" className="w-60">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="light">Light</SelectItem>
+                  <SelectItem value="dark">Dark</SelectItem>
+                  <SelectItem value="system">Match system</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Saved on this device and applied instantly.
+              </p>
+            </CardContent>
+          </Card>
 
-      <Card>
+          <Card>
         <CardHeader>
           <CardTitle>Mintsoft API</CardTitle>
         </CardHeader>
@@ -434,8 +490,15 @@ function SettingsPage() {
           </Button>
         </CardContent>
       </Card>
+        </TabsContent>
 
-      <Card>
+        <TabsContent value="security" className="space-y-6">
+          <TwoFactorCard />
+          <TrustedDeviceCard />
+        </TabsContent>
+
+        <TabsContent value="pricing" className="space-y-6">
+          <Card>
         <CardHeader className="flex-row items-center justify-between">
           <CardTitle>Rework charges (per client)</CardTitle>
           <div className="flex gap-2">
@@ -565,6 +628,8 @@ function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
