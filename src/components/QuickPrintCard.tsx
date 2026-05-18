@@ -18,13 +18,13 @@ type Slot = {
 const SLOTS: Slot[] = [
   {
     key: "carton",
-    title: "Carton warning labels (+15kg)",
+    title: "Carton",
     description: "Heavy-carton warning sticker.",
     printerKind: "large",
   },
   {
     key: "poly",
-    title: "Poly Bag Suffocation Labels",
+    title: "Warning",
     description: "Suffocation warning for poly bags.",
     printerKind: "small",
   },
@@ -75,7 +75,7 @@ export function QuickPrintCard() {
     <Card className="py-0">
       <CardContent className="px-3 py-2">
         <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-2">
-          <Printer className="h-3.5 w-3.5" /> Quick-print labels
+          <Printer className="h-3.5 w-3.5" /> Quick print warning labels
         </div>
         <div className="grid gap-2 md:grid-cols-2">
           {SLOTS.map((s) => (
