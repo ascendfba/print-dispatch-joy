@@ -654,6 +654,20 @@ function OrdersPage() {
     { key: "critical", label: bucketLabel.critical, value: stats.critical, tone: "text-destructive" },
   ];
 
+  const todayCards: Array<{ key: string; label: string; value: number | string }> = [
+    { key: "orders-today", label: "Orders despatched today", value: despatchedToday.length },
+    {
+      key: "units-today",
+      label: "Units despatched today",
+      value: todayTotals.loading ? "…" : todayTotals.units,
+    },
+    {
+      key: "bundles-today",
+      label: "Bundles despatched today",
+      value: todayTotals.loading ? "…" : todayTotals.bundles,
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex items-end justify-between gap-4">
@@ -701,6 +715,24 @@ function OrdersPage() {
           </Card>
         ))}
       </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        {todayCards.map((s) => (
+          <Card key={s.key}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {s.label}
+                </div>
+                <Truck className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="mt-2 text-3xl font-semibold tabular-nums">{s.value}</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <QuickPrintCard />
 
       {ordersQuery.error && (
         <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
