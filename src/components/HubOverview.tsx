@@ -81,7 +81,16 @@ export function HubOverview() {
     0,
   );
   const dueTodayBundles = itemQueries.reduce(
-    (n, q) => n + (q.data && q.data.length > 1 ? 1 : 0),
+    (sum, q) =>
+      sum +
+      (q.data ?? []).reduce((s, it) => {
+        const tag = (it.OrderItemNameValues ?? []).find(
+          (v) => (v?.Name ?? "").toUpperCase() === "BUNDLE-ID",
+        );
+        if (!tag?.Value) return s;
+        const n = Number(tag.Value.split(";")[1]);
+        return Number.isFinite(n) && n > 0 ? s + n : s;
+      }, 0),
     0,
   );
   const unitsLoading = itemQueries.some((q) => q.isLoading);
