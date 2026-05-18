@@ -332,6 +332,7 @@ function SettingsPage() {
         <TabsList>
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="printer">Printer</TabsTrigger>
           <TabsTrigger value="pricing">Client Pricing</TabsTrigger>
         </TabsList>
 
