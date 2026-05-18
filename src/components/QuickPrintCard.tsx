@@ -185,7 +185,7 @@ function QuickPrintSlot({ slot }: { slot: Slot }) {
         max={500}
         value={qty}
         onChange={(e) => setQty(Number(e.target.value) || 1)}
-        className="h-8 w-16 text-sm"
+        className="h-8 w-12 px-1.5 text-sm"
         aria-label={`${slot.title} quantity`}
       />
       <Button
