@@ -696,37 +696,36 @@ function OrdersPage() {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-2 grid-cols-2 sm:grid-cols-4 lg:grid-cols-8">
         {statCards.map((s) => (
-          <Card key={s.key}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="text-xs uppercase tracking-wide text-muted-foreground">
+          <Card key={s.key} className="py-0">
+            <CardContent className="px-2.5 py-2">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">
                   {s.label}
-                </div>
+                </span>
                 {s.key === "total" ? (
-                  <Package className="h-4 w-4 text-muted-foreground" />
+                  <Package className="h-3 w-3 text-muted-foreground shrink-0" />
                 ) : (
-                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
                 )}
               </div>
-              <div className={`mt-2 text-3xl font-semibold tabular-nums ${s.tone}`}>{s.value}</div>
+              <div className={`text-lg font-semibold tabular-nums leading-tight ${s.tone}`}>
+                {s.value}
+              </div>
             </CardContent>
           </Card>
         ))}
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-3">
         {todayCards.map((s) => (
-          <Card key={s.key}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="text-xs uppercase tracking-wide text-muted-foreground">
+          <Card key={s.key} className="py-0">
+            <CardContent className="px-2.5 py-2">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">
                   {s.label}
-                </div>
-                <Truck className="h-4 w-4 text-muted-foreground" />
+                </span>
+                <Truck className="h-3 w-3 text-muted-foreground shrink-0" />
               </div>
-              <div className="mt-2 text-3xl font-semibold tabular-nums">{s.value}</div>
+              <div className="text-lg font-semibold tabular-nums leading-tight">{s.value}</div>
             </CardContent>
           </Card>
         ))}
