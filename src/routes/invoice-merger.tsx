@@ -131,9 +131,10 @@ function downloadBlob(blob: Blob, filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
+const LOOKBACK_HOURS = 72;
+const SCAN_LIMIT = 500;
+
 function InvoiceMergerPage() {
-  const [take, setTake] = useState(50);
-  const [days, setDays] = useState<number>(30);
   const [onePerClient, setOnePerClient] = useState(true);
   const [invoices, setInvoices] = useState<MintsoftInvoice[]>([]);
   const [items, setItems] = useState<ItemWithComment[]>([]);
@@ -153,20 +154,18 @@ function InvoiceMergerPage() {
     setItems([]);
     setSelectedClient("");
     try {
-      const opts: { take: number; from?: string; to?: string } = { take };
-      if (days > 0) {
-        const to = new Date();
-        const from = new Date();
-        from.setDate(from.getDate() - days);
-        opts.from = from.toISOString().slice(0, 10);
-        opts.to = to.toISOString().slice(0, 10);
-      }
+      const to = new Date();
+      const from = new Date();
+      from.setHours(from.getHours() - LOOKBACK_HOURS);
+      const opts: { take: number; from?: string; to?: string } = {
+        take: SCAN_LIMIT,
+        from: from.toISOString().slice(0, 10),
+        to: to.toISOString().slice(0, 10),
+      };
       const all = await listInvoices(settings, opts);
-      // Belt-and-braces client-side date filter in case the API ignored it.
-      const cutoff =
-        days > 0 ? Date.now() - days * 24 * 60 * 60 * 1000 : 0;
+      // Belt-and-braces client-side filter in case the API ignored the range.
+      const cutoff = Date.now() - LOOKBACK_HOURS * 60 * 60 * 1000;
       const inWindow = all.filter((i) => {
-        if (cutoff === 0) return true;
         const t = i.InvoiceDate ? new Date(i.InvoiceDate).getTime() : 0;
         return t >= cutoff;
       });
