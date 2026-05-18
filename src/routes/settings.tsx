@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   defaultSettings,
@@ -47,6 +48,18 @@ import { RefreshCw, Save, Plug, Download, Upload, ShieldCheck } from "lucide-rea
 function normalizeMintsoftBaseUrl(value: string): string {
   const trimmed = value.trim().replace(/\/+$/, "");
   return trimmed.replace(/\/api\/auth$/i, "").replace(/\/api$/i, "");
+}
+
+type ThemeMode = "light" | "dark" | "system";
+const THEME_KEY = "app:theme";
+
+function applyTheme(mode: ThemeMode) {
+  const root = document.documentElement;
+  const isDark =
+    mode === "dark" ||
+    (mode === "system" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches);
+  root.classList.toggle("dark", isDark);
 }
 
 export const Route = createFileRoute("/settings")({
