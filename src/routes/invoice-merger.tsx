@@ -148,7 +148,7 @@ function InvoiceMergerPage() {
     const newHeaders = [...headers];
     if (!newHeaders.includes("Rework Charge")) newHeaders.push("Rework Charge");
     if (!newHeaders.includes("Rework Notes")) newHeaders.push("Rework Notes");
-    const newRows = rows.map((r) => {
+    const newRows: Row[] = rows.map((r) => {
       const ref = (r[orderCol] ?? "").trim();
       const res = results[ref];
       return {
