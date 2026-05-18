@@ -1209,8 +1209,6 @@ function normaliseInvoiceItem(
     ReworkCost: num(r.ReworkCost),
   };
 }
-  return [];
-}
 
 export async function addTrackingNumber(
   settings: Settings,
