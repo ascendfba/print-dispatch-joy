@@ -47,6 +47,8 @@ import { loadSettings } from "@/lib/storage";
 import { Clock, Loader2, Package, Printer, RefreshCw, Truck, X } from "lucide-react";
 import { PDFDocument } from "pdf-lib";
 import { PdfPreview } from "@/components/PdfPreview";
+import { QuickPrintCard } from "@/components/QuickPrintCard";
+import { useQueries } from "@tanstack/react-query";
 
 const isPickingListDoc = (d: { label: string; fileName?: string }) =>
   /pick(ing)?\s*list|despatch\s*note|dispatch\s*note/i.test(d.label) ||
@@ -332,6 +334,70 @@ function OrdersPage() {
     return { total: list.length, ...buckets };
   }, [ordersQuery.data]);
 
+  // Orders despatched today — relies on Mintsoft's despatch timestamp.
+  // Different tenants expose the field under different names, so check a
+  // handful of common ones and fall back to LastModifiedDate.
+  const despatchedToday = useMemo(() => {
+    const list = despatchedQuery.data ?? [];
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const startMs = start.getTime();
+    const endMs = startMs + 24 * 60 * 60 * 1000;
+    const keys = [
+      "DespatchedDate",
+      "DispatchedDate",
+      "DespatchDate",
+      "DispatchDate",
+      "CompletedOn",
+      "CompletedDate",
+      "LastModifiedDate",
+    ];
+    return list.filter((o) => {
+      const r = o as Record<string, unknown>;
+      for (const k of keys) {
+        const v = r[k];
+        if (typeof v === "string" && v) {
+          const t = new Date(v).getTime();
+          if (Number.isFinite(t) && t >= startMs && t < endMs) return true;
+          if (Number.isFinite(t)) return false; // first present date wins
+        }
+      }
+      return false;
+    });
+  }, [despatchedQuery.data]);
+
+  // Fetch items in parallel for orders despatched today so we can sum units
+  // and count bundles. Results are cached and shared with row-level cells.
+  const todayItemsQueries = useQueries({
+    queries: despatchedToday.map((o) => ({
+      queryKey: ["order-items", o.ID],
+      queryFn: () => fetchOrderItems(loadSettings(), o.ID),
+      staleTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+    })),
+  });
+
+  const todayTotals = useMemo(() => {
+    let units = 0;
+    let bundles = 0;
+    let loading = false;
+    for (const q of todayItemsQueries) {
+      if (q.isLoading) loading = true;
+      const items = q.data ?? [];
+      for (const it of items) {
+        units += it.Quantity ?? 0;
+        const tag = (it.OrderItemNameValues ?? []).find(
+          (v) => (v?.Name ?? "").toUpperCase() === "BUNDLE-ID",
+        );
+        if (tag) {
+          const n = Number(tag.Value?.split(";")[1]);
+          bundles += Number.isFinite(n) && n > 0 ? n : 1;
+        }
+      }
+    }
+    return { units, bundles, loading };
+  }, [todayItemsQueries]);
+
   // Lazily fetch order items for each visible order so we can show units & FNSKU counts.
   function OrderItemsCell({ orderId, fallbackUnits }: { orderId: number; fallbackUnits?: number }) {
     const q = useQuery({
@@ -588,6 +654,20 @@ function OrdersPage() {
     { key: "critical", label: bucketLabel.critical, value: stats.critical, tone: "text-destructive" },
   ];
 
+  const todayCards: Array<{ key: string; label: string; value: number | string }> = [
+    { key: "orders-today", label: "Orders despatched today", value: despatchedToday.length },
+    {
+      key: "units-today",
+      label: "Units despatched today",
+      value: todayTotals.loading ? "…" : todayTotals.units,
+    },
+    {
+      key: "bundles-today",
+      label: "Bundles despatched today",
+      value: todayTotals.loading ? "…" : todayTotals.bundles,
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex items-end justify-between gap-4">
@@ -635,6 +715,24 @@ function OrdersPage() {
           </Card>
         ))}
       </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        {todayCards.map((s) => (
+          <Card key={s.key}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {s.label}
+                </div>
+                <Truck className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="mt-2 text-3xl font-semibold tabular-nums">{s.value}</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <QuickPrintCard />
 
       {ordersQuery.error && (
         <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
