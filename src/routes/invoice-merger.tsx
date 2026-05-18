@@ -29,6 +29,7 @@ import {
   fetchInvoiceItems,
   fetchOrderComments,
   listInvoices,
+  listClients,
   type MintsoftInvoice,
   type MintsoftInvoiceItem,
 } from "@/lib/mintsoft";
@@ -184,6 +185,25 @@ function InvoiceMergerPage() {
           seen.add(key);
           return true;
         });
+      }
+      // Enrich with real client names from /api/Client
+      try {
+        const clients = await listClients(settings);
+        const nameById = new Map<number, string>();
+        for (const c of clients) {
+          if (typeof c.ID === "number") {
+            nameById.set(
+              c.ID,
+              c.Name || c.BrandName || c.ShortName || `Client ${c.ID}`,
+            );
+          }
+        }
+        confirmed = confirmed.map((i) => {
+          const n = i.ClientId != null ? nameById.get(i.ClientId) : undefined;
+          return n ? { ...i, ClientName: n } : i;
+        });
+      } catch {
+        /* leave names as-is */
       }
       setInvoices(confirmed);
       if (confirmed.length === 0) {
