@@ -396,33 +396,9 @@ function InvoiceMergerPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex flex-wrap items-end gap-3">
-            <div className="grid w-36 gap-1">
-              <Label htmlFor="days">Date range</Label>
-              <select
-                id="days"
-                className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-                value={days}
-                onChange={(e) => setDays(Number(e.target.value))}
-              >
-                <option value={7}>Last 7 days</option>
-                <option value={30}>Last 30 days</option>
-                <option value={60}>Last 60 days</option>
-                <option value={90}>Last 90 days</option>
-                <option value={0}>All (use limit)</option>
-              </select>
-            </div>
-            <div className="grid w-32 gap-1">
-              <Label htmlFor="take">Max to scan</Label>
-              <Input
-                id="take"
-                type="number"
-                min={10}
-                max={500}
-                step={10}
-                value={take}
-                onChange={(e) => setTake(Math.max(10, Number(e.target.value) || 50))}
-              />
-            </div>
+            <span className="text-sm text-muted-foreground">
+              Scanning invoices from the last 72 hours.
+            </span>
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
