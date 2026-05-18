@@ -80,6 +80,10 @@ export function HubOverview() {
     (s, q) => s + (q.data?.reduce((n, it) => n + (it.Quantity ?? 0), 0) ?? 0),
     0,
   );
+  const dueTodayBundles = itemQueries.reduce(
+    (n, q) => n + (q.data && q.data.length > 1 ? 1 : 0),
+    0,
+  );
   const unitsLoading = itemQueries.some((q) => q.isLoading);
 
   const buckets = { fresh: 0, today: 0, stale: 0, critical: 0 };
@@ -152,6 +156,13 @@ export function HubOverview() {
                   {dueTodayUnits.toLocaleString()}
                 </span>
                 <span>units total</span>
+                {unitsLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+              </div>
+              <div className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
+                <span className="tabular-nums font-medium text-foreground">
+                  {dueTodayBundles.toLocaleString()}
+                </span>
+                <span>bundles</span>
                 {unitsLoading && <Loader2 className="h-3 w-3 animate-spin" />}
               </div>
             </CardContent>
