@@ -438,7 +438,7 @@ function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="printer" className="space-y-6">
-          <QuickPrintCard />
+          <QuickPrintCard mode="upload" />
           <Card>
             <CardHeader className="flex-row items-center justify-between">
               <CardTitle>Printer routing</CardTitle>
