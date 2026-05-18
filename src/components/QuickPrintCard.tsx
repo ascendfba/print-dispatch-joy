@@ -7,7 +7,6 @@ import { Loader2, Printer, Upload, FileCheck2 } from "lucide-react";
 import { toast } from "sonner";
 import { loadSettings } from "@/lib/storage";
 import { pickPrinter, printPdfBytes } from "@/lib/printing";
-import { detectFromBytes } from "@/lib/pdfSize";
 
 type Slot = {
   key: string;
