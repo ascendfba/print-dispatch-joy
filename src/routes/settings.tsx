@@ -145,8 +145,25 @@ function SettingsPage() {
   }, [theme]);
 
   async function refreshPrinters() {
-    const list = await listInstalledPrinters();
-    setPrinters(list);
+    const installed = await listInstalledPrinters();
+    let merged = [...installed];
+    // Also try the local print agent (http://127.0.0.1:9911/printers).
+    try {
+      const agentPort = localStorage.getItem("printAgentPort") || "9911";
+      const res = await fetch(`http://127.0.0.1:${agentPort}/printers`, {
+        signal: AbortSignal.timeout(3000),
+      });
+      if (res.ok) {
+        const json = (await res.json()) as { printers?: string[] };
+        if (Array.isArray(json.printers)) {
+          merged = Array.from(new Set([...merged, ...json.printers]));
+          if (!installed.length) toast.success(`Found ${json.printers.length} printer(s) via local agent`);
+        }
+      }
+    } catch {
+      /* agent not running — silent */
+    }
+    setPrinters(merged);
   }
 
   function update<K extends keyof Settings>(key: K, value: Settings[K]) {
@@ -459,10 +476,13 @@ function SettingsPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {!electron && (
+              {!electron && printers.length === 0 && (
                 <p className="rounded-md border border-dashed border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-                  You're in browser preview — printer enumeration only works in the packaged desktop
-                  app. For now, enter printer names manually below.
+                  No printers detected. Run the local print agent on this PC
+                  (<code>node agent.cjs</code> from the{" "}
+                  <code>local-print-agent</code> folder), then click{" "}
+                  <strong>Refresh</strong>. Alternatively, type printer names
+                  manually below.
                 </p>
               )}
               {printerSlots.map((slot) => (
@@ -471,7 +491,7 @@ function SettingsPage() {
                     <div className="text-sm font-medium">{slot.title}</div>
                     <div className="text-xs text-muted-foreground">{slot.desc}</div>
                   </div>
-                  {electron && printers.length > 0 ? (
+                  {printers.length > 0 ? (
                     <Select
                       value={settings.printers[slot.key] || undefined}
                       onValueChange={(v) => setPrinter(slot.key, v)}
