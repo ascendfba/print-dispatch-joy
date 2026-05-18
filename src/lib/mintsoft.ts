@@ -1085,6 +1085,7 @@ export type MintsoftInvoiceItem = {
 function normaliseInvoice(r: Record<string, unknown>): MintsoftInvoice {
   const id = Number(r.ID ?? r.Id ?? r.InvoiceId);
   return {
+    ...r,
     ID: Number.isFinite(id) ? id : 0,
     InvoiceNumber:
       (typeof r.InvoiceNumber === "string" && r.InvoiceNumber) ||
@@ -1117,7 +1118,6 @@ function normaliseInvoice(r: Record<string, unknown>): MintsoftInvoice {
           : null,
     TotalNet: typeof r.TotalNet === "number" ? r.TotalNet : null,
     TotalTax: typeof r.TotalTax === "number" ? r.TotalTax : null,
-    ...r,
   };
 }
 
