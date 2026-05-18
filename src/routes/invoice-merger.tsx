@@ -131,9 +131,10 @@ function downloadBlob(blob: Blob, filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
+const LOOKBACK_HOURS = 72;
+const SCAN_LIMIT = 500;
+
 function InvoiceMergerPage() {
-  const [take, setTake] = useState(50);
-  const [days, setDays] = useState<number>(30);
   const [onePerClient, setOnePerClient] = useState(true);
   const [invoices, setInvoices] = useState<MintsoftInvoice[]>([]);
   const [items, setItems] = useState<ItemWithComment[]>([]);
@@ -153,20 +154,18 @@ function InvoiceMergerPage() {
     setItems([]);
     setSelectedClient("");
     try {
-      const opts: { take: number; from?: string; to?: string } = { take };
-      if (days > 0) {
-        const to = new Date();
-        const from = new Date();
-        from.setDate(from.getDate() - days);
-        opts.from = from.toISOString().slice(0, 10);
-        opts.to = to.toISOString().slice(0, 10);
-      }
+      const to = new Date();
+      const from = new Date();
+      from.setHours(from.getHours() - LOOKBACK_HOURS);
+      const opts: { take: number; from?: string; to?: string } = {
+        take: SCAN_LIMIT,
+        from: from.toISOString().slice(0, 10),
+        to: to.toISOString().slice(0, 10),
+      };
       const all = await listInvoices(settings, opts);
-      // Belt-and-braces client-side date filter in case the API ignored it.
-      const cutoff =
-        days > 0 ? Date.now() - days * 24 * 60 * 60 * 1000 : 0;
+      // Belt-and-braces client-side filter in case the API ignored the range.
+      const cutoff = Date.now() - LOOKBACK_HOURS * 60 * 60 * 1000;
       const inWindow = all.filter((i) => {
-        if (cutoff === 0) return true;
         const t = i.InvoiceDate ? new Date(i.InvoiceDate).getTime() : 0;
         return t >= cutoff;
       });
@@ -397,33 +396,9 @@ function InvoiceMergerPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex flex-wrap items-end gap-3">
-            <div className="grid w-36 gap-1">
-              <Label htmlFor="days">Date range</Label>
-              <select
-                id="days"
-                className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-                value={days}
-                onChange={(e) => setDays(Number(e.target.value))}
-              >
-                <option value={7}>Last 7 days</option>
-                <option value={30}>Last 30 days</option>
-                <option value={60}>Last 60 days</option>
-                <option value={90}>Last 90 days</option>
-                <option value={0}>All (use limit)</option>
-              </select>
-            </div>
-            <div className="grid w-32 gap-1">
-              <Label htmlFor="take">Max to scan</Label>
-              <Input
-                id="take"
-                type="number"
-                min={10}
-                max={500}
-                step={10}
-                value={take}
-                onChange={(e) => setTake(Math.max(10, Number(e.target.value) || 50))}
-              />
-            </div>
+            <span className="text-sm text-muted-foreground">
+              Scanning invoices from the last 72 hours.
+            </span>
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
