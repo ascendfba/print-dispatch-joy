@@ -516,9 +516,6 @@ function InvoiceMergerPage() {
                       >
                         <td className="px-3 py-2">
                           <div className="font-medium">{g.clientName}</div>
-                          <div className="text-xs text-muted-foreground">
-                            ID {String(g.clientId)}
-                          </div>
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums">
                           {g.invoices.length}
