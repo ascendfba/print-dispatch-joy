@@ -696,42 +696,60 @@ function OrdersPage() {
         </div>
       </div>
 
-      <div className="grid gap-2 grid-cols-2 sm:grid-cols-4 lg:grid-cols-8">
-        {statCards.map((s) => (
-          <Card key={s.key} className="py-0">
-            <CardContent className="px-2.5 py-2">
-              <div className="flex items-center justify-between gap-1">
-                <span className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">
-                  {s.label}
-                </span>
-                {s.key === "total" ? (
-                  <Package className="h-3 w-3 text-muted-foreground shrink-0" />
-                ) : (
-                  <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
-                )}
-              </div>
-              <div className={`text-lg font-semibold tabular-nums leading-tight ${s.tone}`}>
-                {s.value}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-        {todayCards.map((s) => (
-          <Card key={s.key} className="py-0">
-            <CardContent className="px-2.5 py-2">
-              <div className="flex items-center justify-between gap-1">
-                <span className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">
-                  {s.label}
-                </span>
-                <Truck className="h-3 w-3 text-muted-foreground shrink-0" />
-              </div>
-              <div className="text-lg font-semibold tabular-nums leading-tight">{s.value}</div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <div className="grid gap-3 lg:grid-cols-2">
+        <Card className="py-0">
+          <CardContent className="p-3">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">
+              Ready for dispatch
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              {statCards.map((s) => (
+                <div key={s.key} className="rounded-md border px-2 py-1.5">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">
+                      {s.label}
+                    </span>
+                    {s.key === "total" ? (
+                      <Package className="h-3 w-3 text-muted-foreground shrink-0" />
+                    ) : (
+                      <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
+                    )}
+                  </div>
+                  <div className={`text-lg font-semibold tabular-nums leading-tight ${s.tone}`}>
+                    {s.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
-      <QuickPrintCard />
+        <div className="space-y-3">
+          <Card className="py-0">
+            <CardContent className="p-3">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">
+                Despatched today
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {todayCards.map((s) => (
+                  <div key={s.key} className="rounded-md border px-2 py-1.5">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">
+                        {s.label}
+                      </span>
+                      <Truck className="h-3 w-3 text-muted-foreground shrink-0" />
+                    </div>
+                    <div className="text-lg font-semibold tabular-nums leading-tight">
+                      {s.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          <QuickPrintCard />
+        </div>
+      </div>
 
       {ordersQuery.error && (
         <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
