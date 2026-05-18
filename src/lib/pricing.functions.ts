@@ -27,15 +27,21 @@ export const savePricing = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    // Replace-all strategy: delete user's rows, then insert new set.
+    // Pricing is shared globally — replace-all across every user.
     const { error: delErr } = await supabase
       .from("client_pricing")
       .delete()
-      .eq("user_id", userId);
+      .not("id", "is", null);
     if (delErr) throw new Error(delErr.message);
     if (data.rows.length === 0) return { count: 0 };
-    const payload = data.rows.map((r) => ({ ...r, user_id: userId }));
-    const { error: insErr } = await supabase.from("client_pricing").insert(payload);
+    const payload = data.rows.map((r) => ({
+      ...r,
+      user_id: userId,
+      updated_at: new Date().toISOString(),
+    }));
+    const { error: insErr } = await supabase
+      .from("client_pricing")
+      .insert(payload);
     if (insErr) throw new Error(insErr.message);
     return { count: payload.length };
   });
