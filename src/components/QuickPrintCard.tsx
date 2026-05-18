@@ -156,35 +156,50 @@ function QuickPrintSlot({ slot, mode }: { slot: Slot; mode: "print" | "upload" }
     <div className="rounded-md border px-2.5 py-2 flex items-center gap-2">
       <div className="min-w-0 flex-1">
         <div className="text-xs font-medium truncate">{slot.title}</div>
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 truncate max-w-full"
-          title={stored?.name ?? "Upload PDF"}
-        >
-          {stored ? (
-            <>
-              <FileCheck2 className="h-3 w-3 text-emerald-600 shrink-0" />
-              <span className="truncate">{stored.name}</span>
-            </>
-          ) : (
-            <>
-              <Upload className="h-3 w-3 shrink-0" />
-              <span>Upload PDF</span>
-            </>
-          )}
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="application/pdf,.pdf"
-          className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) void onFile(f);
-            e.target.value = "";
-          }}
-        />
+        {mode === "upload" ? (
+          <>
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 truncate max-w-full"
+              title={stored?.name ?? "Upload PDF"}
+            >
+              {stored ? (
+                <>
+                  <FileCheck2 className="h-3 w-3 text-emerald-600 shrink-0" />
+                  <span className="truncate">{stored.name}</span>
+                </>
+              ) : (
+                <>
+                  <Upload className="h-3 w-3 shrink-0" />
+                  <span>Upload PDF</span>
+                </>
+              )}
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="application/pdf,.pdf"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void onFile(f);
+                e.target.value = "";
+              }}
+            />
+          </>
+        ) : (
+          <div className="text-[11px] text-muted-foreground inline-flex items-center gap-1 truncate max-w-full">
+            {stored ? (
+              <>
+                <FileCheck2 className="h-3 w-3 text-emerald-600 shrink-0" />
+                <span className="truncate">{stored.name}</span>
+              </>
+            ) : (
+              <span className="italic">No PDF — upload in Settings</span>
+            )}
+          </div>
+        )}
       </div>
       {mode === "print" && (
         <>
