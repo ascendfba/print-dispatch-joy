@@ -70,16 +70,17 @@ async function fileToBase64(file: File): Promise<string> {
   return btoa(bin);
 }
 
-export function QuickPrintCard() {
+export function QuickPrintCard({ mode = "print" }: { mode?: "print" | "upload" } = {}) {
   return (
     <Card className="py-0">
       <CardContent className="px-3 py-2">
         <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-2">
-          <Printer className="h-3.5 w-3.5" /> Quick print warning labels
+          <Printer className="h-3.5 w-3.5" />
+          {mode === "upload" ? "Warning label PDFs" : "Quick print warning labels"}
         </div>
         <div className="grid gap-2 md:grid-cols-2">
           {SLOTS.map((s) => (
-            <QuickPrintSlot key={s.key} slot={s} />
+            <QuickPrintSlot key={s.key} slot={s} mode={mode} />
           ))}
         </div>
       </CardContent>
@@ -87,7 +88,7 @@ export function QuickPrintCard() {
   );
 }
 
-function QuickPrintSlot({ slot }: { slot: Slot }) {
+function QuickPrintSlot({ slot, mode }: { slot: Slot; mode: "print" | "upload" }) {
   const [stored, setStored] = useState<Stored | null>(null);
   const [qty, setQty] = useState(1);
   const [busy, setBusy] = useState(false);
@@ -95,6 +96,11 @@ function QuickPrintSlot({ slot }: { slot: Slot }) {
 
   useEffect(() => {
     setStored(loadStored(slot.key));
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === lsKey(slot.key)) setStored(loadStored(slot.key));
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, [slot.key]);
 
   async function onFile(file: File) {
@@ -180,28 +186,32 @@ function QuickPrintSlot({ slot }: { slot: Slot }) {
           }}
         />
       </div>
-      <Input
-        type="number"
-        min={1}
-        max={500}
-        value={qty}
-        onChange={(e) => setQty(Number(e.target.value) || 1)}
-        className="h-8 w-12 px-1.5 text-sm"
-        aria-label={`${slot.title} quantity`}
-      />
-      <Button
-        size="sm"
-        onClick={onPrint}
-        disabled={busy || !stored}
-        className="h-8"
-      >
-        {busy ? (
-          <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-        ) : (
-          <Printer className="mr-1 h-3.5 w-3.5" />
-        )}
-        Print
-      </Button>
+      {mode === "print" && (
+        <>
+          <Input
+            type="number"
+            min={1}
+            max={500}
+            value={qty}
+            onChange={(e) => setQty(Number(e.target.value) || 1)}
+            className="h-8 w-12 px-1.5 text-sm"
+            aria-label={`${slot.title} quantity`}
+          />
+          <Button
+            size="sm"
+            onClick={onPrint}
+            disabled={busy || !stored}
+            className="h-8"
+          >
+            {busy ? (
+              <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Printer className="mr-1 h-3.5 w-3.5" />
+            )}
+            Print
+          </Button>
+        </>
+      )}
     </div>
   );
 }
