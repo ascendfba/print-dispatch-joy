@@ -18,6 +18,8 @@ import {
   Contact2,
   Target,
   FolderCode,
+  Wallet,
+  Receipt,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
