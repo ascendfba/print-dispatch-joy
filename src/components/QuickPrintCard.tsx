@@ -41,19 +41,14 @@ function storagePath(slotKey: string) {
 
 async function fetchStored(slot: Slot): Promise<Stored | null> {
   const path = storagePath(slot.key);
-  // List to confirm the file exists and grab original filename from metadata.
   const { data: list } = await supabase.storage.from(BUCKET).list("", {
     search: path,
   });
   const entry = list?.find((f) => f.name === path);
   if (!entry) return null;
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-  const originalName =
-    (entry.metadata as { originalName?: string } | null)?.originalName ??
-    `${slot.title}.pdf`;
-  // Cache-bust so updates show immediately.
   const url = `${data.publicUrl}?v=${encodeURIComponent(entry.updated_at ?? entry.created_at ?? "")}`;
-  return { name: originalName, path, url };
+  return { name: `${slot.title}.pdf`, path, url };
 }
 
 async function fetchBytes(url: string): Promise<Uint8Array> {
@@ -108,7 +103,6 @@ function QuickPrintSlot({ slot, mode }: { slot: Slot; mode: "print" | "upload" }
       const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
         upsert: true,
         contentType: "application/pdf",
-        metadata: { originalName: file.name },
       });
       if (error) throw error;
       const next = await fetchStored(slot);
