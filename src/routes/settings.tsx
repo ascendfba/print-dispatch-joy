@@ -620,6 +620,10 @@ function SettingsPage() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="history" className="space-y-6">
+          <PrintHistoryCard />
+        </TabsContent>
+
         <TabsContent value="pricing" className="space-y-6">
           <Card>
         <CardHeader className="flex-row items-center justify-between">
