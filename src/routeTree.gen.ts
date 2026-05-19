@@ -31,6 +31,7 @@ import { Route as ApiGoogleImageRouteImport } from './routes/api/google-image'
 import { Route as ApiEstimateWeightRouteImport } from './routes/api/estimate-weight'
 import { Route as ApiAmazonImageRouteImport } from './routes/api/amazon-image'
 import { Route as DRouteImport } from './routes/d.'
+import { Route as ApiPublicSetupWarningLabelsBucketRouteImport } from './routes/api/public/setup-warning-labels-bucket'
 import { Route as ApiPublicSetupDesktopBucketRouteImport } from './routes/api/public/setup-desktop-bucket'
 import { Route as ApiPublicDSlugRouteImport } from './routes/api/public/d/$slug'
 
@@ -144,6 +145,12 @@ const DRoute = DRouteImport.update({
   path: '/d/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicSetupWarningLabelsBucketRoute =
+  ApiPublicSetupWarningLabelsBucketRouteImport.update({
+    id: '/api/public/setup-warning-labels-bucket',
+    path: '/api/public/setup-warning-labels-bucket',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicSetupDesktopBucketRoute =
   ApiPublicSetupDesktopBucketRouteImport.update({
     id: '/api/public/setup-desktop-bucket',
@@ -180,6 +187,7 @@ export interface FileRoutesByFullPath {
   '/d/$slug': typeof DSlugRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
   '/api/public/setup-desktop-bucket': typeof ApiPublicSetupDesktopBucketRoute
+  '/api/public/setup-warning-labels-bucket': typeof ApiPublicSetupWarningLabelsBucketRoute
   '/api/public/d/$slug': typeof ApiPublicDSlugRoute
 }
 export interface FileRoutesByTo {
@@ -206,6 +214,7 @@ export interface FileRoutesByTo {
   '/d/$slug': typeof DSlugRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
   '/api/public/setup-desktop-bucket': typeof ApiPublicSetupDesktopBucketRoute
+  '/api/public/setup-warning-labels-bucket': typeof ApiPublicSetupWarningLabelsBucketRoute
   '/api/public/d/$slug': typeof ApiPublicDSlugRoute
 }
 export interface FileRoutesById {
@@ -233,6 +242,7 @@ export interface FileRoutesById {
   '/d/$slug': typeof DSlugRoute
   '/orders_/$orderId': typeof OrdersOrderIdRoute
   '/api/public/setup-desktop-bucket': typeof ApiPublicSetupDesktopBucketRoute
+  '/api/public/setup-warning-labels-bucket': typeof ApiPublicSetupWarningLabelsBucketRoute
   '/api/public/d/$slug': typeof ApiPublicDSlugRoute
 }
 export interface FileRouteTypes {
@@ -261,6 +271,7 @@ export interface FileRouteTypes {
     | '/d/$slug'
     | '/orders/$orderId'
     | '/api/public/setup-desktop-bucket'
+    | '/api/public/setup-warning-labels-bucket'
     | '/api/public/d/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -287,6 +298,7 @@ export interface FileRouteTypes {
     | '/d/$slug'
     | '/orders/$orderId'
     | '/api/public/setup-desktop-bucket'
+    | '/api/public/setup-warning-labels-bucket'
     | '/api/public/d/$slug'
   id:
     | '__root__'
@@ -313,6 +325,7 @@ export interface FileRouteTypes {
     | '/d/$slug'
     | '/orders_/$orderId'
     | '/api/public/setup-desktop-bucket'
+    | '/api/public/setup-warning-labels-bucket'
     | '/api/public/d/$slug'
   fileRoutesById: FileRoutesById
 }
@@ -340,6 +353,7 @@ export interface RootRouteChildren {
   DSlugRoute: typeof DSlugRoute
   OrdersOrderIdRoute: typeof OrdersOrderIdRoute
   ApiPublicSetupDesktopBucketRoute: typeof ApiPublicSetupDesktopBucketRoute
+  ApiPublicSetupWarningLabelsBucketRoute: typeof ApiPublicSetupWarningLabelsBucketRoute
   ApiPublicDSlugRoute: typeof ApiPublicDSlugRoute
 }
 
@@ -499,6 +513,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/setup-warning-labels-bucket': {
+      id: '/api/public/setup-warning-labels-bucket'
+      path: '/api/public/setup-warning-labels-bucket'
+      fullPath: '/api/public/setup-warning-labels-bucket'
+      preLoaderRoute: typeof ApiPublicSetupWarningLabelsBucketRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/setup-desktop-bucket': {
       id: '/api/public/setup-desktop-bucket'
       path: '/api/public/setup-desktop-bucket'
@@ -540,6 +561,8 @@ const rootRouteChildren: RootRouteChildren = {
   DSlugRoute: DSlugRoute,
   OrdersOrderIdRoute: OrdersOrderIdRoute,
   ApiPublicSetupDesktopBucketRoute: ApiPublicSetupDesktopBucketRoute,
+  ApiPublicSetupWarningLabelsBucketRoute:
+    ApiPublicSetupWarningLabelsBucketRoute,
   ApiPublicDSlugRoute: ApiPublicDSlugRoute,
 }
 export const routeTree = rootRouteImport
