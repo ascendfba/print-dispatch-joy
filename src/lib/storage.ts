@@ -28,6 +28,8 @@ export type Settings = {
   reworkMap: Record<string, ReworkMapping>;
   // Per-client rework charges (GBP per unit).
   reworkRates: ReworkRates;
+  // URL where dispatch staff can download the Windows desktop app.
+  desktopAppUrl: string;
 };
 
 export const defaultSettings: Settings = {
