@@ -78,6 +78,7 @@ function AsnsPage() {
       return listASNs(settings);
     },
     refetchOnWindowFocus: false,
+    refetchInterval: 10 * 60_000,
   });
 
   const clientsQuery = useQuery({
