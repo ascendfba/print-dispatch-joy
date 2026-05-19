@@ -481,39 +481,55 @@ function SettingsPage() {
                   printing and automatic printer detection. The app loads the
                   latest web version automatically — no reinstalls needed.
                 </p>
-                <div className="space-y-2">
-                  <Label htmlFor="desktop-url">Download URL</Label>
-                  <div className="flex gap-2">
+                {editingDesktopUrl ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="desktop-url">Download URL</Label>
                     <Input
                       id="desktop-url"
                       placeholder="https://your-domain.com/DispatchConsole-Windows.zip"
-                      value={settings.desktopAppUrl}
-                      onChange={(e) => update("desktopAppUrl", e.target.value)}
+                      value={desktopUrl}
+                      onChange={(e) => setDesktopUrlState(e.target.value)}
                     />
-                    {settings.desktopAppUrl && (
-                      <Button asChild variant="default">
-                        <a
-                          href={settings.desktopAppUrl}
-                          download
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <Download className="mr-2 h-4 w-4" />
-                          Download
-                        </a>
+                    <div className="flex gap-2">
+                      <Button onClick={saveDesktopUrl} size="sm" disabled={savingDesktopUrl}>
+                        <Save className="mr-2 h-4 w-4" />
+                        {savingDesktopUrl ? "Saving…" : "Save link"}
                       </Button>
-                    )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditingDesktopUrl(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Paste the URL where the <code>DispatchConsole-Windows.zip</code>{" "}
-                    file is hosted (e.g. your company file server, SharePoint, or
-                    web hosting). Once set, every dispatch user sees the Download
-                    button here.
-                  </p>
-                </div>
-                <Button onClick={save} variant="outline" size="sm">
-                  <Save className="mr-2 h-4 w-4" /> Save URL
-                </Button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Button asChild variant="default" disabled={!desktopUrl}>
+                      <a
+                        href={desktopUrl || "#"}
+                        download
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => {
+                          if (!desktopUrl) e.preventDefault();
+                        }}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Download for Windows
+                      </a>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditingDesktopUrl(true)}
+                      title="Edit download link"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
