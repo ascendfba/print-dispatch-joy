@@ -45,10 +45,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { RefreshCw, Save, Plug, Download, Upload, ShieldCheck } from "lucide-react";
+import { RefreshCw, Save, Plug, Upload, ShieldCheck } from "lucide-react";
 import JSZip from "jszip";
-import agentSource from "../../local-print-agent/agent.cjs?raw";
-import agentReadme from "../../local-print-agent/README.md?raw";
 
 function normalizeMintsoftBaseUrl(value: string): string {
   const trimmed = value.trim().replace(/\/+$/, "");
@@ -77,8 +75,6 @@ function SettingsPage() {
   const [printers, setPrinters] = useState<string[]>([]);
   const [testing, setTesting] = useState(false);
   const [checkingDb, setCheckingDb] = useState(false);
-  const [agentStatus, setAgentStatus] = useState<"checking" | "online" | "offline">("checking");
-  const [agentPlatform, setAgentPlatform] = useState<string | null>(null);
   const [clients, setClients] = useState<MintsoftClient[]>([]);
   const [theme, setTheme] = useState<ThemeMode>(() => {
     if (typeof window === "undefined") return "system";
@@ -150,75 +146,9 @@ function SettingsPage() {
     return () => mq.removeEventListener("change", onChange);
   }, [theme]);
 
-  // Poll the local print agent for health every 5s so the user sees a
-  // live status indicator in the Printer tab.
-  useEffect(() => {
-    let cancelled = false;
-    async function ping() {
-      const port = localStorage.getItem("printAgentPort") || "9911";
-      try {
-        const res = await fetch(`http://127.0.0.1:${port}/health`, {
-          signal: AbortSignal.timeout(2000),
-        });
-        if (cancelled) return;
-        if (res.ok) {
-          const j = (await res.json().catch(() => ({}))) as { platform?: string };
-          setAgentStatus("online");
-          setAgentPlatform(j.platform ?? null);
-        } else {
-          setAgentStatus("offline");
-        }
-      } catch {
-        if (!cancelled) setAgentStatus("offline");
-      }
-    }
-    void ping();
-    const id = setInterval(ping, 5000);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
-  }, []);
-
-  async function downloadAgentZip() {
-    try {
-      const zip = new JSZip();
-      const folder = zip.folder("local-print-agent")!;
-      folder.file("agent.cjs", agentSource);
-      folder.file("README.md", agentReadme);
-      const blob = await zip.generateAsync({ type: "blob" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "local-print-agent.zip";
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success("Downloaded local-print-agent.zip — see README to run it.");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Download failed");
-    }
-  }
-
   async function refreshPrinters() {
     const installed = await listInstalledPrinters();
-    let merged = [...installed];
-    // Also try the local print agent (http://127.0.0.1:9911/printers).
-    try {
-      const agentPort = localStorage.getItem("printAgentPort") || "9911";
-      const res = await fetch(`http://127.0.0.1:${agentPort}/printers`, {
-        signal: AbortSignal.timeout(3000),
-      });
-      if (res.ok) {
-        const json = (await res.json()) as { printers?: string[] };
-        if (Array.isArray(json.printers)) {
-          merged = Array.from(new Set([...merged, ...json.printers]));
-          if (!installed.length) toast.success(`Found ${json.printers.length} printer(s) via local agent`);
-        }
-      }
-    } catch {
-      /* agent not running — silent */
-    }
-    setPrinters(merged);
+    setPrinters(installed);
   }
 
   function update<K extends keyof Settings>(key: K, value: Settings[K]) {
