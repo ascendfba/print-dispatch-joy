@@ -77,15 +77,25 @@ export async function printPdfBytes(
   const blob = new Blob([new Uint8Array(bytes)], { type: "application/pdf" });
   const url = URL.createObjectURL(blob);
   const w = window.open(url, "_blank");
-  if (w) {
-    setTimeout(() => {
-      try {
-        w.focus();
-        w.print();
-      } catch {
-        /* ignore */
-      }
-    }, 800);
+  if (!w) {
+    fireLog({
+      printer: printerName,
+      meta,
+      byteSize: bytes.byteLength,
+      status: "error",
+      error: "Popup blocked — allow popups for this site to print from the browser.",
+    });
+    throw new Error(
+      "Popup blocked. Allow popups for this site, or install the desktop app for silent printing.",
+    );
   }
+  setTimeout(() => {
+    try {
+      w.focus();
+      w.print();
+    } catch {
+      /* ignore */
+    }
+  }, 800);
   fireLog({ printer: printerName, meta, byteSize: bytes.byteLength, status: "success" });
 }
