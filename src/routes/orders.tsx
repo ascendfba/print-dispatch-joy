@@ -185,6 +185,7 @@ function OrdersPage() {
       return listOpenOrders(settings);
     },
     refetchOnWindowFocus: false,
+    refetchInterval: 10 * 60_000,
   });
 
   const statusesQuery = useQuery({
@@ -210,6 +211,7 @@ function OrdersPage() {
     queryFn: () => listOrdersByStatus(loadSettings(), despatchedStatusId!),
     enabled: despatchedStatusId != null,
     refetchOnWindowFocus: false,
+    refetchInterval: 10 * 60_000,
   });
 
   const invoicedQuery = useQuery({
@@ -217,6 +219,7 @@ function OrdersPage() {
     queryFn: () => listOrdersByStatus(loadSettings(), invoicedStatusId!),
     enabled: invoicedStatusId != null,
     refetchOnWindowFocus: false,
+    refetchInterval: 10 * 60_000,
   });
 
   const clientsQuery = useQuery({
