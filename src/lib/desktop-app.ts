@@ -1,4 +1,5 @@
 // URL where dispatch staff download the Windows desktop app.
-// Hosted as a GitHub release asset on ascendfba/dispatch-console-desktop.
+// Hosted in the Supabase `desktop-app` public bucket — upload new builds
+// via Cloud → Storage → desktop-app, replacing this file.
 export const DESKTOP_APP_DOWNLOAD_URL =
-  "https://github.com/ascendfba/dispatch-console-desktop/releases/download/v1.0.0/DispatchConsole-win32-x64.zip";
+  "https://kcezuzzefouwqbgbxuog.supabase.co/storage/v1/object/public/desktop-app/DispatchConsole-win32-x64.zip";
