@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, Printer, Upload, FileCheck2 } from "lucide-react";
 import { toast } from "sonner";
 import { loadSettings } from "@/lib/storage";
-import { pickPrinter, printPdfBytes } from "@/lib/printing";
+import { pickPrinter, printPdfBytes, isElectron } from "@/lib/printing";
 import { supabase } from "@/integrations/supabase/client";
 
 type Slot = {
@@ -169,7 +169,13 @@ function QuickPrintSlot({ slot, mode }: { slot: Slot; mode: "print" | "upload" }
         );
       }
       await printPdfBytes(out, printer, settings.silentPrint);
-      toast.success(`Sent ${copies} × ${slot.title} to ${printer}`);
+      if (isElectron()) {
+        toast.success(`Sent ${copies} × ${slot.title} to ${printer}`);
+      } else {
+        toast.success(
+          `Opened ${copies} × ${slot.title} — use the browser print dialog (install the desktop app for silent printing).`,
+        );
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Print failed");
     } finally {
