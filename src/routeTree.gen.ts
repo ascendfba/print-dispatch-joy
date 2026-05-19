@@ -31,6 +31,7 @@ import { Route as ApiGoogleImageRouteImport } from './routes/api/google-image'
 import { Route as ApiEstimateWeightRouteImport } from './routes/api/estimate-weight'
 import { Route as ApiAmazonImageRouteImport } from './routes/api/amazon-image'
 import { Route as DRouteImport } from './routes/d.'
+import { Route as ApiPublicSetupDesktopBucketRouteImport } from './routes/api/public/setup-desktop-bucket'
 import { Route as ApiPublicDSlugRouteImport } from './routes/api/public/d/$slug'
 
 const SignupRoute = SignupRouteImport.update({
@@ -143,6 +144,12 @@ const DRoute = DRouteImport.update({
   path: '/d/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicSetupDesktopBucketRoute =
+  ApiPublicSetupDesktopBucketRouteImport.update({
+    id: '/api/public/setup-desktop-bucket',
+    path: '/api/public/setup-desktop-bucket',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicDSlugRoute = ApiPublicDSlugRouteImport.update({
   id: '/api/public/d/$slug',
   path: '/api/public/d/$slug',
@@ -172,6 +179,7 @@ export interface FileRoutesByFullPath {
   '/asns/$asnId': typeof AsnsAsnIdRoute
   '/d/$slug': typeof DSlugRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/api/public/setup-desktop-bucket': typeof ApiPublicSetupDesktopBucketRoute
   '/api/public/d/$slug': typeof ApiPublicDSlugRoute
 }
 export interface FileRoutesByTo {
@@ -197,6 +205,7 @@ export interface FileRoutesByTo {
   '/asns/$asnId': typeof AsnsAsnIdRoute
   '/d/$slug': typeof DSlugRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/api/public/setup-desktop-bucket': typeof ApiPublicSetupDesktopBucketRoute
   '/api/public/d/$slug': typeof ApiPublicDSlugRoute
 }
 export interface FileRoutesById {
@@ -223,6 +232,7 @@ export interface FileRoutesById {
   '/asns_/$asnId': typeof AsnsAsnIdRoute
   '/d/$slug': typeof DSlugRoute
   '/orders_/$orderId': typeof OrdersOrderIdRoute
+  '/api/public/setup-desktop-bucket': typeof ApiPublicSetupDesktopBucketRoute
   '/api/public/d/$slug': typeof ApiPublicDSlugRoute
 }
 export interface FileRouteTypes {
@@ -250,6 +260,7 @@ export interface FileRouteTypes {
     | '/asns/$asnId'
     | '/d/$slug'
     | '/orders/$orderId'
+    | '/api/public/setup-desktop-bucket'
     | '/api/public/d/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -275,6 +286,7 @@ export interface FileRouteTypes {
     | '/asns/$asnId'
     | '/d/$slug'
     | '/orders/$orderId'
+    | '/api/public/setup-desktop-bucket'
     | '/api/public/d/$slug'
   id:
     | '__root__'
@@ -300,6 +312,7 @@ export interface FileRouteTypes {
     | '/asns_/$asnId'
     | '/d/$slug'
     | '/orders_/$orderId'
+    | '/api/public/setup-desktop-bucket'
     | '/api/public/d/$slug'
   fileRoutesById: FileRoutesById
 }
@@ -326,6 +339,7 @@ export interface RootRouteChildren {
   AsnsAsnIdRoute: typeof AsnsAsnIdRoute
   DSlugRoute: typeof DSlugRoute
   OrdersOrderIdRoute: typeof OrdersOrderIdRoute
+  ApiPublicSetupDesktopBucketRoute: typeof ApiPublicSetupDesktopBucketRoute
   ApiPublicDSlugRoute: typeof ApiPublicDSlugRoute
 }
 
@@ -485,6 +499,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/setup-desktop-bucket': {
+      id: '/api/public/setup-desktop-bucket'
+      path: '/api/public/setup-desktop-bucket'
+      fullPath: '/api/public/setup-desktop-bucket'
+      preLoaderRoute: typeof ApiPublicSetupDesktopBucketRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/d/$slug': {
       id: '/api/public/d/$slug'
       path: '/api/public/d/$slug'
@@ -518,8 +539,19 @@ const rootRouteChildren: RootRouteChildren = {
   AsnsAsnIdRoute: AsnsAsnIdRoute,
   DSlugRoute: DSlugRoute,
   OrdersOrderIdRoute: OrdersOrderIdRoute,
+  ApiPublicSetupDesktopBucketRoute: ApiPublicSetupDesktopBucketRoute,
   ApiPublicDSlugRoute: ApiPublicDSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
