@@ -42,6 +42,7 @@ export const defaultSettings: Settings = {
   reworkClientId: "",
   reworkMap: {},
   reworkRates: {},
+  desktopAppUrl: "",
 };
 
 export function loadSettings(): Settings {
