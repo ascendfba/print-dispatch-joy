@@ -55,7 +55,10 @@ ipcMain.handle("printers:printPdf", async (_evt, payload) => {
   const tmp = path.join(os.tmpdir(), `dispatch-${Date.now()}-${Math.random().toString(36).slice(2)}.pdf`);
   fs.writeFileSync(tmp, Buffer.from(base64, "base64"));
   return await new Promise((resolve) => {
-    const w = new BrowserWindow({ show: false, webPreferences: { sandbox: true } });
+    const w = new BrowserWindow({
+      show: false,
+      webPreferences: { sandbox: true, plugins: true },
+    });
     w.webContents.on("did-finish-load", () => {
       w.webContents.print(
         {
