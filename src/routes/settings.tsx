@@ -45,7 +45,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { RefreshCw, Save, Plug, Upload, ShieldCheck, Download } from "lucide-react";
+import { RefreshCw, Save, Plug, Upload, ShieldCheck, Download, Monitor } from "lucide-react";
 import JSZip from "jszip";
 
 function normalizeMintsoftBaseUrl(value: string): string {
