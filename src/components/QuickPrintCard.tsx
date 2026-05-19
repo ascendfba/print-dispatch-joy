@@ -84,7 +84,36 @@ function QuickPrintSlot({ slot, mode }: { slot: Slot; mode: "print" | "upload" }
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const s = await fetchStored(slot).catch(() => null);
+      let s = await fetchStored(slot).catch(() => null);
+      // One-time migration: if nothing in Storage yet but this browser still
+      // has a PDF in the old localStorage slot, push it up so every user sees
+      // the same labels.
+      if (!s && typeof window !== "undefined") {
+        try {
+          const raw = window.localStorage.getItem(`quickprint:${slot.key}`);
+          if (raw) {
+            const v = JSON.parse(raw) as { name?: string; base64?: string };
+            if (v?.base64) {
+              const bin = atob(v.base64);
+              const bytes = new Uint8Array(bin.length);
+              for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+              const blob = new Blob([bytes], { type: "application/pdf" });
+              const { error } = await supabase.storage
+                .from(BUCKET)
+                .upload(storagePath(slot.key), blob, {
+                  upsert: true,
+                  contentType: "application/pdf",
+                });
+              if (!error) {
+                window.localStorage.removeItem(`quickprint:${slot.key}`);
+                s = await fetchStored(slot).catch(() => null);
+              }
+            }
+          }
+        } catch {
+          /* ignore migration errors */
+        }
+      }
       if (!cancelled) setStored(s);
     })();
     return () => {
