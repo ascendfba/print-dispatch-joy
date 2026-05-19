@@ -79,7 +79,7 @@ const sections: Section[] = [
         title: "Schedule UPS Collection",
         description: "Book a UPS pickup on ups.com.",
         icon: CalendarClock,
-        href: "https://www.ups.com/pickup/schedule",
+        href: "https://wwwapps.ups.com/pickup/schedule?loc=en_GB&client=IPR",
         extra: <UpsDeadlineTimer />,
         logoSlug: "ups",
         brandColor: "521801",
