@@ -7,6 +7,7 @@ import { Loader2, Printer, Upload, FileCheck2 } from "lucide-react";
 import { toast } from "sonner";
 import { loadSettings } from "@/lib/storage";
 import { pickPrinter, printPdfBytes } from "@/lib/printing";
+import { supabase } from "@/integrations/supabase/client";
 
 type Slot = {
   key: string;
@@ -30,44 +31,30 @@ const SLOTS: Slot[] = [
   },
 ];
 
-type Stored = { name: string; base64: string };
+type Stored = { name: string; path: string; url: string };
 
-function lsKey(k: string) {
-  return `quickprint:${k}`;
+const BUCKET = "warning-labels";
+
+function storagePath(slotKey: string) {
+  return `${slotKey}.pdf`;
 }
 
-function loadStored(k: string): Stored | null {
-  try {
-    const raw = localStorage.getItem(lsKey(k));
-    if (!raw) return null;
-    const v = JSON.parse(raw) as Stored;
-    if (v && typeof v.base64 === "string" && typeof v.name === "string") return v;
-  } catch {
-    /* ignore */
-  }
-  return null;
+async function fetchStored(slot: Slot): Promise<Stored | null> {
+  const path = storagePath(slot.key);
+  const { data: list } = await supabase.storage.from(BUCKET).list("", {
+    search: path,
+  });
+  const entry = list?.find((f) => f.name === path);
+  if (!entry) return null;
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+  const url = `${data.publicUrl}?v=${encodeURIComponent(entry.updated_at ?? entry.created_at ?? "")}`;
+  return { name: `${slot.title}.pdf`, path, url };
 }
 
-function saveStored(k: string, v: Stored) {
-  localStorage.setItem(lsKey(k), JSON.stringify(v));
-}
-
-function base64ToBytes(b64: string): Uint8Array {
-  const bin = atob(b64);
-  const out = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-  return out;
-}
-
-async function fileToBase64(file: File): Promise<string> {
-  const buf = await file.arrayBuffer();
-  const bytes = new Uint8Array(buf);
-  let bin = "";
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
-  }
-  return btoa(bin);
+async function fetchBytes(url: string): Promise<Uint8Array> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Download failed (${res.status})`);
+  return new Uint8Array(await res.arrayBuffer());
 }
 
 export function QuickPrintCard({ mode = "print" }: { mode?: "print" | "upload" } = {}) {
@@ -95,27 +82,65 @@ function QuickPrintSlot({ slot, mode }: { slot: Slot; mode: "print" | "upload" }
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    setStored(loadStored(slot.key));
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === lsKey(slot.key)) setStored(loadStored(slot.key));
+    let cancelled = false;
+    (async () => {
+      let s = await fetchStored(slot).catch(() => null);
+      // One-time migration: if nothing in Storage yet but this browser still
+      // has a PDF in the old localStorage slot, push it up so every user sees
+      // the same labels.
+      if (!s && typeof window !== "undefined") {
+        try {
+          const raw = window.localStorage.getItem(`quickprint:${slot.key}`);
+          if (raw) {
+            const v = JSON.parse(raw) as { name?: string; base64?: string };
+            if (v?.base64) {
+              const bin = atob(v.base64);
+              const bytes = new Uint8Array(bin.length);
+              for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+              const blob = new Blob([bytes], { type: "application/pdf" });
+              const { error } = await supabase.storage
+                .from(BUCKET)
+                .upload(storagePath(slot.key), blob, {
+                  upsert: true,
+                  contentType: "application/pdf",
+                });
+              if (!error) {
+                window.localStorage.removeItem(`quickprint:${slot.key}`);
+                s = await fetchStored(slot).catch(() => null);
+              }
+            }
+          }
+        } catch {
+          /* ignore migration errors */
+        }
+      }
+      if (!cancelled) setStored(s);
+    })();
+    return () => {
+      cancelled = true;
     };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, [slot.key]);
+  }, [slot]);
 
   async function onFile(file: File) {
     if (file.type && !file.type.includes("pdf")) {
       toast.error("Please upload a PDF");
       return;
     }
+    setBusy(true);
     try {
-      const base64 = await fileToBase64(file);
-      const next: Stored = { name: file.name, base64 };
-      saveStored(slot.key, next);
+      const path = storagePath(slot.key);
+      const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
+        upsert: true,
+        contentType: "application/pdf",
+      });
+      if (error) throw error;
+      const next = await fetchStored(slot);
       setStored(next);
-      toast.success(`${slot.title} saved`);
+      toast.success(`${slot.title} saved for all users`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -127,7 +152,7 @@ function QuickPrintSlot({ slot, mode }: { slot: Slot; mode: "print" | "upload" }
     const copies = Math.max(1, Math.min(500, Math.floor(qty || 1)));
     setBusy(true);
     try {
-      const bytes = base64ToBytes(stored.base64);
+      const bytes = await fetchBytes(stored.url);
       const src = await PDFDocument.load(bytes as BlobPart as ArrayBuffer);
       const merged = await PDFDocument.create();
       const indices = src.getPageIndices();
