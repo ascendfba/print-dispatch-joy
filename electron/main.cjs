@@ -10,7 +10,7 @@ const os = require("os");
 // Override at runtime with:  DISPATCH_URL=https://your-domain.com  DispatchConsole.exe
 const APP_URL =
   process.env.DISPATCH_URL ||
-  "https://project--484fae32-a6a4-4c64-8416-14ca1d53c6c9.lovable.app";
+  "https://start.ascendfba.co.uk";
 
 function createWindow() {
   const win = new BrowserWindow({
