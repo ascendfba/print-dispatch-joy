@@ -20,6 +20,7 @@ import {
   FolderCode,
   Wallet,
   Receipt,
+  Monitor,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
