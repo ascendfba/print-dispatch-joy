@@ -36,6 +36,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { TwoFactorCard } from "@/components/TwoFactorCard";
 import { TrustedDeviceCard } from "@/components/TrustedDeviceCard";
 import { QuickPrintCard } from "@/components/QuickPrintCard";
+import { PrintHistoryCard } from "@/components/PrintHistoryCard";
 import {
   Table,
   TableBody,
@@ -405,6 +406,7 @@ function SettingsPage() {
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
           <TabsTrigger value="printer">Printer</TabsTrigger>
+          <TabsTrigger value="history">Print History</TabsTrigger>
           <TabsTrigger value="pricing">Client Pricing</TabsTrigger>
         </TabsList>
 
