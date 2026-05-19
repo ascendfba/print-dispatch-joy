@@ -442,6 +442,56 @@ function SettingsPage() {
 
         <TabsContent value="printer" className="space-y-6">
           <QuickPrintCard mode="upload" />
+          {!electron && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Monitor className="h-5 w-5" />
+                  Dispatch Console Desktop App
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Install the Windows desktop app on each dispatch PC for silent
+                  printing and automatic printer detection. The app loads the
+                  latest web version automatically — no reinstalls needed.
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="desktop-url">Download URL</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="desktop-url"
+                      placeholder="https://your-domain.com/DispatchConsole-Windows.zip"
+                      value={settings.desktopAppUrl}
+                      onChange={(e) => update("desktopAppUrl", e.target.value)}
+                    />
+                    {settings.desktopAppUrl && (
+                      <Button asChild variant="default">
+                        <a
+                          href={settings.desktopAppUrl}
+                          download
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Download className="mr-2 h-4 w-4" />
+                          Download
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Paste the URL where the <code>DispatchConsole-Windows.zip</code>{" "}
+                    file is hosted (e.g. your company file server, SharePoint, or
+                    web hosting). Once set, every dispatch user sees the Download
+                    button here.
+                  </p>
+                </div>
+                <Button onClick={save} variant="outline" size="sm">
+                  <Save className="mr-2 h-4 w-4" /> Save URL
+                </Button>
+              </CardContent>
+            </Card>
+          )}
           <Card>
             <CardHeader className="flex-row items-center justify-between">
               <CardTitle>Printer routing</CardTitle>
