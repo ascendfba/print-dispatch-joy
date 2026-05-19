@@ -45,7 +45,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { RefreshCw, Save, Plug, Upload, ShieldCheck } from "lucide-react";
+import { RefreshCw, Save, Plug, Upload, ShieldCheck, Download } from "lucide-react";
 import JSZip from "jszip";
 
 function normalizeMintsoftBaseUrl(value: string): string {
@@ -444,47 +444,6 @@ function SettingsPage() {
           <QuickPrintCard mode="upload" />
           <Card>
             <CardHeader className="flex-row items-center justify-between">
-              <CardTitle>Local print agent</CardTitle>
-              <div className="flex items-center gap-2">
-                <span
-                  className={
-                    "inline-block h-2.5 w-2.5 rounded-full " +
-                    (agentStatus === "online"
-                      ? "bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.2)]"
-                      : agentStatus === "offline"
-                      ? "bg-red-500"
-                      : "bg-muted-foreground/50 animate-pulse")
-                  }
-                  aria-hidden
-                />
-                <span className="text-xs text-muted-foreground">
-                  {agentStatus === "online"
-                    ? `Online${agentPlatform ? ` (${agentPlatform})` : ""}`
-                    : agentStatus === "offline"
-                    ? "Offline"
-                    : "Checking…"}
-                </span>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                A tiny Node script runs on the PC connected to your printers and
-                exposes them to this app at <code>http://127.0.0.1:9911</code>.
-                Download the zip, unpack it, then run{" "}
-                <code>node agent.cjs</code> from a terminal (requires Node 18+).
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Button onClick={downloadAgentZip} variant="default">
-                  <Download className="mr-2 h-4 w-4" /> Download agent
-                </Button>
-                <Button onClick={refreshPrinters} variant="outline">
-                  <RefreshCw className="mr-2 h-4 w-4" /> Refresh printers
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex-row items-center justify-between">
               <CardTitle>Printer routing</CardTitle>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
@@ -505,11 +464,9 @@ function SettingsPage() {
             <CardContent className="space-y-4">
               {!electron && printers.length === 0 && (
                 <p className="rounded-md border border-dashed border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-                  No printers detected. Run the local print agent on this PC
-                  (<code>node agent.cjs</code> from the{" "}
-                  <code>local-print-agent</code> folder), then click{" "}
-                  <strong>Refresh</strong>. Alternatively, type printer names
-                  manually below.
+                  No printers detected. Open Dispatch Console (the desktop app)
+                  on the PC connected to your printers — installed printers will
+                  appear here automatically. You can also type names manually below.
                 </p>
               )}
               {printerSlots.map((slot) => (
