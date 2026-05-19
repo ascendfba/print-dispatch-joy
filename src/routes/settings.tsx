@@ -34,7 +34,7 @@ import {
   loadUserSettings,
   saveUserSettings,
 } from "@/lib/user-settings.functions";
-import { getDesktopAppUrl, setDesktopAppUrl } from "@/lib/app-settings.functions";
+import { DESKTOP_APP_DOWNLOAD_URL } from "@/lib/desktop-app";
 import { useServerFn } from "@tanstack/react-start";
 import { TwoFactorCard } from "@/components/TwoFactorCard";
 import { TrustedDeviceCard } from "@/components/TrustedDeviceCard";
@@ -48,7 +48,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { RefreshCw, Save, Plug, Upload, ShieldCheck, Download, Monitor, Pencil, Printer, CircleDot } from "lucide-react";
+import { RefreshCw, Save, Plug, Upload, ShieldCheck, Download, Monitor, Printer, CircleDot } from "lucide-react";
 import JSZip from "jszip";
 
 function normalizeMintsoftBaseUrl(value: string): string {
@@ -89,30 +89,7 @@ function SettingsPage() {
   const fetchSettings = useServerFn(loadUserSettings);
   const persistSettings = useServerFn(saveUserSettings);
   const checkDb = useServerFn(checkUserSettings);
-  const fetchDesktopUrl = useServerFn(getDesktopAppUrl);
-  const persistDesktopUrl = useServerFn(setDesktopAppUrl);
-  const [desktopUrl, setDesktopUrlState] = useState("");
-  const [editingDesktopUrl, setEditingDesktopUrl] = useState(false);
-  const [savingDesktopUrl, setSavingDesktopUrl] = useState(false);
-
-  useEffect(() => {
-    fetchDesktopUrl()
-      .then((r) => setDesktopUrlState(r.url ?? ""))
-      .catch(() => {});
-  }, []);
-
-  async function saveDesktopUrl() {
-    setSavingDesktopUrl(true);
-    try {
-      await persistDesktopUrl({ data: { url: desktopUrl.trim() } });
-      toast.success("Download link saved");
-      setEditingDesktopUrl(false);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to save link");
-    } finally {
-      setSavingDesktopUrl(false);
-    }
-  }
+  const desktopUrl = DESKTOP_APP_DOWNLOAD_URL;
 
   useEffect(() => {
     const s = loadSettings();
@@ -512,55 +489,22 @@ function SettingsPage() {
                   printing and automatic printer detection. The app loads the
                   latest web version automatically — no reinstalls needed.
                 </p>
-                {editingDesktopUrl ? (
-                  <div className="space-y-2">
-                    <Label htmlFor="desktop-url">Download URL</Label>
-                    <Input
-                      id="desktop-url"
-                      placeholder="https://your-domain.com/DispatchConsole-Windows.zip"
-                      value={desktopUrl}
-                      onChange={(e) => setDesktopUrlState(e.target.value)}
-                    />
-                    <div className="flex gap-2">
-                      <Button onClick={saveDesktopUrl} size="sm" disabled={savingDesktopUrl}>
-                        <Save className="mr-2 h-4 w-4" />
-                        {savingDesktopUrl ? "Saving…" : "Save link"}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setEditingDesktopUrl(false)}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Button asChild variant="default" disabled={!desktopUrl}>
-                      <a
-                        href={desktopUrl || "#"}
-                        download
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => {
-                          if (!desktopUrl) e.preventDefault();
-                        }}
-                      >
-                        <Download className="mr-2 h-4 w-4" />
-                        Download for Windows
-                      </a>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setEditingDesktopUrl(true)}
-                      title="Edit download link"
+                <div className="flex items-center gap-2">
+                  <Button asChild variant="default" disabled={!desktopUrl}>
+                    <a
+                      href={desktopUrl || "#"}
+                      download
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => {
+                        if (!desktopUrl) e.preventDefault();
+                      }}
                     >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
+                      <Download className="mr-2 h-4 w-4" />
+                      Download for Windows
+                    </a>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           )}
