@@ -45,10 +45,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { RefreshCw, Save, Plug, Download, Upload, ShieldCheck } from "lucide-react";
+import { RefreshCw, Save, Plug, Upload, ShieldCheck, Download } from "lucide-react";
 import JSZip from "jszip";
-import agentSource from "../../local-print-agent/agent.cjs?raw";
-import agentReadme from "../../local-print-agent/README.md?raw";
 
 function normalizeMintsoftBaseUrl(value: string): string {
   const trimmed = value.trim().replace(/\/+$/, "");
@@ -77,8 +75,6 @@ function SettingsPage() {
   const [printers, setPrinters] = useState<string[]>([]);
   const [testing, setTesting] = useState(false);
   const [checkingDb, setCheckingDb] = useState(false);
-  const [agentStatus, setAgentStatus] = useState<"checking" | "online" | "offline">("checking");
-  const [agentPlatform, setAgentPlatform] = useState<string | null>(null);
   const [clients, setClients] = useState<MintsoftClient[]>([]);
   const [theme, setTheme] = useState<ThemeMode>(() => {
     if (typeof window === "undefined") return "system";
@@ -150,75 +146,9 @@ function SettingsPage() {
     return () => mq.removeEventListener("change", onChange);
   }, [theme]);
 
-  // Poll the local print agent for health every 5s so the user sees a
-  // live status indicator in the Printer tab.
-  useEffect(() => {
-    let cancelled = false;
-    async function ping() {
-      const port = localStorage.getItem("printAgentPort") || "9911";
-      try {
-        const res = await fetch(`http://127.0.0.1:${port}/health`, {
-          signal: AbortSignal.timeout(2000),
-        });
-        if (cancelled) return;
-        if (res.ok) {
-          const j = (await res.json().catch(() => ({}))) as { platform?: string };
-          setAgentStatus("online");
-          setAgentPlatform(j.platform ?? null);
-        } else {
-          setAgentStatus("offline");
-        }
-      } catch {
-        if (!cancelled) setAgentStatus("offline");
-      }
-    }
-    void ping();
-    const id = setInterval(ping, 5000);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
-  }, []);
-
-  async function downloadAgentZip() {
-    try {
-      const zip = new JSZip();
-      const folder = zip.folder("local-print-agent")!;
-      folder.file("agent.cjs", agentSource);
-      folder.file("README.md", agentReadme);
-      const blob = await zip.generateAsync({ type: "blob" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "local-print-agent.zip";
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success("Downloaded local-print-agent.zip — see README to run it.");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Download failed");
-    }
-  }
-
   async function refreshPrinters() {
     const installed = await listInstalledPrinters();
-    let merged = [...installed];
-    // Also try the local print agent (http://127.0.0.1:9911/printers).
-    try {
-      const agentPort = localStorage.getItem("printAgentPort") || "9911";
-      const res = await fetch(`http://127.0.0.1:${agentPort}/printers`, {
-        signal: AbortSignal.timeout(3000),
-      });
-      if (res.ok) {
-        const json = (await res.json()) as { printers?: string[] };
-        if (Array.isArray(json.printers)) {
-          merged = Array.from(new Set([...merged, ...json.printers]));
-          if (!installed.length) toast.success(`Found ${json.printers.length} printer(s) via local agent`);
-        }
-      }
-    } catch {
-      /* agent not running — silent */
-    }
-    setPrinters(merged);
+    setPrinters(installed);
   }
 
   function update<K extends keyof Settings>(key: K, value: Settings[K]) {
@@ -514,47 +444,6 @@ function SettingsPage() {
           <QuickPrintCard mode="upload" />
           <Card>
             <CardHeader className="flex-row items-center justify-between">
-              <CardTitle>Local print agent</CardTitle>
-              <div className="flex items-center gap-2">
-                <span
-                  className={
-                    "inline-block h-2.5 w-2.5 rounded-full " +
-                    (agentStatus === "online"
-                      ? "bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.2)]"
-                      : agentStatus === "offline"
-                      ? "bg-red-500"
-                      : "bg-muted-foreground/50 animate-pulse")
-                  }
-                  aria-hidden
-                />
-                <span className="text-xs text-muted-foreground">
-                  {agentStatus === "online"
-                    ? `Online${agentPlatform ? ` (${agentPlatform})` : ""}`
-                    : agentStatus === "offline"
-                    ? "Offline"
-                    : "Checking…"}
-                </span>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                A tiny Node script runs on the PC connected to your printers and
-                exposes them to this app at <code>http://127.0.0.1:9911</code>.
-                Download the zip, unpack it, then run{" "}
-                <code>node agent.cjs</code> from a terminal (requires Node 18+).
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Button onClick={downloadAgentZip} variant="default">
-                  <Download className="mr-2 h-4 w-4" /> Download agent
-                </Button>
-                <Button onClick={refreshPrinters} variant="outline">
-                  <RefreshCw className="mr-2 h-4 w-4" /> Refresh printers
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex-row items-center justify-between">
               <CardTitle>Printer routing</CardTitle>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
@@ -575,11 +464,9 @@ function SettingsPage() {
             <CardContent className="space-y-4">
               {!electron && printers.length === 0 && (
                 <p className="rounded-md border border-dashed border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-                  No printers detected. Run the local print agent on this PC
-                  (<code>node agent.cjs</code> from the{" "}
-                  <code>local-print-agent</code> folder), then click{" "}
-                  <strong>Refresh</strong>. Alternatively, type printer names
-                  manually below.
+                  No printers detected. Open Dispatch Console (the desktop app)
+                  on the PC connected to your printers — installed printers will
+                  appear here automatically. You can also type names manually below.
                 </p>
               )}
               {printerSlots.map((slot) => (
