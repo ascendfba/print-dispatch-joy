@@ -24,6 +24,8 @@ import {
   type ReworkRates,
 } from "@/lib/storage";
 import { isElectron, listInstalledPrinters } from "@/lib/printing";
+import { printPdfBytes } from "@/lib/printing";
+import { PDFDocument, StandardFonts } from "pdf-lib";
 import { login, listClients, type MintsoftClient } from "@/lib/mintsoft";
 import { REWORK_CATALOG, DEFAULT_CLIENT_KEY, ratesToCsv, csvToRates } from "@/lib/rework";
 import { listPricing, savePricing } from "@/lib/pricing.functions";
@@ -46,7 +48,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { RefreshCw, Save, Plug, Upload, ShieldCheck, Download, Monitor, Pencil } from "lucide-react";
+import { RefreshCw, Save, Plug, Upload, ShieldCheck, Download, Monitor, Pencil, Printer, CircleDot } from "lucide-react";
 import JSZip from "jszip";
 
 function normalizeMintsoftBaseUrl(value: string): string {
@@ -288,6 +290,35 @@ function SettingsPage() {
   }
 
   const electron = isElectron();
+
+  async function testPrint(slot: keyof Settings["printers"]) {
+    const printerName = settings.printers[slot];
+    if (!printerName) {
+      toast.error("Choose a printer for this slot first");
+      return;
+    }
+    try {
+      const pdf = await PDFDocument.create();
+      // 100x60mm test card — readable on every label size.
+      const page = pdf.addPage([283, 170]);
+      const font = await pdf.embedFont(StandardFonts.HelveticaBold);
+      const body = await pdf.embedFont(StandardFonts.Helvetica);
+      page.drawText("Dispatch Console", { x: 14, y: 132, size: 18, font });
+      page.drawText("Printer test", { x: 14, y: 108, size: 14, font: body });
+      page.drawText(`Slot: ${slot}`, { x: 14, y: 82, size: 11, font: body });
+      page.drawText(`Printer: ${printerName}`, { x: 14, y: 64, size: 11, font: body });
+      page.drawText(new Date().toLocaleString(), { x: 14, y: 46, size: 10, font: body });
+      page.drawRectangle({ x: 8, y: 8, width: 267, height: 154, borderWidth: 1 });
+      const bytes = await pdf.save();
+      await printPdfBytes(bytes, printerName, settings.silentPrint, {
+        kind: "test",
+        label: `Printer test (${slot})`,
+      });
+      toast.success(`Test sent to ${printerName}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Test print failed");
+    }
+  }
 
   const clientNameById = useMemo(() => {
     const m = new Map<string, string>();
@@ -537,6 +568,23 @@ function SettingsPage() {
             <CardHeader className="flex-row items-center justify-between">
               <CardTitle>Printer routing</CardTitle>
               <div className="flex items-center gap-3">
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${
+                    electron
+                      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                      : "border-muted-foreground/30 bg-muted text-muted-foreground"
+                  }`}
+                  title={
+                    electron
+                      ? "Running inside the Dispatch Console desktop app — printers detected live."
+                      : "Running in a web browser — install the desktop app to detect printers."
+                  }
+                >
+                  <CircleDot
+                    className={`h-3 w-3 ${electron ? "animate-pulse" : ""}`}
+                  />
+                  {electron ? "Desktop · Live" : "Web mode"}
+                </span>
                 <div className="flex items-center gap-2">
                   <Switch
                     id="silent"
@@ -561,7 +609,7 @@ function SettingsPage() {
                 </p>
               )}
               {printerSlots.map((slot) => (
-                <div key={slot.key} className="grid gap-2 md:grid-cols-[1fr_2fr] md:items-center">
+                <div key={slot.key} className="grid gap-2 md:grid-cols-[1fr_2fr_auto] md:items-center">
                   <div>
                     <div className="text-sm font-medium">{slot.title}</div>
                     <div className="text-xs text-muted-foreground">{slot.desc}</div>
@@ -589,6 +637,20 @@ function SettingsPage() {
                       placeholder="Printer name"
                     />
                   )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => testPrint(slot.key)}
+                    disabled={!settings.printers[slot.key]}
+                    title={
+                      settings.printers[slot.key]
+                        ? `Send a test label to ${settings.printers[slot.key]}`
+                        : "Select a printer first"
+                    }
+                  >
+                    <Printer className="mr-2 h-4 w-4" />
+                    Test
+                  </Button>
                 </div>
               ))}
               <Button onClick={save}>
