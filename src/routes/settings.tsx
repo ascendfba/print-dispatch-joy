@@ -32,6 +32,7 @@ import {
   loadUserSettings,
   saveUserSettings,
 } from "@/lib/user-settings.functions";
+import { getDesktopAppUrl, setDesktopAppUrl } from "@/lib/app-settings.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { TwoFactorCard } from "@/components/TwoFactorCard";
 import { TrustedDeviceCard } from "@/components/TrustedDeviceCard";
@@ -45,7 +46,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { RefreshCw, Save, Plug, Upload, ShieldCheck, Download, Monitor } from "lucide-react";
+import { RefreshCw, Save, Plug, Upload, ShieldCheck, Download, Monitor, Pencil } from "lucide-react";
 import JSZip from "jszip";
 
 function normalizeMintsoftBaseUrl(value: string): string {
@@ -86,6 +87,30 @@ function SettingsPage() {
   const fetchSettings = useServerFn(loadUserSettings);
   const persistSettings = useServerFn(saveUserSettings);
   const checkDb = useServerFn(checkUserSettings);
+  const fetchDesktopUrl = useServerFn(getDesktopAppUrl);
+  const persistDesktopUrl = useServerFn(setDesktopAppUrl);
+  const [desktopUrl, setDesktopUrlState] = useState("");
+  const [editingDesktopUrl, setEditingDesktopUrl] = useState(false);
+  const [savingDesktopUrl, setSavingDesktopUrl] = useState(false);
+
+  useEffect(() => {
+    fetchDesktopUrl()
+      .then((r) => setDesktopUrlState(r.url ?? ""))
+      .catch(() => {});
+  }, []);
+
+  async function saveDesktopUrl() {
+    setSavingDesktopUrl(true);
+    try {
+      await persistDesktopUrl({ data: { url: desktopUrl.trim() } });
+      toast.success("Download link saved");
+      setEditingDesktopUrl(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save link");
+    } finally {
+      setSavingDesktopUrl(false);
+    }
+  }
 
   useEffect(() => {
     const s = loadSettings();
