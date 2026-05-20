@@ -1,7 +1,3 @@
-import { BrowserMultiFormatReader } from "@zxing/browser";
-import * as zxingLib from "@zxing/library";
-const { DecodeHintType, BarcodeFormat } = zxingLib;
-
 export type ScannedLabel = {
   pageIndex: number;
   text: string;
@@ -21,7 +17,12 @@ async function loadPdfjs() {
   return pdfjsPromise;
 }
 
-function makeReader() {
+async function makeReader() {
+  const [{ BrowserMultiFormatReader }, zxingLib] = await Promise.all([
+    import("@zxing/browser"),
+    import("@zxing/library"),
+  ]);
+  const { DecodeHintType, BarcodeFormat } = zxingLib;
   const hints = new Map();
   hints.set(DecodeHintType.POSSIBLE_FORMATS, [
     BarcodeFormat.EAN_13,
@@ -44,7 +45,7 @@ export async function scanLabelPdf(bytes: Uint8Array): Promise<ScannedLabel[]> {
   const pdfjs = await loadPdfjs();
   const data = bytes.slice().buffer;
   const pdf = await pdfjs.getDocument({ data }).promise;
-  const reader = makeReader();
+  const reader = await makeReader();
   const out: ScannedLabel[] = [];
 
   try {
