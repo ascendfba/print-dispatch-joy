@@ -758,9 +758,7 @@ function OrderDetailPage() {
                             </div>
                           )}
                           {allocs.map((a, i) => {
-                            const loc =
-                              a.locationName ||
-                              (a.locationId ? `Location ${a.locationId}` : "Unassigned");
+                            const loc = a.locationName || "Unassigned";
                             const meta: string[] = [];
                             if (a.batchNo) meta.push(`Batch ${a.batchNo}`);
                             if (a.bestBefore)
