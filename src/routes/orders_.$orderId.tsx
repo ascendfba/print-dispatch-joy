@@ -751,6 +751,13 @@ function OrderDetailPage() {
                         {p?.EAN && (
                           <div className="text-[10px] text-muted-foreground">EAN {p.EAN}</div>
                         )}
+                        {!p?.EAN && p && (
+                          <SuggestedEanLine
+                            name={p.Name ?? null}
+                            sku={p.SKU ?? null}
+                            description={p.Description ?? null}
+                          />
+                        )}
                       </TableCell>
                       <TableCell className="align-top pt-4">
                         <div className="text-sm">{p?.Name || p?.Description || "—"}</div>
