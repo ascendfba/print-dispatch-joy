@@ -107,6 +107,7 @@ function OrdersPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [filter, setFilter] = useState("");
+  const [clientFilter, setClientFilter] = useState("");
   const [trackingFor, setTrackingFor] = useState<MintsoftOrder | null>(null);
   const [trackingValue, setTrackingValue] = useState("");
   const trackingRef = useRef<HTMLInputElement>(null);
