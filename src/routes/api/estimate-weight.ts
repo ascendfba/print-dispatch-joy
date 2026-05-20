@@ -31,11 +31,13 @@ export const Route = createFileRoute("/api/estimate-weight")({
         const prompt = `You estimate total shipping weight (grams) for a UK warehouse order.
 
 RULES (follow exactly):
-1. For EACH line, estimate a realistic per-unit packaged weight in grams (typical retail product weight). Default to 150g if truly unknown.
-2. line_total = per_unit_grams * qty.
-3. subtotal = sum of all line_totals.
-4. total = round(subtotal * 1.05)  (5% packaging overhead).
-5. DO NOT ignore quantity. A line with qty=10 must be 10x the per-unit weight, not 1x.
+1. READ the description carefully. If it mentions a multipack (e.g. "6 pack", "six pack", "pack of 12", "case of 24", "2x500ml", "12-count"), the per_unit_grams must be the weight of the WHOLE pack, not a single inner item. Example: "six pack of 330ml cans" with qty=2 → per_unit_grams ≈ 6 * 345g ≈ 2070g, line_total = 2070 * 2.
+2. Use the description to infer size/volume too (e.g. "500ml", "1kg", "250g"). 1ml of liquid ≈ 1g; add ~50g for can/bottle packaging.
+3. If no size/pack info, estimate a realistic per-unit packaged weight in grams. Default to 150g only if truly unknown.
+4. line_total_grams = per_unit_grams * qty.
+5. subtotal = sum of all line_totals.
+6. total = round(subtotal * 1.05)  (5% packaging overhead).
+7. DO NOT ignore qty. qty is how many of the described unit/pack the customer ordered.
 
 Return ONLY strict JSON:
 {
