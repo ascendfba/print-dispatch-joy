@@ -317,6 +317,8 @@ export type MintsoftProduct = {
   ImageURL?: string | null;
   EAN?: string | null;
   UPC?: string | null;
+  ClientId?: number | null;
+  ClientID?: number | null;
   Bundle?: boolean | null;
   IsBundle?: boolean | null;
   BundleProducts?: Array<{ ProductId?: number; SKU?: string; Quantity?: number }> | null;
@@ -326,6 +328,47 @@ export type MintsoftProduct = {
   RequiresExpiryDate?: boolean | null;
   RequiresBatchNumber?: boolean | null;
 };
+
+export async function listProducts(
+  settings: Settings,
+  opts: { take?: number; skip?: number } = {},
+): Promise<MintsoftProduct[]> {
+  const take = opts.take ?? 500;
+  const skip = opts.skip ?? 0;
+  const paths = [
+    `/api/Product/List?Take=${take}&Skip=${skip}`,
+    `/api/Product?Take=${take}&Skip=${skip}`,
+    `/api/Product/Search?Take=${take}&Skip=${skip}`,
+  ];
+  for (const p of paths) {
+    try {
+      const data = await authedJson<MintsoftProduct[] | { Results?: MintsoftProduct[] }>(
+        settings,
+        p,
+      );
+      const arr = Array.isArray(data) ? data : (data?.Results ?? []);
+      if (Array.isArray(arr)) return arr;
+    } catch {
+      /* try next */
+    }
+  }
+  return [];
+}
+
+export async function listAllProducts(settings: Settings): Promise<MintsoftProduct[]> {
+  const pageSize = 500;
+  const all: MintsoftProduct[] = [];
+  let skip = 0;
+  // Safety cap to avoid runaway loops
+  for (let i = 0; i < 40; i++) {
+    const batch = await listProducts(settings, { take: pageSize, skip });
+    if (batch.length === 0) break;
+    all.push(...batch);
+    if (batch.length < pageSize) break;
+    skip += pageSize;
+  }
+  return all;
+}
 
 export async function fetchProduct(
   settings: Settings,
