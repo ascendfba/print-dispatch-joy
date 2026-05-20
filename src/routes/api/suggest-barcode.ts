@@ -108,10 +108,10 @@ export const Route = createFileRoute("/api/suggest-barcode")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const apiKey = process.env.LOVABLE_API_KEY;
+        const apiKey = process.env.GROQ_API_KEY;
         if (!apiKey) {
           return Response.json(
-            { barcode: null, error: "LOVABLE_API_KEY missing" },
+            { barcode: null, error: "GROQ_API_KEY missing" },
             { status: 500 },
           );
         }
@@ -188,22 +188,23 @@ export const Route = createFileRoute("/api/suggest-barcode")({
           'Reply ONLY as strict JSON: {"barcode": "<digits or null>", "type": "EAN"|"UPC", "confidence": "low"|"medium"|"high", "reason": "<one sentence citing the source or why none match>"}';
 
         try {
-          const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${apiKey}`,
             },
             body: JSON.stringify({
-              model: "google/gemini-3-flash-preview",
+              model: "llama-3.3-70b-versatile",
               messages: [{ role: "user", content: prompt }],
               temperature: 0,
+              response_format: { type: "json_object" },
             }),
           });
           if (!r.ok) {
             const text = await r.text();
             return Response.json(
-              { barcode: null, error: `gemini ${r.status}: ${text.slice(0, 200)}` },
+              { barcode: null, error: `groq ${r.status}: ${text.slice(0, 200)}` },
               { status: 200 },
             );
           }

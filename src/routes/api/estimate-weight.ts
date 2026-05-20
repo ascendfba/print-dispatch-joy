@@ -6,9 +6,9 @@ export const Route = createFileRoute("/api/estimate-weight")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const key = process.env.LOVABLE_API_KEY;
+        const key = process.env.GROQ_API_KEY;
         if (!key) {
-          return Response.json({ error: "Missing LOVABLE_API_KEY" }, { status: 500 });
+          return Response.json({ error: "Missing GROQ_API_KEY" }, { status: 500 });
         }
         let body: { items?: Item[] };
         try {
@@ -34,14 +34,14 @@ Order items:
 ${lines}`;
 
         try {
-          const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "Lovable-API-Key": key,
+              Authorization: `Bearer ${key}`,
             },
             body: JSON.stringify({
-              model: "google/gemini-3-flash-preview",
+              model: "llama-3.3-70b-versatile",
               messages: [{ role: "user", content: prompt }],
               response_format: { type: "json_object" },
             }),
