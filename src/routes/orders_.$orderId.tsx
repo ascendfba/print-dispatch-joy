@@ -1293,16 +1293,56 @@ function ReworkChargesCard({
           );
         })()}
 
-        <Button
-          className={`mt-2 w-full ${attention && !submitted ? "animate-attention" : ""}`}
-          variant="secondary"
-          onClick={handleSubmit}
-          disabled={submitting || submitted}
+        <div
+          className={`mt-2 flex w-full ${attention && !submitted ? "animate-attention" : ""}`}
         >
-          {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {submitted && <Check className="mr-2 h-4 w-4" />}
-          {submitted ? "Charges submitted" : "Submit charges"}
-        </Button>
+          <Button
+            className="flex-1 rounded-r-none"
+            variant="secondary"
+            onClick={handleSubmit}
+            disabled={submitting || submitted}
+          >
+            {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {submitted && <Check className="mr-2 h-4 w-4" />}
+            {submitted ? "Charges submitted" : "Submit charges"}
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="secondary"
+                size="icon"
+                className="rounded-l-none border-l border-border/60"
+                disabled={submitting}
+                aria-label="Charge options"
+              >
+                <Flag className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={async () => {
+                  try {
+                    await addOrderComment(
+                      loadSettings(),
+                      orderId,
+                      "Charges Flagged, please review",
+                      true,
+                    );
+                    const ref = orderNumber ?? `#${orderId}`;
+                    toast.success(`Order ${ref}: flagged for review`);
+                  } catch (e) {
+                    toast.error(
+                      e instanceof Error ? e.message : "Failed to flag charges",
+                    );
+                  }
+                }}
+              >
+                <Flag className="mr-2 h-4 w-4" />
+                Flag charges for review
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </CardContent>
     </Card>
   );
