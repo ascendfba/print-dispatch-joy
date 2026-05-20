@@ -128,8 +128,15 @@ export const Route = createFileRoute("/api/suggest-barcode")({
           return Response.json({ barcode: null, error: "Need name or SKU" }, { status: 400 });
         }
 
-        // 1) Web search for the product + barcode.
-        const query = `${name || sku} EAN barcode`;
+        // 1) Web search for the product + barcode. Build the query from
+        // name + the most descriptive bits of the description (size, pack,
+        // variant) so vague SKUs/names still produce relevant matches.
+        const descSnippet = description
+          .replace(/\s+/g, " ")
+          .slice(0, 120)
+          .trim();
+        const queryParts = [name || sku, descSnippet, "EAN barcode"].filter(Boolean);
+        const query = queryParts.join(" ");
         const enc = encodeURIComponent(query);
         const searchHtml = await fetchHtml(
           `https://www.google.com/search?q=${enc}&hl=en&gl=uk`,
