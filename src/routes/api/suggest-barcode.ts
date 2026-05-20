@@ -33,15 +33,25 @@ async function fetchHtml(url: string, timeoutMs = 6000): Promise<string | null> 
   }
 }
 
-function extractGoogleResultLinks(html: string): string[] {
+function extractDuckLinks(html: string): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
-  const re = /\/url\?q=(https?:\/\/[^&"]+)&/g;
+  // DuckDuckGo HTML results: <a class="result__a" href="...">
+  // or redirect form: /l/?uddg=<encoded>
+  const reDirect = /href="(https?:\/\/[^"]+)"[^>]*class="result__a"/g;
+  const reRedir = /\/l\/\?uddg=([^"&]+)/g;
   let m: RegExpExecArray | null;
-  while ((m = re.exec(html)) && out.length < 8) {
+  while ((m = reDirect.exec(html)) && out.length < 8) {
+    const u = m[1];
+    if (/duckduckgo\.com/i.test(u)) continue;
+    if (seen.has(u)) continue;
+    seen.add(u);
+    out.push(u);
+  }
+  while ((m = reRedir.exec(html)) && out.length < 8) {
     try {
       const u = decodeURIComponent(m[1]);
-      if (/google\.|gstatic|webcache/i.test(u)) continue;
+      if (/duckduckgo\.com/i.test(u)) continue;
       if (seen.has(u)) continue;
       seen.add(u);
       out.push(u);
