@@ -1310,11 +1310,11 @@ function ReworkChargesCard({
               <Button
                 variant="secondary"
                 size="icon"
-                className="rounded-l-none border-l border-border/60"
+                className="rounded-l-none rounded-r-md border-l border-border/60"
                 disabled={submitting}
                 aria-label="Charge options"
               >
-                <Flag className="h-4 w-4" />
+                <Flag className="h-4 w-4 text-red-500" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
