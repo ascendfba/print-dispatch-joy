@@ -285,30 +285,43 @@ function OrderDetailPage() {
         console.warn("[order] fetchOrderAllocations failed", e);
       }
       // Resolve any missing/numeric location names to the short bin code
-      // (e.g. "B1-S1-PB1") so pickers see the same label as the picking list.
+      // (e.g. "B10-S1-PL1") so pickers see the same label as the picking list.
       const needsName = (n: string | undefined, locId: number | undefined) => {
         if (!locId) return false;
         const t = (n ?? "").trim().toLowerCase();
         return !t || t === `${locId}` || t === `location ${locId}`;
       };
-      const toResolve = new Map<string, { warehouseId: number; locationId: number }>();
-      for (const a of allocs) {
-        if (a.warehouseId && a.locationId && needsName(a.locationName, a.locationId)) {
-          toResolve.set(`${a.warehouseId}:${a.locationId}`, {
-            warehouseId: a.warehouseId,
-            locationId: a.locationId,
-          });
+      // Build a global locationId -> short-name map by listing every
+      // warehouse's locations once (same source the picking list uses).
+      // Falls back to MIL1 if no warehouseId was returned on the allocation.
+      const unresolved = allocs.filter((a) =>
+        a.locationId && needsName(a.locationName, a.locationId),
+      );
+      if (unresolved.length > 0) {
+        let warehouseIds = Array.from(
+          new Set(unresolved.map((a) => a.warehouseId).filter((w): w is number => !!w)),
+        );
+        if (warehouseIds.length === 0) {
+          try {
+            const whs = await listWarehouses(settings);
+            const mil1 =
+              whs.find((w) => (w.code ?? "").toUpperCase() === "MIL1") ||
+              whs.find((w) => (w.name ?? "").toUpperCase().includes("MIL1"));
+            if (mil1) warehouseIds = [mil1.id];
+          } catch (e) {
+            console.warn("[order] listWarehouses failed", e);
+          }
         }
-      }
-      if (toResolve.size > 0) {
         const nameMap = new Map<number, string>();
         await Promise.all(
-          Array.from(toResolve.values()).map(async ({ warehouseId, locationId }) => {
+          warehouseIds.map(async (wid) => {
             try {
-              const loc = await fetchWarehouseLocation(settings, warehouseId, locationId);
-              if (loc?.name) nameMap.set(locationId, loc.code || loc.name);
-            } catch {
-              /* best-effort */
+              const locs = await listWarehouseLocations(settings, wid);
+              for (const l of locs) {
+                if (l.name) nameMap.set(l.id, l.code || l.name);
+              }
+            } catch (e) {
+              console.warn("[order] listWarehouseLocations failed", wid, e);
             }
           }),
         );
