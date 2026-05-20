@@ -284,6 +284,41 @@ function OrderDetailPage() {
       } catch (e) {
         console.warn("[order] fetchOrderAllocations failed", e);
       }
+      // Resolve any missing/numeric location names to the short bin code
+      // (e.g. "B1-S1-PB1") so pickers see the same label as the picking list.
+      const needsName = (n: string | undefined, locId: number | undefined) => {
+        if (!locId) return false;
+        const t = (n ?? "").trim().toLowerCase();
+        return !t || t === `${locId}` || t === `location ${locId}`;
+      };
+      const toResolve = new Map<string, { warehouseId: number; locationId: number }>();
+      for (const a of allocs) {
+        if (a.warehouseId && a.locationId && needsName(a.locationName, a.locationId)) {
+          toResolve.set(`${a.warehouseId}:${a.locationId}`, {
+            warehouseId: a.warehouseId,
+            locationId: a.locationId,
+          });
+        }
+      }
+      if (toResolve.size > 0) {
+        const nameMap = new Map<number, string>();
+        await Promise.all(
+          Array.from(toResolve.values()).map(async ({ warehouseId, locationId }) => {
+            try {
+              const loc = await fetchWarehouseLocation(settings, warehouseId, locationId);
+              if (loc?.name) nameMap.set(locationId, loc.code || loc.name);
+            } catch {
+              /* best-effort */
+            }
+          }),
+        );
+        for (const a of allocs) {
+          if (a.locationId && needsName(a.locationName, a.locationId)) {
+            const name = nameMap.get(a.locationId);
+            if (name) a.locationName = name;
+          }
+        }
+      }
       const byItem = new Map<number, OrderAllocation[]>();
       const byProduct = new Map<number, OrderAllocation[]>();
       for (const a of allocs) {
@@ -723,9 +758,7 @@ function OrderDetailPage() {
                             </div>
                           )}
                           {allocs.map((a, i) => {
-                            const loc =
-                              a.locationName ||
-                              (a.locationId ? `Location ${a.locationId}` : "Unassigned");
+                            const loc = a.locationName || "Unassigned";
                             const meta: string[] = [];
                             if (a.batchNo) meta.push(`Batch ${a.batchNo}`);
                             if (a.bestBefore)
