@@ -1297,8 +1297,7 @@ function ReworkChargesCard({
           className={`mt-2 flex w-full ${attention && !submitted ? "animate-attention" : ""}`}
         >
           <Button
-            className="flex-1 rounded-r-none"
-            variant="secondary"
+            className="flex-1 rounded-r-none bg-emerald-600 text-white hover:bg-emerald-700"
             onClick={handleSubmit}
             disabled={submitting || submitted}
           >
