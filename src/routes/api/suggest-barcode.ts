@@ -149,20 +149,20 @@ export const Route = createFileRoute("/api/suggest-barcode")({
         const query = queryParts.join(" ");
         const enc = encodeURIComponent(query);
         const searchHtml = await fetchHtml(
-          `https://www.google.com/search?q=${enc}&hl=en&gl=uk`,
+          `https://html.duckduckgo.com/html/?q=${enc}&kl=uk-en`,
         );
-        const links = searchHtml ? extractGoogleResultLinks(searchHtml) : [];
+        const links = searchHtml ? extractDuckLinks(searchHtml) : [];
 
         // 2) Scrape candidate pages and extract barcode digits.
         const candidates: Candidate[] = [];
         const sources: string[] = [];
         if (searchHtml) {
-          const fromSerp = extractBarcodes(stripHtml(searchHtml), "google-results");
+          const fromSerp = extractBarcodes(stripHtml(searchHtml), "duckduckgo-results");
           candidates.push(...fromSerp);
         }
         const topLinks = links.slice(0, 4);
         await Promise.all(
-          topLinks.map(async (url) => {
+          topLinks.map(async (url: string) => {
             const html = await fetchHtml(url, 5000);
             if (!html) return;
             const text = stripHtml(html);
