@@ -66,6 +66,7 @@ import {
 } from "@/components/ui/select";
 
 export const Route = createFileRoute("/orders_/$orderId")({
+  ssr: false,
   beforeLoad: ({ location }) => requireAuth(location),
   component: OrderDetailPage,
 });
