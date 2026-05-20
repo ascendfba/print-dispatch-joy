@@ -639,6 +639,12 @@ function OrderDetailPage() {
                   const isBundle = !!(
                     bundleTag || p?.Bundle || p?.IsBundle || bundleInfo
                   );
+                  const allocs =
+                    allocationsQuery.data?.byItem.get(it.ID) ??
+                    (it.ProductId
+                      ? allocationsQuery.data?.byProduct.get(it.ProductId)
+                      : undefined) ??
+                    [];
                   return (
                     <TableRow key={it.ID}>
                       <TableCell>
@@ -703,6 +709,50 @@ function OrderDetailPage() {
                             Suggested image
                           </Badge>
                         )}
+                        <div className="mt-2 space-y-0.5 text-xs">
+                          {allocationsQuery.isLoading && (
+                            <div className="text-muted-foreground">
+                              <Loader2 className="mr-1 inline h-3 w-3 animate-spin" />
+                              Loading pick location…
+                            </div>
+                          )}
+                          {!allocationsQuery.isLoading && allocs.length === 0 && (
+                            <div className="text-muted-foreground">
+                              <MapPin className="mr-1 inline h-3 w-3" />
+                              No allocation
+                            </div>
+                          )}
+                          {allocs.map((a, i) => {
+                            const loc =
+                              a.locationName ||
+                              (a.locationId ? `Location ${a.locationId}` : "Unassigned");
+                            const meta: string[] = [];
+                            if (a.batchNo) meta.push(`Batch ${a.batchNo}`);
+                            if (a.bestBefore)
+                              meta.push(
+                                `BBE ${new Date(a.bestBefore).toLocaleDateString()}`,
+                              );
+                            return (
+                              <div
+                                key={`${a.orderItemId ?? "p"}-${a.locationId ?? "x"}-${i}`}
+                                className="flex flex-wrap items-center gap-x-2 gap-y-0.5"
+                              >
+                                <span className="inline-flex items-center font-medium text-foreground">
+                                  <MapPin className="mr-1 h-3 w-3 text-muted-foreground" />
+                                  {loc}
+                                </span>
+                                <span className="tabular-nums text-muted-foreground">
+                                  × {a.quantity}
+                                </span>
+                                {meta.length > 0 && (
+                                  <span className="text-muted-foreground">
+                                    · {meta.join(" · ")}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right text-2xl font-semibold tabular-nums align-top pt-3">
                         {it.Quantity}
