@@ -56,7 +56,7 @@ import { scanLabelPdf, buildSkuBarcodeMap } from "@/lib/labelScan";
 import { pickPrinter, printPdfBytes } from "@/lib/printing";
 import { loadSettings } from "@/lib/storage";
 import { REWORK_CATALOG, getRate, formatGBP } from "@/lib/rework";
-import { ArrowLeft, ArrowRight, Check, Eye, FileText, ImageOff, Loader2, Minus, Printer, AlertTriangle, ListChecks, Plus, Weight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Eye, FileText, ImageOff, Loader2, MapPin, Minus, Printer, AlertTriangle, ListChecks, Plus, Weight } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -269,6 +269,38 @@ function OrderDetailPage() {
     queryKey: ["order-items", id],
     queryFn: () => fetchOrderItems(loadSettings(), id),
     staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  // Pull the same allocation data Mintsoft uses to build the picking list so
+  // we can show pickers where each SKU is stocked (location, batch, BBE).
+  const allocationsQuery = useQuery({
+    queryKey: ["order-allocations", id],
+    queryFn: async () => {
+      const settings = loadSettings();
+      let allocs: OrderAllocation[] = [];
+      try {
+        allocs = await fetchOrderAllocations(settings, id);
+      } catch (e) {
+        console.warn("[order] fetchOrderAllocations failed", e);
+      }
+      const byItem = new Map<number, OrderAllocation[]>();
+      const byProduct = new Map<number, OrderAllocation[]>();
+      for (const a of allocs) {
+        if (a.orderItemId) {
+          const list = byItem.get(a.orderItemId) ?? [];
+          list.push(a);
+          byItem.set(a.orderItemId, list);
+        }
+        if (a.productId) {
+          const list = byProduct.get(a.productId) ?? [];
+          list.push(a);
+          byProduct.set(a.productId, list);
+        }
+      }
+      return { byItem, byProduct };
+    },
+    staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
 
