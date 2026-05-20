@@ -197,6 +197,58 @@ function ProductImage({
   );
 }
 
+function SuggestedEanLine({
+  name,
+  sku,
+  description,
+}: {
+  name: string | null;
+  sku: string | null;
+  description: string | null;
+}) {
+  const q = useQuery({
+    queryKey: ["suggest-ean", sku ?? name],
+    queryFn: async () => {
+      const r = await fetch("/api/suggest-barcode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, sku, description }),
+      });
+      if (!r.ok) return null;
+      return (await r.json()) as {
+        barcode?: string | null;
+        type?: "EAN" | "UPC";
+        confidence?: "low" | "medium" | "high";
+        reason?: string;
+      };
+    },
+    enabled: !!(name || sku),
+    staleTime: 60 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  if (q.isLoading) {
+    return (
+      <div className="text-[10px] text-muted-foreground">
+        <Loader2 className="mr-1 inline h-3 w-3 animate-spin" />
+        Looking up EAN…
+      </div>
+    );
+  }
+  const code = q.data?.barcode;
+  if (!code) return null;
+  const label = q.data?.type === "UPC" ? "UPC" : "EAN";
+  return (
+    <div
+      className="text-[10px] font-medium text-amber-600"
+      title={q.data?.reason ?? "AI-suggested barcode — verify before use"}
+    >
+      <AlertTriangle className="mr-1 inline h-3 w-3" />
+      {label} {code} (suggested)
+    </div>
+  );
+}
+
 function firstString(...values: unknown[]): string | null {
   for (const value of values) {
     if (typeof value === "string" && value.trim()) return value.trim();
