@@ -33,15 +33,25 @@ async function fetchHtml(url: string, timeoutMs = 6000): Promise<string | null> 
   }
 }
 
-function extractGoogleResultLinks(html: string): string[] {
+function extractDuckLinks(html: string): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
-  const re = /\/url\?q=(https?:\/\/[^&"]+)&/g;
+  // DuckDuckGo HTML results: <a class="result__a" href="...">
+  // or redirect form: /l/?uddg=<encoded>
+  const reDirect = /href="(https?:\/\/[^"]+)"[^>]*class="result__a"/g;
+  const reRedir = /\/l\/\?uddg=([^"&]+)/g;
   let m: RegExpExecArray | null;
-  while ((m = re.exec(html)) && out.length < 8) {
+  while ((m = reDirect.exec(html)) && out.length < 8) {
+    const u = m[1];
+    if (/duckduckgo\.com/i.test(u)) continue;
+    if (seen.has(u)) continue;
+    seen.add(u);
+    out.push(u);
+  }
+  while ((m = reRedir.exec(html)) && out.length < 8) {
     try {
       const u = decodeURIComponent(m[1]);
-      if (/google\.|gstatic|webcache/i.test(u)) continue;
+      if (/duckduckgo\.com/i.test(u)) continue;
       if (seen.has(u)) continue;
       seen.add(u);
       out.push(u);
@@ -139,20 +149,20 @@ export const Route = createFileRoute("/api/suggest-barcode")({
         const query = queryParts.join(" ");
         const enc = encodeURIComponent(query);
         const searchHtml = await fetchHtml(
-          `https://www.google.com/search?q=${enc}&hl=en&gl=uk`,
+          `https://html.duckduckgo.com/html/?q=${enc}&kl=uk-en`,
         );
-        const links = searchHtml ? extractGoogleResultLinks(searchHtml) : [];
+        const links = searchHtml ? extractDuckLinks(searchHtml) : [];
 
         // 2) Scrape candidate pages and extract barcode digits.
         const candidates: Candidate[] = [];
         const sources: string[] = [];
         if (searchHtml) {
-          const fromSerp = extractBarcodes(stripHtml(searchHtml), "google-results");
+          const fromSerp = extractBarcodes(stripHtml(searchHtml), "duckduckgo-results");
           candidates.push(...fromSerp);
         }
         const topLinks = links.slice(0, 4);
         await Promise.all(
-          topLinks.map(async (url) => {
+          topLinks.map(async (url: string) => {
             const html = await fetchHtml(url, 5000);
             if (!html) return;
             const text = stripHtml(html);
