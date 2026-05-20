@@ -1,6 +1,6 @@
 import { Link, Outlet, useLocation, useNavigate, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Package, Settings as SettingsIcon, Truck, LogOut, LayoutGrid } from "lucide-react";
+import { Package, Settings as SettingsIcon, Truck, LogOut, LayoutGrid, Boxes } from "lucide-react";
 import { isElectron } from "@/lib/printing";
 import { Toaster } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,7 @@ export function AppLayout() {
     { to: "/", label: "Hub", icon: LayoutGrid, exact: true },
     { to: "/orders", label: "Orders", icon: Package },
     { to: "/asns", label: "ASNs", icon: Truck },
+    { to: "/stock", label: "Stock", icon: Boxes },
     { to: "/settings", label: "Settings", icon: SettingsIcon },
   ];
   const authRoutes = ["/login", "/signup", "/forgot-password", "/reset-password"];
