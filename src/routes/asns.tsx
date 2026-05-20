@@ -63,6 +63,7 @@ function AsnsPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [filter, setFilter] = useState("");
+  const [clientFilter, setClientFilter] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [statusTab, setStatusTab] = useState<
     "new" | "partial" | "completed"
@@ -147,23 +148,29 @@ function AsnsPage() {
   }, [asnsQuery.data, statusTab]);
 
   const filtered = useMemo(() => {
-    const list = (asnsQuery.data ?? []).filter((a) => matchesStatusTab(a.Status));
+    let list = (asnsQuery.data ?? []).filter((a) => matchesStatusTab(a.Status));
     const q = filter.trim().toLowerCase();
-    if (!q) return list;
-    return list.filter((a) =>
-      [
-        a.Reference,
-        a.SupplierName,
-        a.WarehouseName,
-        a.Status,
-        String(a.ID),
-        a.ClientId ? clientNameById.get(a.ClientId) : null,
-      ]
-        .filter(Boolean)
-        .some((v) => String(v).toLowerCase().includes(q)),
-    );
+    if (q) {
+      list = list.filter((a) =>
+        [
+          a.Reference,
+          a.SupplierName,
+          a.WarehouseName,
+          a.Status,
+          String(a.ID),
+          a.ClientId ? clientNameById.get(a.ClientId) : null,
+        ]
+          .filter(Boolean)
+          .some((v) => String(v).toLowerCase().includes(q)),
+      );
+    }
+    if (clientFilter && clientFilter !== "all") {
+      const cid = Number(clientFilter);
+      list = list.filter((a) => a.ClientId === cid);
+    }
+    return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [asnsQuery.data, filter, clientNameById, statusTab]);
+  }, [asnsQuery.data, filter, clientNameById, statusTab, clientFilter]);
 
   return (
     <div className="space-y-4">
@@ -209,16 +216,31 @@ function AsnsPage() {
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+      <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
           <CardTitle className="text-base">
             {filtered.length} ASN{filtered.length === 1 ? "" : "s"}
           </CardTitle>
-          <Input
-            placeholder="Search reference, supplier, warehouse…"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="max-w-xs"
-          />
+          <div className="flex items-center gap-2">
+            <Select value={clientFilter} onValueChange={setClientFilter}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="All clients" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All clients</SelectItem>
+                {(clientsQuery.data ?? []).map((c) => (
+                  <SelectItem key={c.ID} value={String(c.ID)}>
+                    {c.BrandName || c.ShortName || c.Name || `Client #${c.ID}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              placeholder="Search reference, supplier, warehouse…"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="max-w-xs"
+            />
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <Tabs value={statusTab} onValueChange={(v) => setStatusTab(v as typeof statusTab)}>

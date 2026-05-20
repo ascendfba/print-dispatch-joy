@@ -15,6 +15,13 @@ import {
 import { Loader2, Package } from "lucide-react";
 import { listAllProducts, listClients } from "@/lib/mintsoft";
 import { loadSettings } from "@/lib/storage";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const Route = createFileRoute("/stock")({
   beforeLoad: ({ location }) => requireAuth(location),
@@ -23,6 +30,7 @@ export const Route = createFileRoute("/stock")({
 
 function StockPage() {
   const [filter, setFilter] = useState("");
+  const [clientFilter, setClientFilter] = useState("");
 
   const productsQuery = useQuery({
     queryKey: ["stock-products"],
@@ -54,21 +62,27 @@ function StockPage() {
   }, [clientsQuery.data]);
 
   const rows = useMemo(() => {
-    const items = productsQuery.data ?? [];
+    let items = productsQuery.data ?? [];
     const q = filter.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((p) => {
-      const clientId = p.ClientId ?? p.ClientID ?? 0;
-      const clientName = clientId ? (clientNameById.get(clientId) ?? "") : "";
-      return (
-        (p.SKU ?? "").toLowerCase().includes(q) ||
-        (p.Name ?? "").toLowerCase().includes(q) ||
-        (p.EAN ?? "").toLowerCase().includes(q) ||
-        (p.UPC ?? "").toLowerCase().includes(q) ||
-        clientName.toLowerCase().includes(q)
-      );
-    });
-  }, [productsQuery.data, filter, clientNameById]);
+    if (q) {
+      items = items.filter((p) => {
+        const clientId = p.ClientId ?? p.ClientID ?? 0;
+        const clientName = clientId ? (clientNameById.get(clientId) ?? "") : "";
+        return (
+          (p.SKU ?? "").toLowerCase().includes(q) ||
+          (p.Name ?? "").toLowerCase().includes(q) ||
+          (p.EAN ?? "").toLowerCase().includes(q) ||
+          (p.UPC ?? "").toLowerCase().includes(q) ||
+          clientName.toLowerCase().includes(q)
+        );
+      });
+    }
+    if (clientFilter && clientFilter !== "all") {
+      const cid = Number(clientFilter);
+      items = items.filter((p) => (p.ClientId ?? p.ClientID ?? 0) === cid);
+    }
+    return items;
+  }, [productsQuery.data, filter, clientFilter, clientNameById]);
 
   return (
     <div className="space-y-4">
@@ -79,12 +93,27 @@ function StockPage() {
             All SKUs from Mintsoft.
           </p>
         </div>
-        <Input
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          placeholder="Search SKU, name, barcode or client…"
-          className="max-w-sm"
-        />
+        <div className="flex items-center gap-2">
+          <Select value={clientFilter} onValueChange={setClientFilter}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="All clients" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All clients</SelectItem>
+              {(clientsQuery.data ?? []).map((c) => (
+                <SelectItem key={c.ID} value={String(c.ID)}>
+                  {c.BrandName || c.ShortName || c.Name || `Client #${c.ID}`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="Search SKU, name, barcode or client…"
+            className="max-w-sm"
+          />
+        </div>
       </div>
 
       <Card>

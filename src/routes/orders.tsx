@@ -20,6 +20,13 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -100,6 +107,7 @@ function OrdersPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [filter, setFilter] = useState("");
+  const [clientFilter, setClientFilter] = useState("");
   const [trackingFor, setTrackingFor] = useState<MintsoftOrder | null>(null);
   const [trackingValue, setTrackingValue] = useState("");
   const trackingRef = useRef<HTMLInputElement>(null);
@@ -294,28 +302,36 @@ function OrdersPage() {
   const filtered = useMemo(() => {
     const list = ordersQuery.data ?? [];
     const q = filter.trim().toLowerCase();
-    const matches = q
+    let matches = q
       ? list.filter((o) =>
           [o.OrderNumber, o.ChannelOrderRef, o.CustomerName, o.CourierName, o.WarehouseName]
             .filter(Boolean)
             .some((v) => String(v).toLowerCase().includes(q)),
         )
       : list;
+    if (clientFilter && clientFilter !== "all") {
+      const cid = Number(clientFilter);
+      matches = matches.filter((o) => (o as { ClientId?: number }).ClientId === cid);
+    }
     // Oldest first — most urgent at the top
     return [...matches].sort(
       (a, b) => (ageInHours(b.OrderDate as string) ?? 0) - (ageInHours(a.OrderDate as string) ?? 0),
     );
-  }, [ordersQuery.data, filter]);
+  }, [ordersQuery.data, filter, clientFilter]);
 
   const applyFilter = (list: MintsoftOrder[]) => {
     const q = filter.trim().toLowerCase();
-    const matches = q
+    let matches = q
       ? list.filter((o) =>
           [o.OrderNumber, o.ChannelOrderRef, o.CustomerName, o.CourierName, o.WarehouseName]
             .filter(Boolean)
             .some((v) => String(v).toLowerCase().includes(q)),
         )
       : list;
+    if (clientFilter && clientFilter !== "all") {
+      const cid = Number(clientFilter);
+      matches = matches.filter((o) => (o as { ClientId?: number }).ClientId === cid);
+    }
     return [...matches].sort(
       (a, b) => (ageInHours(b.OrderDate as string) ?? 0) - (ageInHours(a.OrderDate as string) ?? 0),
     );
@@ -323,12 +339,12 @@ function OrdersPage() {
   const filteredDespatched = useMemo(
     () => applyFilter(despatchedQuery.data ?? []),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [despatchedQuery.data, filter],
+    [despatchedQuery.data, filter, clientFilter],
   );
   const filteredInvoiced = useMemo(
     () => applyFilter(invoicedQuery.data ?? []),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [invoicedQuery.data, filter],
+    [invoicedQuery.data, filter, clientFilter],
   );
 
   const stats = useMemo(() => {
@@ -729,6 +745,19 @@ function OrdersPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Select value={clientFilter} onValueChange={setClientFilter}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="All clients" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All clients</SelectItem>
+              {(clientsQuery.data ?? []).map((c) => (
+                <SelectItem key={c.ID} value={String(c.ID)}>
+                  {c.BrandName || c.ShortName || c.Name || `Client #${c.ID}`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Input
             placeholder="Filter…"
             className="w-64"
