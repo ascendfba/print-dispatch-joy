@@ -91,6 +91,7 @@ const bucketBadge: Record<ReturnType<typeof ageBucket>, string> = {
 };
 
 export const Route = createFileRoute("/orders")({
+  ssr: false,
   beforeLoad: ({ location }) => requireAuth(location),
   component: OrdersPage,
 });

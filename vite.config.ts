@@ -10,6 +10,16 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 // @cloudflare/vite-plugin builds from this — wrangler.jsonc main alone is insufficient.
 export default defineConfig({
   vite: {
+    optimizeDeps: {
+      include: [
+        '@tanstack/router-core',
+        '@tanstack/router-core/ssr/client',
+        '@tanstack/router-core/ssr/server',
+        '@tanstack/history',
+        'h3-v2',
+        'seroval',
+      ],
+    },
     server: {
       watch: {
         ignored: [
