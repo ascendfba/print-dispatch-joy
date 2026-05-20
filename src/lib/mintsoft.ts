@@ -737,9 +737,12 @@ export async function fetchOrderAllocations(
       quantity: Number(r.Quantity ?? 0),
       locationId: Number.isFinite(locationId) ? locationId : undefined,
       locationName:
+        (typeof r.SimpleLocationName === "string" && r.SimpleLocationName) ||
         (typeof r.LocationName === "string" && r.LocationName) ||
         (typeof r.Location === "string" && r.Location) ||
         (typeof r.BinLocation === "string" && r.BinLocation) ||
+        (typeof r.LocationCode === "string" && r.LocationCode) ||
+        (typeof r.Code === "string" && r.Code) ||
         undefined,
       warehouseId: Number.isFinite(warehouseId) ? warehouseId : undefined,
       warehouseName: typeof r.WarehouseName === "string" ? r.WarehouseName : undefined,
