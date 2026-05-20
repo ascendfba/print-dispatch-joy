@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as StockRouteImport } from './routes/stock'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
@@ -35,6 +36,11 @@ import { Route as ApiPublicSetupWarningLabelsBucketRouteImport } from './routes/
 import { Route as ApiPublicSetupDesktopBucketRouteImport } from './routes/api/public/setup-desktop-bucket'
 import { Route as ApiPublicDSlugRouteImport } from './routes/api/public/d/$slug'
 
+const StockRoute = StockRouteImport.update({
+  id: '/stock',
+  path: '/stock',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -176,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/stock': typeof StockRoute
   '/d/': typeof DRoute
   '/api/amazon-image': typeof ApiAmazonImageRoute
   '/api/estimate-weight': typeof ApiEstimateWeightRoute
@@ -203,6 +210,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/stock': typeof StockRoute
   '/d': typeof DRoute
   '/api/amazon-image': typeof ApiAmazonImageRoute
   '/api/estimate-weight': typeof ApiEstimateWeightRoute
@@ -231,6 +239,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/stock': typeof StockRoute
   '/d/': typeof DRoute
   '/api/amazon-image': typeof ApiAmazonImageRoute
   '/api/estimate-weight': typeof ApiEstimateWeightRoute
@@ -260,6 +269,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/settings'
     | '/signup'
+    | '/stock'
     | '/d/'
     | '/api/amazon-image'
     | '/api/estimate-weight'
@@ -287,6 +297,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/settings'
     | '/signup'
+    | '/stock'
     | '/d'
     | '/api/amazon-image'
     | '/api/estimate-weight'
@@ -314,6 +325,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/settings'
     | '/signup'
+    | '/stock'
     | '/d/'
     | '/api/amazon-image'
     | '/api/estimate-weight'
@@ -342,6 +354,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
+  StockRoute: typeof StockRoute
   DRoute: typeof DRoute
   ApiAmazonImageRoute: typeof ApiAmazonImageRoute
   ApiEstimateWeightRoute: typeof ApiEstimateWeightRoute
@@ -359,6 +372,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/stock': {
+      id: '/stock'
+      path: '/stock'
+      fullPath: '/stock'
+      preLoaderRoute: typeof StockRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
@@ -550,6 +570,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
+  StockRoute: StockRoute,
   DRoute: DRoute,
   ApiAmazonImageRoute: ApiAmazonImageRoute,
   ApiEstimateWeightRoute: ApiEstimateWeightRoute,
