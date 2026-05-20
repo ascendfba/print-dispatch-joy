@@ -24,11 +24,26 @@ export const Route = createFileRoute("/api/estimate-weight")({
         const lines = items
           .map(
             (i, idx) =>
-              `${idx + 1}. ${i.quantity}x ${i.sku ?? "?"} — ${i.description ?? "(no description)"}`,
+              `${idx + 1}. qty=${i.quantity} sku=${i.sku ?? "?"} desc="${i.description ?? "(no description)"}"`,
           )
           .join("\n");
 
-        const prompt = `You are estimating the total shipping weight (in grams) of an order based on item descriptions and quantities. Return ONLY a JSON object of the form {"grams": <integer>, "note": "<one-sentence reasoning>"}. Be pragmatic — guess a typical retail packaged weight per unit, multiply by quantity, sum, and add ~5% packaging. If a description is too vague, assume a small consumer product around 150g.
+        const prompt = `You estimate total shipping weight (grams) for a UK warehouse order.
+
+RULES (follow exactly):
+1. For EACH line, estimate a realistic per-unit packaged weight in grams (typical retail product weight). Default to 150g if truly unknown.
+2. line_total = per_unit_grams * qty.
+3. subtotal = sum of all line_totals.
+4. total = round(subtotal * 1.05)  (5% packaging overhead).
+5. DO NOT ignore quantity. A line with qty=10 must be 10x the per-unit weight, not 1x.
+
+Return ONLY strict JSON:
+{
+  "lines": [{"sku": "...", "qty": <int>, "per_unit_grams": <int>, "line_total_grams": <int>}],
+  "subtotal_grams": <int>,
+  "grams": <int>,
+  "note": "<one sentence>"
+}
 
 Order items:
 ${lines}`;
@@ -57,15 +72,38 @@ ${lines}`;
             choices?: Array<{ message?: { content?: string } }>;
           };
           const raw = data.choices?.[0]?.message?.content ?? "{}";
-          let parsed: { grams?: number; note?: string } = {};
+          let parsed: {
+            grams?: number;
+            subtotal_grams?: number;
+            note?: string;
+            lines?: Array<{ sku?: string; qty?: number; per_unit_grams?: number; line_total_grams?: number }>;
+          } = {};
           try {
             parsed = JSON.parse(raw);
           } catch {
             const m = raw.match(/\{[\s\S]*\}/);
             if (m) parsed = JSON.parse(m[0]);
           }
-          const grams = Math.max(0, Math.round(Number(parsed.grams) || 0));
-          return Response.json({ grams, note: parsed.note ?? null });
+
+          // Recompute from per-unit weights to guarantee qty is respected.
+          let grams = 0;
+          let note = parsed.note ?? null;
+          if (Array.isArray(parsed.lines) && parsed.lines.length > 0) {
+            // Map AI per-unit weights back to our items by SKU (fallback to index).
+            let subtotal = 0;
+            for (let i = 0; i < items.length; i++) {
+              const item = items[i];
+              const match =
+                parsed.lines.find((l) => l.sku && item.sku && l.sku === item.sku) ??
+                parsed.lines[i];
+              const perUnit = Math.max(1, Math.round(Number(match?.per_unit_grams) || 150));
+              subtotal += perUnit * item.quantity;
+            }
+            grams = Math.round(subtotal * 1.05);
+          } else {
+            grams = Math.max(0, Math.round(Number(parsed.grams) || 0));
+          }
+          return Response.json({ grams, note });
         } catch (e) {
           return Response.json(
             { error: e instanceof Error ? e.message : "Estimate failed" },
