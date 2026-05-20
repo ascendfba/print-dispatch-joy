@@ -56,7 +56,13 @@ import { scanLabelPdf, buildSkuBarcodeMap } from "@/lib/labelScan";
 import { pickPrinter, printPdfBytes } from "@/lib/printing";
 import { loadSettings } from "@/lib/storage";
 import { REWORK_CATALOG, getRate, formatGBP } from "@/lib/rework";
-import { ArrowLeft, ArrowRight, Check, Eye, FileText, ImageOff, Loader2, MapPin, Minus, Printer, AlertTriangle, ListChecks, Plus, Weight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Eye, FileText, Flag, ImageOff, Loader2, MapPin, Minus, Printer, AlertTriangle, ListChecks, Plus, Weight } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
