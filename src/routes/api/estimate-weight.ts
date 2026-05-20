@@ -36,7 +36,7 @@ RULES (follow exactly):
 3. If no size/pack info, estimate a realistic per-unit packaged weight in grams. Default to 150g only if truly unknown.
 4. line_total_grams = per_unit_grams * qty.
 5. subtotal = sum of all line_totals.
-6. total = round(subtotal * 1.05)  (5% packaging overhead).
+6. total = subtotal + 1000  (add a flat 1kg for outer packaging/box/void fill).
 7. DO NOT ignore qty. qty is how many of the described unit/pack the customer ordered.
 
 Return ONLY strict JSON:
@@ -101,7 +101,7 @@ ${lines}`;
               const perUnit = Math.max(1, Math.round(Number(match?.per_unit_grams) || 150));
               subtotal += perUnit * item.quantity;
             }
-            grams = Math.round(subtotal * 1.05);
+            grams = subtotal + 1000;
           } else {
             grams = Math.max(0, Math.round(Number(parsed.grams) || 0));
           }
