@@ -581,10 +581,7 @@ function notSkuValue(
 
 function usableLocationName(value?: string | null): string | undefined {
   const cleaned = value?.trim();
-  return cleaned && cleaned.toLowerCase() !== "unassigned"
-    ? cleaned
-    ? value
-    : undefined;
+  return cleaned && cleaned.toLowerCase() !== "unassigned" ? cleaned : undefined;
 }
 
 function locationStringField(record: Record<string, unknown>, keys: string[]): string | undefined {
