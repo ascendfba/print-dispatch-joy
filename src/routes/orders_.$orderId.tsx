@@ -2257,6 +2257,16 @@ function PackingListDialog({
   };
 
   const handleSubmit = async () => {
+    const missing = boxes
+      .map((b, i) => ({ i, hasDims: !!(b.length && b.width && b.height) }))
+      .filter((x) => !x.hasDims)
+      .map((x) => x.i + 1);
+    if (missing.length > 0) {
+      toast.error(
+        `Pick a box size for Box ${missing.join(", ")} before saving`,
+      );
+      return;
+    }
     setSubmitting(true);
     try {
       const ref = orderNumber ?? `#${orderId}`;
@@ -2406,6 +2416,12 @@ function PackingListDialog({
                 }}
               >
                 <div className="text-sm font-semibold">Box {i + 1}</div>
+                {!(b.length && b.width && b.height) && (
+                  <div className="rounded border border-amber-400 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800">
+                    <AlertTriangle className="mr-1 inline h-3 w-3" />
+                    Pick a box size below before saving
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-2">
                   {[
                     { label: "S DISP/B", size: "37", weight: "0.7" },
@@ -2553,7 +2569,13 @@ function PackingListDialog({
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
+            <Button
+              onClick={handleSubmit}
+              disabled={
+                submitting ||
+                boxes.some((b) => !(b.length && b.width && b.height))
+              }
+            >
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save packing list
             </Button>
