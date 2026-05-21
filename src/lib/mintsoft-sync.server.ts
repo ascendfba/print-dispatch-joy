@@ -103,10 +103,13 @@ async function fetchTotalsForWarehouse(warehouseId: number): Promise<Map<number,
       for (const r of arr as Record<string, unknown>[]) {
         const pid = Number(r.ProductId ?? r.ProductID ?? r.ID ?? r.Id);
         if (!Number.isFinite(pid)) continue;
+        const stockLevel = num(r, ["StockLevel", "Stock Level", "TotalStockLevel", "Level"]);
+        const allocated = num(r, ["Allocated", "StockAllocated", "QuantityAllocated"]);
+        const onHandDirect = num(r, ["OnHand", "On Hand", "StockOnHand", "QuantityOnHand"]);
         out.set(pid, {
-          stockLevel: num(r, ["StockLevel", "Stock Level", "TotalStockLevel", "Level"]),
-          allocated: num(r, ["Allocated", "StockAllocated", "QuantityAllocated"]),
-          onHand: num(r, ["OnHand", "On Hand", "StockOnHand", "QuantityOnHand"]),
+          stockLevel,
+          allocated,
+          onHand: onHandDirect || stockLevel,
         });
       }
       return out;
