@@ -492,6 +492,7 @@ export type StockLocation = {
   onHand?: number;
   locationId?: number;
   warehouseId?: number;
+  warehouseName?: string;
   batchNumber?: string;
   bestBeforeDate?: string;
 };
