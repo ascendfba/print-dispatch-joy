@@ -935,7 +935,7 @@ function OrderDetailPage() {
                 disabled={!order}
               >
                 <Package className="mr-2 h-4 w-4" />
-                Enter Packing List
+                {saved ? "View Packing List" : "Enter Packing List"}
                 {required && !saved && (
                   <span className="ml-2 rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900">
                     Required
