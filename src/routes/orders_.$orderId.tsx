@@ -1434,7 +1434,8 @@ function ReworkChargesCard({
           <Button
             className="flex-1 rounded-r-none bg-emerald-600 text-white hover:bg-emerald-700 px-[25px]"
             onClick={handleSubmit}
-            disabled={submitting || submitted}
+            disabled={submitting || submitted || disabled}
+            title={disabled ? "Save the packing list first" : undefined}
           >
             {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {submitted && <Check className="mr-2 h-4 w-4" />}
