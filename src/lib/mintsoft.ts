@@ -494,6 +494,9 @@ function numericField(record: Record<string, unknown>, keys: string[]): number {
 export type ProductStockEntry = {
   location: string;
   quantity: number;
+  stockLevel?: number;
+  allocated?: number;
+  onHand?: number;
   warehouseId?: number;
   locationId?: number;
   warehouseName?: string;
