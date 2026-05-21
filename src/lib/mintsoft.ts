@@ -504,7 +504,13 @@ export type ProductStockEntry = {
   bestBeforeDate?: string;
 };
 
-type ProductStockTotal = { stockLevel: number; allocated: number; onHand: number };
+type ProductStockTotal = {
+  stockLevel: number;
+  allocated: number;
+  onHand: number;
+  sku?: string;
+  clientId?: number;
+};
 
 function arrayPayload(data: unknown): Array<Record<string, unknown>> | null {
   const arr = Array.isArray(data)
@@ -527,6 +533,8 @@ function stockTotalFromRecord(r: Record<string, unknown>): ProductStockTotal {
     stockLevel: numericField(r, ["StockLevel", "Stock Level", "TotalStockLevel", "Total Stock Level", "Level"]),
     allocated: numericField(r, ["Allocated", "StockAllocated", "QuantityAllocated"]) || allocatedFromBreakdown,
     onHand: numericField(r, ["OnHand", "On Hand", "StockOnHand", "QuantityOnHand", "Level"]),
+    sku: typeof r.SKU === "string" ? r.SKU : undefined,
+    clientId: Number.isFinite(Number(r.ClientId ?? r.ClientID)) ? Number(r.ClientId ?? r.ClientID) : undefined,
   };
 }
 
@@ -627,7 +635,7 @@ export async function fetchProductStockTotals(
   settings: Settings,
   productIds: number[],
   opts: { concurrency?: number } = {},
-): Promise<Map<number, { stockLevel: number; allocated: number; onHand: number }>> {
+): Promise<Map<number, ProductStockTotal>> {
   try {
     const warehouses = await listWarehouses(settings);
     const allWarehouseTotals = new Map<number, ProductStockTotal>();
@@ -643,6 +651,8 @@ export async function fetchProductStockTotals(
           stockLevel: existing.stockLevel + totals.stockLevel,
           allocated: existing.allocated + totals.allocated,
           onHand: existing.onHand + totals.onHand,
+          sku: existing.sku ?? totals.sku,
+          clientId: existing.clientId ?? totals.clientId,
         });
       }
     }
@@ -652,7 +662,7 @@ export async function fetchProductStockTotals(
   }
 
   const concurrency = Math.max(1, opts.concurrency ?? 8);
-  const result = new Map<number, { stockLevel: number; allocated: number; onHand: number }>();
+  const result = new Map<number, ProductStockTotal>();
   let idx = 0;
   const workers: Promise<void>[] = [];
   const next = async (): Promise<void> => {

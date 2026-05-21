@@ -112,6 +112,17 @@ function StockPage() {
 
   const rows = useMemo(() => {
     let items = productsQuery.data ?? [];
+    if (inStockOnly && stockTotalsQuery.data) {
+      const productById = new Map(items.map((p) => [p.ID, p]));
+      items = Array.from(stockTotalsQuery.data.entries())
+        .filter(([, t]) => t.stockLevel > 0 || t.allocated > 0 || t.onHand > 0)
+        .map(([id, t]) => ({
+          ...(productById.get(id) ?? { ID: id }),
+          SKU: productById.get(id)?.SKU ?? t.sku,
+          ClientId: productById.get(id)?.ClientId ?? t.clientId,
+          ClientID: productById.get(id)?.ClientID ?? t.clientId,
+        }));
+    }
     const q = filter.trim().toLowerCase();
     if (q) {
       items = items.filter((p) => {
@@ -130,20 +141,13 @@ function StockPage() {
       const cid = Number(clientFilter);
       items = items.filter((p) => (p.ClientId ?? p.ClientID ?? 0) === cid);
     }
-    if (inStockOnly) {
-      const totals = stockTotalsQuery.data;
-      if (totals) {
-        items = items.filter((p) => {
-          const t = totals.get(p.ID);
-          const stockLevel =
-            t?.stockLevel ?? Number(p.StockLevel ?? p["Stock Level"] ?? p.StockAvailable ?? 0);
-          const allocated =
-            t?.allocated ?? Number(p.Allocated ?? p.StockAllocated ?? p.QuantityAllocated ?? 0);
-          const onHand =
-            t?.onHand ?? Number(p.OnHand ?? p["On Hand"] ?? p.StockOnHand ?? p.QuantityOnHand ?? 0);
-          return stockLevel > 0 || allocated > 0 || onHand > 0;
-        });
-      }
+    if (inStockOnly && stockTotalsQuery.isError) {
+      items = items.filter((p) => {
+        const stockLevel = Number(p.StockLevel ?? p["Stock Level"] ?? p.StockAvailable ?? 0);
+        const allocated = Number(p.Allocated ?? p.StockAllocated ?? p.QuantityAllocated ?? 0);
+        const onHand = Number(p.OnHand ?? p["On Hand"] ?? p.StockOnHand ?? p.QuantityOnHand ?? 0);
+        return stockLevel > 0 || allocated > 0 || onHand > 0;
+      });
     }
     return items;
   }, [
