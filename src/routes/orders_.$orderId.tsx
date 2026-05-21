@@ -2159,6 +2159,9 @@ function PackingListDialog({
   const [boxCount, setBoxCount] = useState(1);
   const [boxes, setBoxes] = useState<PackingBox[]>([makeEmptyBox()]);
   const [submitting, setSubmitting] = useState(false);
+  const [step, setStep] = useState<"edit" | "upload">("edit");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   // Available SKUs from the order (sku + total ordered qty).
   const orderSkus = useMemo(() => {
@@ -2206,6 +2209,9 @@ function PackingListDialog({
     setBoxCount(1);
     setBoxes([makeEmptyBox()]);
     setSubmitting(false);
+    setStep("edit");
+    setUploadFile(null);
+    setUploading(false);
   }, [open]);
 
   const applyBoxCount = (n: number) => {
@@ -2335,11 +2341,34 @@ function PackingListDialog({
       await addOrderComment(loadSettings(), orderId, comment, true);
       toast.success("Packing list saved to order");
       onSaved?.(boxes.length);
-      onOpenChange(false);
+      setStep("upload");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save packing list");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!uploadFile) {
+      toast.error("Choose a PDF to upload");
+      return;
+    }
+    setUploading(true);
+    try {
+      const buf = new Uint8Array(await uploadFile.arrayBuffer());
+      await uploadOrderDocument(loadSettings(), orderId, {
+        fileName: uploadFile.name || "Packing List.pdf",
+        contentType: uploadFile.type || "application/pdf",
+        bytes: buf,
+        label: "Packing List",
+      });
+      toast.success("Packing list uploaded to Mintsoft");
+      onOpenChange(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to upload packing list");
+    } finally {
+      setUploading(false);
     }
   };
 
