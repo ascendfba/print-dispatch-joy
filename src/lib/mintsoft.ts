@@ -491,6 +491,8 @@ export type StockLocation = {
   stockLevel?: number;
   allocated?: number;
   onHand?: number;
+  locationId?: number;
+  warehouseId?: number;
 };
 
 function numericField(record: Record<string, unknown>, keys: string[]): number {
@@ -593,15 +595,21 @@ export async function fetchProductStockLocations(
     try {
       const data = await authedJson<unknown>(settings, p);
       if (Array.isArray(data)) {
+        const rows = arrayPayload(data) ?? [];
         const out: StockLocation[] = [];
-        for (const r of data as Array<Record<string, unknown>>) {
+        for (const r of rows) {
+          const locationId = Number(r.LocationId ?? r.LocationID ?? r.Location_Id ?? r.WarehouseLocationId);
+          const warehouseId = Number(r.WarehouseId ?? r.WarehouseID ?? r.Warehouse_Id);
           const location =
+            (typeof r.SimpleLocationName === "string" && r.SimpleLocationName) ||
             (typeof r.Location === "string" && r.Location) ||
             (typeof r.LocationName === "string" && r.LocationName) ||
             (typeof r.WarehouseLocation === "string" && r.WarehouseLocation) ||
             (typeof r.BinLocation === "string" && r.BinLocation) ||
+            (typeof r.LocationCode === "string" && r.LocationCode) ||
+            (typeof r.Code === "string" && r.Code) ||
             (typeof r.Bin === "string" && r.Bin) ||
-            "";
+            (Number.isFinite(locationId) ? `Location #${locationId}` : "");
           const stockLevel = numericField(r, [
             "StockLevel",
             "Stock Level",
@@ -623,7 +631,17 @@ export async function fetchProductStockLocations(
             "OnHandQuantity",
           ]);
           const quantity = stockLevel || onHand;
-          if (location) out.push({ location, quantity, stockLevel, allocated, onHand });
+          if (location) {
+            out.push({
+              location,
+              quantity,
+              stockLevel,
+              allocated,
+              onHand: onHand || stockLevel,
+              locationId: Number.isFinite(locationId) ? locationId : undefined,
+              warehouseId: Number.isFinite(warehouseId) ? warehouseId : undefined,
+            });
+          }
         }
         if (out.length > 0) return out;
       }
