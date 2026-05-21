@@ -551,8 +551,16 @@ function BookInCard({
       if (!s.locationId) {
         return { rowsToBook: [], error: `Pick a location for ${item.SKU ?? item.Title ?? "item"}` };
       }
-      if (requiresBbfByKey[key] && !s.bbf) {
-        return { rowsToBook: [], error: `BBF date required for ${item.SKU ?? item.Title ?? "item"}` };
+      const normalisedBbf = normaliseBbf(s.bbf ?? "");
+      if (requiresBbfByKey[key]) {
+        if (!s.bbf) {
+          return { rowsToBook: [], error: `BBF date required for ${item.SKU ?? item.Title ?? "item"}` };
+        }
+        if (!normalisedBbf) {
+          return { rowsToBook: [], error: `Invalid BBF date for ${item.SKU ?? item.Title ?? "item"} — use DDMMYY (e.g. 010126)` };
+        }
+      } else if (s.bbf && !normalisedBbf) {
+        return { rowsToBook: [], error: `Invalid BBF date for ${item.SKU ?? item.Title ?? "item"} — use DDMMYY (e.g. 010126)` };
       }
       if (!item.ID) {
         return { rowsToBook: [], error: `Missing ASN item id for ${item.SKU ?? "item"}` };
@@ -560,7 +568,7 @@ function BookInCard({
       if (!item.ProductId) {
         return { rowsToBook: [], error: `Missing product id for ${item.SKU ?? "item"}` };
       }
-      rowsToBook.push({ item, qty, locationId: Number(s.locationId), bbf: s.bbf });
+      rowsToBook.push({ item, qty, locationId: Number(s.locationId), bbf: normalisedBbf });
     }
     if (rowsToBook.length === 0) {
       return { rowsToBook: [], error: "Enter at least one receive quantity" };
