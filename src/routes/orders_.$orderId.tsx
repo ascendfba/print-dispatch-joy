@@ -2139,6 +2139,79 @@ function makeEmptyBox(): PackingBox {
   return { weight: "", weightAuto: true, tare: 0, length: "", width: "", height: "", contents: [] };
 }
 
+async function buildPackingListPdf({
+  orderRef,
+  boxes,
+}: {
+  orderRef: string;
+  boxes: PackingBox[];
+}): Promise<Uint8Array> {
+  const { PDFDocument: PDFDoc, StandardFonts, rgb } = await import("pdf-lib");
+  const pdf = await PDFDoc.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+
+  const pageWidth = 595.28; // A4
+  const pageHeight = 841.89;
+  const margin = 40;
+  const lineGap = 14;
+  let page = pdf.addPage([pageWidth, pageHeight]);
+  let y = pageHeight - margin;
+
+  const ensureRoom = (needed: number) => {
+    if (y - needed < margin) {
+      page = pdf.addPage([pageWidth, pageHeight]);
+      y = pageHeight - margin;
+    }
+  };
+  const draw = (text: string, opts: { size?: number; bold?: boolean } = {}) => {
+    const size = opts.size ?? 10;
+    ensureRoom(size + 2);
+    page.drawText(text, {
+      x: margin,
+      y: y - size,
+      size,
+      font: opts.bold ? bold : font,
+      color: rgb(0, 0, 0),
+    });
+    y -= size + 4;
+  };
+
+  draw(`Packing List — ${orderRef}`, { size: 18, bold: true });
+  draw(`Generated: ${new Date().toLocaleString()}`, { size: 9 });
+  draw(`Total boxes: ${boxes.length}`, { size: 10, bold: true });
+  y -= 6;
+
+  boxes.forEach((b, i) => {
+    ensureRoom(60);
+    draw(`Box ${i + 1}`, { size: 13, bold: true });
+    const dims =
+      b.length || b.width || b.height
+        ? `${b.length || "?"} × ${b.width || "?"} × ${b.height || "?"} cm`
+        : "no dimensions";
+    draw(`Dimensions: ${dims}    Weight: ${b.weight || "?"} kg`, { size: 10 });
+    const rows = b.contents.filter((c) => c.qty > 0);
+    if (rows.length === 0) {
+      draw("  (no SKUs assigned)", { size: 10 });
+    } else {
+      draw("  SKU                                                       Qty", {
+        size: 10,
+        bold: true,
+      });
+      rows.forEach((c) => {
+        ensureRoom(lineGap);
+        const sku = c.sku.length > 50 ? c.sku.slice(0, 49) + "…" : c.sku;
+        draw(`  ${sku.padEnd(52, " ")} ${String(c.qty).padStart(4, " ")}`, {
+          size: 10,
+        });
+      });
+    }
+    y -= 6;
+  });
+
+  return await pdf.save();
+}
+
 function PackingListDialog({
   open,
   onOpenChange,
