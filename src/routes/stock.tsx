@@ -113,8 +113,17 @@ function StockPage() {
       const cid = Number(clientFilter);
       items = items.filter((p) => (p.ClientId ?? p.ClientID ?? 0) === cid);
     }
+    if (inStockOnly) {
+      items = items.filter((p) => {
+        const onHand =
+          Number(p.StockOnHand ?? p.QuantityOnHand ?? 0) || 0;
+        const allocated =
+          Number(p.StockAllocated ?? p.QuantityAllocated ?? 0) || 0;
+        return onHand > 0 || allocated > 0;
+      });
+    }
     return items;
-  }, [productsQuery.data, filter, clientFilter, clientNameById]);
+  }, [productsQuery.data, filter, clientFilter, clientNameById, inStockOnly]);
 
   return (
     <div className="space-y-4">
