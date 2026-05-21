@@ -2425,7 +2425,6 @@ function PackingListDialog({
           label: "Packing List",
         });
         toast.success("Packing list PDF uploaded to Mintsoft");
-        onOpenChange(false);
       } catch (e) {
         toast.error(
           e instanceof Error
@@ -2743,9 +2742,16 @@ function PackingListDialog({
             ))}
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
-              Cancel
+          <div className="flex justify-between gap-2 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setBoxCount(1);
+                setBoxes([makeEmptyBox()]);
+              }}
+              disabled={submitting}
+            >
+              Reset
             </Button>
             <Button
               onClick={handleSubmit}
