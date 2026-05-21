@@ -2027,6 +2027,20 @@ export async function uploadOrderDocument(
   });
 }
 
+/**
+ * Delete a document attached to a Mintsoft order.
+ * `DELETE /api/Order/{orderId}/Documents/{documentId}`
+ */
+export async function deleteOrderDocument(
+  settings: Settings,
+  orderId: number,
+  documentId: number,
+): Promise<void> {
+  await authedJson(settings, `/api/Order/${orderId}/Documents/${documentId}`, {
+    method: "DELETE",
+  });
+}
+
 export type MintsoftOrderDocumentType = {
   ID?: number;
   Name?: string | null;
