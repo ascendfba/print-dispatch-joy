@@ -330,6 +330,11 @@ export type MintsoftProduct = {
   StockOnHand?: number | null;
   StockAllocated?: number | null;
   StockAvailable?: number | null;
+  StockLevel?: number | null;
+  "Stock Level"?: number | null;
+  Allocated?: number | null;
+  OnHand?: number | null;
+  "On Hand"?: number | null;
   QuantityOnHand?: number | null;
   QuantityAllocated?: number | null;
 };
@@ -469,7 +474,22 @@ export async function fetchProductBundle(
   return [];
 }
 
-export type StockLocation = { location: string; quantity: number };
+export type StockLocation = {
+  location: string;
+  quantity: number;
+  stockLevel?: number;
+  allocated?: number;
+  onHand?: number;
+};
+
+function numericField(record: Record<string, unknown>, keys: string[]): number {
+  for (const key of keys) {
+    const value = record[key];
+    const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
+    if (Number.isFinite(n)) return n;
+  }
+  return 0;
+}
 
 export type ProductStockEntry = {
   location: string;
@@ -508,8 +528,11 @@ export async function fetchProductStockLocations(
             (typeof r.BinLocation === "string" && r.BinLocation) ||
             (typeof r.Bin === "string" && r.Bin) ||
             "";
-          const quantity = Number(r.Quantity ?? r.Qty ?? r.StockLevel ?? r.Available ?? 0);
-          if (location) out.push({ location, quantity: Number.isFinite(quantity) ? quantity : 0 });
+          const stockLevel = numericField(r, ["StockLevel", "Stock Level", "Quantity", "Qty", "Available"]);
+          const allocated = numericField(r, ["Allocated", "StockAllocated", "QuantityAllocated", "AllocatedQuantity"]);
+          const onHand = numericField(r, ["OnHand", "On Hand", "StockOnHand", "QuantityOnHand", "OnHandQuantity"]);
+          const quantity = stockLevel || onHand;
+          if (location) out.push({ location, quantity, stockLevel, allocated, onHand });
         }
         if (out.length > 0) return out;
       }
@@ -532,9 +555,9 @@ export async function fetchProductStockTotals(
   settings: Settings,
   productIds: number[],
   opts: { concurrency?: number } = {},
-): Promise<Map<number, { onHand: number; allocated: number }>> {
+): Promise<Map<number, { stockLevel: number; allocated: number; onHand: number }>> {
   const concurrency = Math.max(1, opts.concurrency ?? 8);
-  const result = new Map<number, { onHand: number; allocated: number }>();
+  const result = new Map<number, { stockLevel: number; allocated: number; onHand: number }>();
   let idx = 0;
   const workers: Promise<void>[] = [];
   const next = async (): Promise<void> => {
@@ -543,10 +566,12 @@ export async function fetchProductStockTotals(
       const pid = productIds[i];
       try {
         const locs = await fetchProductStockLocations(settings, pid);
-        const onHand = locs.reduce((s, l) => s + (Number(l.quantity) || 0), 0);
-        result.set(pid, { onHand, allocated: 0 });
+        const stockLevel = locs.reduce((s, l) => s + (Number(l.stockLevel ?? l.quantity) || 0), 0);
+        const allocated = locs.reduce((s, l) => s + (Number(l.allocated) || 0), 0);
+        const onHand = locs.reduce((s, l) => s + (Number(l.onHand ?? l.quantity) || 0), 0);
+        result.set(pid, { stockLevel, allocated, onHand });
       } catch {
-        result.set(pid, { onHand: 0, allocated: 0 });
+        result.set(pid, { stockLevel: 0, allocated: 0, onHand: 0 });
       }
     }
   };
