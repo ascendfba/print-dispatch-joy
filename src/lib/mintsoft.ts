@@ -370,7 +370,9 @@ export async function listProducts(
 }
 
 export async function listAllProducts(settings: Settings): Promise<MintsoftProduct[]> {
-  const pageSize = 200;
+  // Mintsoft Product/List caps responses at 100 even when a larger PageSize is requested.
+  // Keep requests aligned to that cap so subsequent PageNumber calls don't stop early.
+  const pageSize = 100;
   const all: MintsoftProduct[] = [];
   let skip = 0;
   let lastFirstId: number | undefined;
