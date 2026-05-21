@@ -518,14 +518,26 @@ function optionalStringField(record: Record<string, unknown>, keys: string[]): s
   for (const key of keys) {
     const value = record[key];
     if (typeof value === "string" && value.trim()) return value.trim();
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const nested = optionalStringField(value as Record<string, unknown>, keys);
+      if (nested) return nested;
+    }
   }
   const lowerKeyMap = new Map(Object.keys(record).map((key) => [key.toLowerCase(), key]));
   for (const key of keys) {
     const actualKey = lowerKeyMap.get(key.toLowerCase());
     const value = actualKey ? record[actualKey] : undefined;
     if (typeof value === "string" && value.trim()) return value.trim();
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const nested = optionalStringField(value as Record<string, unknown>, keys);
+      if (nested) return nested;
+    }
   }
   return undefined;
+}
+
+function isUnassignedLocationName(value?: string): boolean {
+  return (value || "").trim().toLowerCase() === "unassigned";
 }
 
 const locationNameCache = new Map<number, string>();
@@ -673,7 +685,7 @@ export async function fetchProductStockLocations(
             "Code",
           ]);
           const resolved = await resolveLocationName(settings, locationId, warehouseId);
-          const location = directBin || resolved || "Unassigned";
+          const location = isUnassignedLocationName(directBin) ? resolved || directBin : directBin || resolved || "Unassigned";
           const stockLevel = optionalNumericField(r, [
             "StockLevel",
             "Stock Level",
