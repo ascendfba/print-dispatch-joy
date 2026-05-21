@@ -960,37 +960,17 @@ function OrderDetailPage() {
                     title="Delete packing list"
                     aria-label="Delete packing list"
                     disabled={deletingPacking || !order}
-                    onClick={async () => {
+                    onClick={() => {
                       if (!order) return;
-                      if (!window.confirm("Delete the packing list from this order?")) return;
-                      setDeletingPacking(true);
-                      try {
-                        const settings = loadSettings();
-                        const docs = await fetchOrderDocuments(settings, id);
-                        const matches = docs.filter((d) => {
-                          const name = (d.fileName ?? d.label ?? "").toLowerCase();
-                          return d.documentId != null && /packing\s*list/.test(name);
-                        });
-                        if (matches.length === 0) {
-                          toast.message("No packing list document found on this order");
-                        }
-                        for (const d of matches) {
-                          if (d.documentId != null) {
-                            await deleteOrderDocument(settings, id, d.documentId);
-                          }
-                        }
-                        setPackingBoxCount(null);
-                        setPackingResetKey((k) => k + 1);
-                        await qc.invalidateQueries({ queryKey: ["order-docs", id] });
-                        await qc.invalidateQueries({ queryKey: ["shipping-pages", id] });
-                        toast.success("Packing list deleted");
-                      } catch (e) {
-                        toast.error(
-                          e instanceof Error ? e.message : "Failed to delete packing list",
-                        );
-                      } finally {
-                        setDeletingPacking(false);
-                      }
+                      if (
+                        !window.confirm(
+                          "Clear the packing list entry and start again?\n\nNote: Mintsoft's API does not support deleting attached documents, so the previous PDF will remain on the order in Mintsoft until removed manually there.",
+                        )
+                      )
+                        return;
+                      setPackingBoxCount(null);
+                      setPackingResetKey((k) => k + 1);
+                      toast.success("Packing list cleared — you can re-enter it now");
                     }}
                   >
                     {deletingPacking ? (
