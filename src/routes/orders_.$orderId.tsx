@@ -2355,7 +2355,7 @@ function PackingListDialog({
                           length: preset.size,
                           width: preset.size,
                           height: preset.size,
-                          weight: preset.weight,
+                          tare: Number(preset.weight),
                         })
                       }
                     >
