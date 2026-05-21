@@ -898,8 +898,6 @@ function OrderDetailPage() {
         </Card>
 
         <div className="space-y-3">
-          {(() => null)()}
-          {/* compute packing-required block flag inline below */}
           <ReworkChargesCard
             items={itemsQuery.data ?? []}
             fnskuLabelCount={scanQuery.data?.length ?? 0}
