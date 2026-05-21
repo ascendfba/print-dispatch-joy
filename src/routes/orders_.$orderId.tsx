@@ -989,6 +989,15 @@ function OrderDetailPage() {
         orderNumber={orderReference}
       />
 
+      <PackingListDialog
+        open={packingOpen}
+        onOpenChange={setPackingOpen}
+        items={itemsQuery.data ?? []}
+        products={productsQuery.data}
+        orderId={id}
+        orderNumber={orderReference}
+      />
+
       <AlertDialog open={confirmDespatch} onOpenChange={setConfirmDespatch}>
         <AlertDialogContent>
           <AlertDialogHeader>
