@@ -573,11 +573,16 @@ function notSkuValue(
   record: Record<string, unknown>,
 ): string | undefined {
   const sku = skuLikeField(record);
-  const normalized = value?.trim().toLowerCase();
-  return value &&
-    normalized &&
-    normalized !== "unassigned" &&
-    (!sku || normalized !== sku.trim().toLowerCase())
+  const cleaned = usableLocationName(value);
+  return cleaned && (!sku || cleaned.toLowerCase() !== sku.trim().toLowerCase())
+    ? cleaned
+    : undefined;
+}
+
+function usableLocationName(value?: string | null): string | undefined {
+  const cleaned = value?.trim();
+  return cleaned && cleaned.toLowerCase() !== "unassigned"
+    ? cleaned
     ? value
     : undefined;
 }
