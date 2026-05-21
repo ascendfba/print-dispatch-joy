@@ -485,12 +485,7 @@ export type StockLocation = {
 function numericField(record: Record<string, unknown>, keys: string[]): number {
   for (const key of keys) {
     const value = record[key];
-    const n =
-      typeof value === "number"
-        ? value
-        : typeof value === "string"
-          ? Number(value)
-          : Number.NaN;
+    const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
     if (Number.isFinite(n)) return n;
   }
   return 0;
@@ -580,14 +575,9 @@ export async function fetchProductStockTotals(
   settings: Settings,
   productIds: number[],
   opts: { concurrency?: number } = {},
-): Promise<
-  Map<number, { stockLevel: number; allocated: number; onHand: number }>
-> {
+): Promise<Map<number, { stockLevel: number; allocated: number; onHand: number }>> {
   const concurrency = Math.max(1, opts.concurrency ?? 8);
-  const result = new Map<
-    number,
-    { stockLevel: number; allocated: number; onHand: number }
-  >();
+  const result = new Map<number, { stockLevel: number; allocated: number; onHand: number }>();
   let idx = 0;
   const workers: Promise<void>[] = [];
   const next = async (): Promise<void> => {
@@ -596,15 +586,9 @@ export async function fetchProductStockTotals(
       const pid = productIds[i];
       try {
         const locs = await fetchProductStockLocations(settings, pid);
-        const stockLevel = locs.reduce(
-          (s, l) => s + (Number(l.stockLevel ?? l.quantity) || 0),
-          0,
-        );
+        const stockLevel = locs.reduce((s, l) => s + (Number(l.stockLevel ?? l.quantity) || 0), 0);
         const allocated = locs.reduce((s, l) => s + (Number(l.allocated) || 0), 0);
-        const onHand = locs.reduce(
-          (s, l) => s + (Number(l.onHand ?? l.quantity) || 0),
-          0,
-        );
+        const onHand = locs.reduce((s, l) => s + (Number(l.onHand ?? l.quantity) || 0), 0);
         result.set(pid, { stockLevel, allocated, onHand });
       } catch {
         result.set(pid, { stockLevel: 0, allocated: 0, onHand: 0 });
