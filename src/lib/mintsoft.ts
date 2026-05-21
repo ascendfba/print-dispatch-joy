@@ -1002,11 +1002,15 @@ export async function fetchProductStockLocations(
         const out: StockLocation[] = [];
         const inventoryRows: StockLocation[] = [];
         const isInventoryPath = /\/Inventory\b/i.test(p);
+        let inventorySku: string | undefined;
         for (const r of rows) {
           const locationId = Number(
             r.LocationId ?? r.LocationID ?? r.Location_Id ?? r.WarehouseLocationId,
           );
           const warehouseId = Number(r.WarehouseId ?? r.WarehouseID ?? r.Warehouse_Id);
+          if (typeof r.SKU === "string" && r.SKU.trim() && !inventorySku) {
+            inventorySku = r.SKU.trim();
+          }
           const directLocationName = locationStringField(r, [
             "LocationName",
             "locationName",
@@ -1088,6 +1092,14 @@ export async function fetchProductStockLocations(
           }
         }
         if (isInventoryPath) {
+          // The Inventory endpoint collapses bin locations to LocationId=0.
+          // Use the ProductsInLocationReport (cached) to recover the real
+          // location names per SKU.
+          if (inventorySku) {
+            const report = await fetchProductsInLocationReport(settings);
+            const reportLocations = stockLocationsFromReport(report, inventorySku);
+            if (reportLocations.length > 0) return reportLocations;
+          }
           const bookedInLocations = await fetchProductBookedInLocations(
             settings,
             productId,
