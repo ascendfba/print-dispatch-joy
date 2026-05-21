@@ -2473,24 +2473,34 @@ function PackingListDialog({
                     { label: "S DISP/B", size: "37", weight: "0.7" },
                     { label: "M DISP/B", size: "48", weight: "1.2" },
                     { label: "L DISP/B", size: "60", weight: "1.84" },
-                  ].map((preset) => (
-                    <Button
-                      key={preset.label}
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        updateBox(i, {
-                          length: preset.size,
-                          width: preset.size,
-                          height: preset.size,
-                          tare: Number(preset.weight),
-                        })
-                      }
-                    >
-                      {preset.label}
-                    </Button>
-                  ))}
+                  ].map((preset) => {
+                    const selected =
+                      b.length === preset.size &&
+                      b.width === preset.size &&
+                      b.height === preset.size;
+                    return (
+                      <Button
+                        key={preset.label}
+                        type="button"
+                        size="sm"
+                        variant={selected ? "default" : "outline"}
+                        className={selected ? "ring-2 ring-primary ring-offset-2" : ""}
+                        onClick={() =>
+                          updateBox(i, {
+                            length: preset.size,
+                            width: preset.size,
+                            height: preset.size,
+                            tare: Number(preset.weight),
+                          })
+                        }
+                      >
+                        {preset.label}
+                        {selected && (
+                          <Check className="ml-1 h-3 w-3" />
+                        )}
+                      </Button>
+                    );
+                  })}
                 </div>
                 <div className="grid grid-cols-4 gap-2">
                   <div>
