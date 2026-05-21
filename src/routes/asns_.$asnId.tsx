@@ -246,6 +246,30 @@ function getRemainingQty(item: MintsoftASNItem): number {
   return Math.max(0, getExpectedQty(item) - getReceivedQty(item));
 }
 
+// Detect whether a product requires a best-before / expiry date when booking in.
+// Mintsoft surfaces this with several different field names depending on the
+// tenant (HasExpiryDates, RequiresExpiryDate, HasBestBefore, BBE_Required, etc.),
+// so we check any boolean field whose name references expiry or best-before.
+function productRequiresBbf(p: unknown): boolean {
+  if (!p || typeof p !== "object") return false;
+  const obj = p as Record<string, unknown>;
+  for (const [k, v] of Object.entries(obj)) {
+    if (v !== true) continue;
+    const key = k.toLowerCase();
+    if (
+      key.includes("expir") ||
+      key.includes("bestbefore") ||
+      key === "bbe" ||
+      key.startsWith("bbe_") ||
+      key.includes("bbedate") ||
+      key.includes("bbd")
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function BookInCard({
   asnId,
   warehouseId,
@@ -452,10 +476,7 @@ function BookInCard({
     items.forEach((item, i) => {
       const key = asnItemKey(item);
       const p = productQueries[i]?.data as MintsoftProduct | null | undefined;
-      map[key] = !!(
-        p?.HasExpiryDates ||
-        p?.RequiresExpiryDate
-      );
+      map[key] = productRequiresBbf(p);
     });
     return map;
   }, [items, productQueries]);
