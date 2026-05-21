@@ -135,15 +135,31 @@ function StockPage() {
       if (totals) {
         items = items.filter((p) => {
           const t = totals.get(p.ID);
-          const stockLevel = t?.stockLevel ?? Number(p.StockLevel ?? p["Stock Level"] ?? p.StockAvailable ?? 0) ?? 0;
-          const allocated = t?.allocated ?? Number(p.Allocated ?? p.StockAllocated ?? p.QuantityAllocated ?? 0) ?? 0;
-          const onHand = t?.onHand ?? Number(p.OnHand ?? p["On Hand"] ?? p.StockOnHand ?? p.QuantityOnHand ?? 0) ?? 0;
+          const stockLevel =
+            t?.stockLevel ??
+            Number(p.StockLevel ?? p["Stock Level"] ?? p.StockAvailable ?? 0) ??
+            0;
+          const allocated =
+            t?.allocated ??
+            Number(p.Allocated ?? p.StockAllocated ?? p.QuantityAllocated ?? 0) ??
+            0;
+          const onHand =
+            t?.onHand ??
+            Number(p.OnHand ?? p["On Hand"] ?? p.StockOnHand ?? p.QuantityOnHand ?? 0) ??
+            0;
           return stockLevel > 0 || allocated > 0 || onHand > 0;
         });
       }
     }
     return items;
-  }, [productsQuery.data, filter, clientFilter, clientNameById, inStockOnly, stockTotalsQuery.data]);
+  }, [
+    productsQuery.data,
+    filter,
+    clientFilter,
+    clientNameById,
+    inStockOnly,
+    stockTotalsQuery.data,
+  ]);
 
   return (
     <div className="space-y-4">
