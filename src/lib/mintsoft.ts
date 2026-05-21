@@ -690,6 +690,15 @@ export async function fetchProductStockLocations(
           ]);
           const resolved = await resolveLocationName(settings, locationId, warehouseId);
           const location = directBin || resolved || "";
+          const batchNumber = optionalStringField(r, ["BatchNumber", "BatchNo", "Batch"]);
+          const bestBeforeDate = optionalStringField(r, [
+            "BestBeforeDate",
+            "BestBefore",
+            "ExpiryDate",
+            "ExpirationDate",
+            "Expires",
+            "BBE",
+          ]);
           const stockLevel =
             optionalNumericField(r, [
               "StockLevel",
@@ -725,6 +734,8 @@ export async function fetchProductStockLocations(
               onHand: onHand ?? stockLevel,
               locationId: Number.isFinite(locationId) ? locationId : undefined,
               warehouseId: Number.isFinite(warehouseId) ? warehouseId : undefined,
+              batchNumber,
+              bestBeforeDate,
             });
           }
         }
