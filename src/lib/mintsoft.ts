@@ -573,13 +573,15 @@ function notSkuValue(
   record: Record<string, unknown>,
 ): string | undefined {
   const sku = skuLikeField(record);
-  const normalized = value?.trim().toLowerCase();
-  return value &&
-    normalized &&
-    normalized !== "unassigned" &&
-    (!sku || normalized !== sku.trim().toLowerCase())
-    ? value
+  const cleaned = usableLocationName(value);
+  return cleaned && (!sku || cleaned.toLowerCase() !== sku.trim().toLowerCase())
+    ? cleaned
     : undefined;
+}
+
+function usableLocationName(value?: string | null): string | undefined {
+  const cleaned = value?.trim();
+  return cleaned && cleaned.toLowerCase() !== "unassigned" ? cleaned : undefined;
 }
 
 function locationStringField(record: Record<string, unknown>, keys: string[]): string | undefined {
@@ -620,20 +622,38 @@ async function resolveLocationName(
   const cached = locationNameCache.get(locationId);
   if (cached) return cached;
   if (Number.isFinite(warehouseId)) {
+    const locations = await listWarehouseLocations(settings, warehouseId);
+    const listedLocation = locations.find((location) => location.id === locationId);
+    const listedName = usableLocationName(listedLocation?.code || listedLocation?.name);
+    if (listedName) {
+      locationNameCache.set(locationId, listedName);
+      return listedName;
+    }
+
     const location = await fetchWarehouseLocation(settings, warehouseId, locationId);
-    if (location?.name) {
-      locationNameCache.set(locationId, location.name);
-      return location.name;
+    const locationName = usableLocationName(location?.code || location?.name);
+    if (locationName) {
+      locationNameCache.set(locationId, locationName);
+      return locationName;
     }
   }
   // Warehouse unknown — search all warehouses for this location.
   try {
     const warehouses = await listWarehouses(settings);
     for (const w of warehouses) {
+      const locations = await listWarehouseLocations(settings, w.id);
+      const listedLocation = locations.find((location) => location.id === locationId);
+      const listedName = usableLocationName(listedLocation?.code || listedLocation?.name);
+      if (listedName) {
+        locationNameCache.set(locationId, listedName);
+        return listedName;
+      }
+
       const location = await fetchWarehouseLocation(settings, w.id, locationId);
-      if (location?.name) {
-        locationNameCache.set(locationId, location.name);
-        return location.name;
+      const locationName = usableLocationName(location?.code || location?.name);
+      if (locationName) {
+        locationNameCache.set(locationId, locationName);
+        return locationName;
       }
     }
   } catch {
