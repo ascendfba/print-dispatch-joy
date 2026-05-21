@@ -8,7 +8,7 @@ export type MintsoftOrder = {
   CustomerName?: string;
   WarehouseName?: string;
   CourierName?: string;
-  CourierService?: string;
+  CourierServiceName?: string;
   CreatedDate?: string;
   TotalValue?: number;
   [k: string]: unknown;
