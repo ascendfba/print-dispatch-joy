@@ -514,16 +514,37 @@ function optionalNumericField(record: Record<string, unknown>, keys: string[]): 
   return undefined;
 }
 
+const locationNameCache = new Map<number, string>();
+
 async function resolveLocationName(
   settings: Settings,
   locationId: number,
   warehouseId: number,
 ): Promise<string> {
-  if (Number.isFinite(locationId) && Number.isFinite(warehouseId)) {
+  if (!Number.isFinite(locationId)) return "";
+  const cached = locationNameCache.get(locationId);
+  if (cached) return cached;
+  if (Number.isFinite(warehouseId)) {
     const location = await fetchWarehouseLocation(settings, warehouseId, locationId);
-    if (location?.name) return location.name;
+    if (location?.name) {
+      locationNameCache.set(locationId, location.name);
+      return location.name;
+    }
   }
-  return Number.isFinite(locationId) ? `Location #${locationId}` : "";
+  // Warehouse unknown — search all warehouses for this location.
+  try {
+    const warehouses = await listWarehouses(settings);
+    for (const w of warehouses) {
+      const location = await fetchWarehouseLocation(settings, w.id, locationId);
+      if (location?.name) {
+        locationNameCache.set(locationId, location.name);
+        return location.name;
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return `Location #${locationId}`;
 }
 
 export type ProductStockEntry = {
@@ -623,17 +644,18 @@ export async function fetchProductStockLocations(
         for (const r of rows) {
           const locationId = Number(r.LocationId ?? r.LocationID ?? r.Location_Id ?? r.WarehouseLocationId);
           const warehouseId = Number(r.WarehouseId ?? r.WarehouseID ?? r.Warehouse_Id);
-          const directLocation =
+          // Prefer bin-code style fields (e.g. "A-A19-B87-S3-P01"). Avoid
+          // generic `Location` / `LocationName` which Mintsoft often uses
+          // for the warehouse name rather than the bin.
+          const directBin =
             (typeof r.SimpleLocationName === "string" && r.SimpleLocationName) ||
-            (typeof r.Location === "string" && r.Location) ||
-            (typeof r.LocationName === "string" && r.LocationName) ||
-            (typeof r.WarehouseLocation === "string" && r.WarehouseLocation) ||
             (typeof r.BinLocation === "string" && r.BinLocation) ||
             (typeof r.LocationCode === "string" && r.LocationCode) ||
-            (typeof r.Code === "string" && r.Code) ||
             (typeof r.Bin === "string" && r.Bin) ||
+            (typeof r.Code === "string" && r.Code) ||
             "";
-          const location = directLocation || (await resolveLocationName(settings, locationId, warehouseId));
+          const resolved = await resolveLocationName(settings, locationId, warehouseId);
+          const location = resolved || directBin;
           const stockLevel = optionalNumericField(r, [
             "StockLevel",
             "Stock Level",
