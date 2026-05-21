@@ -635,7 +635,7 @@ export async function fetchProductStockTotals(
   settings: Settings,
   productIds: number[],
   opts: { concurrency?: number } = {},
-): Promise<Map<number, { stockLevel: number; allocated: number; onHand: number }>> {
+): Promise<Map<number, ProductStockTotal>> {
   try {
     const warehouses = await listWarehouses(settings);
     const allWarehouseTotals = new Map<number, ProductStockTotal>();
@@ -662,7 +662,7 @@ export async function fetchProductStockTotals(
   }
 
   const concurrency = Math.max(1, opts.concurrency ?? 8);
-  const result = new Map<number, { stockLevel: number; allocated: number; onHand: number }>();
+  const result = new Map<number, ProductStockTotal>();
   let idx = 0;
   const workers: Promise<void>[] = [];
   const next = async (): Promise<void> => {
