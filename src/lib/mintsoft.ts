@@ -909,6 +909,8 @@ export async function fetchProductStockLocations(
       const rows = arrayPayload(data) ?? [];
       if (rows.length > 0) {
         const out: StockLocation[] = [];
+        const inventoryRows: StockLocation[] = [];
+        const isInventoryPath = /\/Inventory\b/i.test(p);
         for (const r of rows) {
           const locationId = Number(
             r.LocationId ?? r.LocationID ?? r.Location_Id ?? r.WarehouseLocationId,
@@ -927,9 +929,6 @@ export async function fetchProductStockLocations(
             "LocationCode",
             "Bin",
           ]);
-          const resolved = await resolveLocationName(settings, locationId, warehouseId);
-          const location = directLocationName || resolved || "";
-          if (!directLocationName && (!Number.isFinite(locationId) || locationId === 0)) continue;
           const batchNumber = optionalStringField(r, ["BatchNumber", "BatchNo", "Batch"]);
           const bestBeforeDate = optionalStringField(r, [
             "BestBeforeDate",
@@ -965,6 +964,24 @@ export async function fetchProductStockLocations(
             "Level",
           ]);
           const quantity = stockLevel || onHand || 0;
+          if (isInventoryPath) {
+            inventoryRows.push({
+              location: directLocationName || "",
+              quantity,
+              stockLevel,
+              allocated,
+              onHand: onHand ?? stockLevel,
+              locationId: Number.isFinite(locationId) ? locationId : undefined,
+              warehouseId: Number.isFinite(warehouseId) ? warehouseId : undefined,
+              batchNumber,
+              bestBeforeDate,
+            });
+          }
+          if (!directLocationName && (!Number.isFinite(locationId) || locationId === 0)) continue;
+          const resolved = directLocationName
+            ? ""
+            : await resolveLocationName(settings, locationId, warehouseId);
+          const location = directLocationName || resolved || "";
           if (location) {
             out.push({
               location,
@@ -978,6 +995,14 @@ export async function fetchProductStockLocations(
               bestBeforeDate,
             });
           }
+        }
+        if (isInventoryPath) {
+          const bookedInLocations = await fetchProductBookedInLocations(
+            settings,
+            productId,
+            inventoryRows,
+          );
+          if (bookedInLocations.length > 0) return bookedInLocations;
         }
         if (out.length > 0) return out;
       }
