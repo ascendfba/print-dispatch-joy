@@ -533,6 +533,12 @@ function optionalStringField(record: Record<string, unknown>, keys: string[]): s
       if (nested) return nested;
     }
   }
+  for (const value of Object.values(record)) {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const nested = optionalStringField(value as Record<string, unknown>, keys);
+      if (nested) return nested;
+    }
+  }
   return undefined;
 }
 
@@ -1074,17 +1080,16 @@ export async function fetchOrderAllocations(
   for (const r of arr as Array<Record<string, unknown>>) {
     const locationId = Number(r.LocationId ?? r.LocationID);
     const warehouseId = Number(r.WarehouseId ?? r.WarehouseID);
-    const directLocationName = optionalStringField(r, [
-      "SimpleLocationName",
-      "simpleLocationName",
-      "simplelocationname",
-      "BinLocation",
-      "LocationCode",
-      "Bin",
-      "Code",
-      "LocationName",
-      "Location",
-    ]);
+    const directLocationName =
+      optionalStringField(r, [
+        "SimpleLocationName",
+        "simpleLocationName",
+        "simplelocationname",
+        "BinLocation",
+        "LocationCode",
+        "Bin",
+        "Code",
+      ]) || optionalStringField(r, ["LocationName", "Location"]);
     const resolvedLocationName = await resolveLocationName(settings, locationId, warehouseId);
     out.push({
       orderItemId: Number(r.OrderItemId ?? r.OrderItemID) || undefined,
