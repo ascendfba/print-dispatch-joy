@@ -33,6 +33,26 @@ import {
 } from "@/lib/mintsoft-cache.functions";
 import { loadSettings } from "@/lib/storage";
 import { MultiSelect } from "@/components/MultiSelect";
+
+function formatBbe(input: string): string {
+  const s = input.trim();
+  // ISO yyyy-mm-dd[Thh:...]
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+  // UK dd/mm/yyyy or dd-mm-yyyy
+  const uk = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if (uk) {
+    const d = uk[1].padStart(2, "0");
+    const m = uk[2].padStart(2, "0");
+    const y = uk[3].length === 2 ? `20${uk[3]}` : uk[3];
+    return `${d}/${m}/${y}`;
+  }
+  const parsed = new Date(s);
+  if (!isNaN(parsed.getTime())) {
+    return parsed.toLocaleDateString("en-GB");
+  }
+  return s;
+}
 import {
   Select,
   SelectContent,
