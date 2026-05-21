@@ -623,17 +623,18 @@ export async function fetchProductStockLocations(
         for (const r of rows) {
           const locationId = Number(r.LocationId ?? r.LocationID ?? r.Location_Id ?? r.WarehouseLocationId);
           const warehouseId = Number(r.WarehouseId ?? r.WarehouseID ?? r.Warehouse_Id);
-          const directLocation =
+          // Prefer bin-code style fields (e.g. "A-A19-B87-S3-P01"). Avoid
+          // generic `Location` / `LocationName` which Mintsoft often uses
+          // for the warehouse name rather than the bin.
+          const directBin =
             (typeof r.SimpleLocationName === "string" && r.SimpleLocationName) ||
-            (typeof r.Location === "string" && r.Location) ||
-            (typeof r.LocationName === "string" && r.LocationName) ||
-            (typeof r.WarehouseLocation === "string" && r.WarehouseLocation) ||
             (typeof r.BinLocation === "string" && r.BinLocation) ||
             (typeof r.LocationCode === "string" && r.LocationCode) ||
-            (typeof r.Code === "string" && r.Code) ||
             (typeof r.Bin === "string" && r.Bin) ||
+            (typeof r.Code === "string" && r.Code) ||
             "";
-          const location = directLocation || (await resolveLocationName(settings, locationId, warehouseId));
+          const resolved = await resolveLocationName(settings, locationId, warehouseId);
+          const location = resolved || directBin;
           const stockLevel = optionalNumericField(r, [
             "StockLevel",
             "Stock Level",
