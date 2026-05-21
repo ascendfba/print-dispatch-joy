@@ -83,7 +83,8 @@ function ExpandedDetails({
         existing.onHand += l.onHand ?? l.quantity ?? l.stockLevel ?? 0;
       } else {
         map.set(key, {
-          label: l.location || (l.locationId ? `Location #${l.locationId}` : "Location unavailable"),
+          label:
+            l.location || (l.locationId ? `Location #${l.locationId}` : "Location unavailable"),
           stockLevel: l.stockLevel ?? l.quantity ?? 0,
           allocated: l.allocated ?? 0,
           onHand: l.onHand ?? l.quantity ?? l.stockLevel ?? 0,
@@ -105,7 +106,8 @@ function ExpandedDetails({
       let row = map.get(key);
       if (!row) {
         row = {
-          label: a.location || (a.locationId ? `Location #${a.locationId}` : "Location unavailable"),
+          label:
+            a.location || (a.locationId ? `Location #${a.locationId}` : "Location unavailable"),
           stockLevel: 0,
           allocated: 0,
           onHand: 0,

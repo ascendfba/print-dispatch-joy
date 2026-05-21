@@ -755,14 +755,14 @@ export async function fetchProductStockLocations(
           // generic `Location` / `LocationName` which Mintsoft often uses
           // for the warehouse name rather than the bin.
           const directBin = locationStringField(r, [
-              "SimpleLocationName",
-              "simpleLocationName",
-              "simplelocationname",
-              "WarehouseLocationName",
-              "WarehouseLocation",
-              "BinLocation",
-              "LocationCode",
-              "Bin",
+            "SimpleLocationName",
+            "simpleLocationName",
+            "simplelocationname",
+            "WarehouseLocationName",
+            "WarehouseLocation",
+            "BinLocation",
+            "LocationCode",
+            "Bin",
           ]);
           const resolved = await resolveLocationName(settings, locationId, warehouseId);
           const location = directBin || resolved || "";
@@ -1169,14 +1169,14 @@ export async function fetchOrderAllocations(
     const warehouseId = Number(r.WarehouseId ?? r.WarehouseID);
     const directLocationName =
       locationStringField(r, [
-          "SimpleLocationName",
-          "simpleLocationName",
-          "simplelocationname",
-          "WarehouseLocationName",
-          "WarehouseLocation",
-          "BinLocation",
-          "LocationCode",
-          "Bin",
+        "SimpleLocationName",
+        "simpleLocationName",
+        "simplelocationname",
+        "WarehouseLocationName",
+        "WarehouseLocation",
+        "BinLocation",
+        "LocationCode",
+        "Bin",
       ]) || notSkuValue(optionalDirectStringField(r, ["LocationName", "Location"]), r);
     const resolvedLocationName = await resolveLocationName(settings, locationId, warehouseId);
     out.push({
