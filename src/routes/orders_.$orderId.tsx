@@ -19,6 +19,8 @@ import {
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { PdfPreview } from "@/components/PdfPreview";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -56,7 +58,7 @@ import { scanLabelPdf, buildSkuBarcodeMap } from "@/lib/labelScan";
 import { pickPrinter, printPdfBytes } from "@/lib/printing";
 import { loadSettings } from "@/lib/storage";
 import { REWORK_CATALOG, getRate, formatGBP } from "@/lib/rework";
-import { ArrowLeft, ArrowRight, Check, Eye, FileText, Flag, ImageOff, Loader2, MapPin, Minus, Printer, AlertTriangle, ListChecks, Plus, Weight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Eye, FileText, Flag, ImageOff, Loader2, MapPin, Minus, Package, Printer, AlertTriangle, ListChecks, Plus, Weight } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
