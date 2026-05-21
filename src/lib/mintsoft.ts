@@ -876,9 +876,7 @@ type ProductsInLocationReportRow = {
   ProductInLocationId?: number | null;
 };
 
-let productsInLocationReportCache:
-  | { at: number; rows: ProductsInLocationReportRow[] }
-  | undefined;
+let productsInLocationReportCache: { at: number; rows: ProductsInLocationReportRow[] } | undefined;
 let productsInLocationReportInflight: Promise<ProductsInLocationReportRow[]> | undefined;
 const PRODUCTS_IN_LOCATION_TTL_MS = 60_000;
 
