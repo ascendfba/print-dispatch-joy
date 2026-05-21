@@ -692,8 +692,8 @@ export async function fetchProductStockLocations(
           ]);
           const resolved = await resolveLocationName(settings, locationId, warehouseId);
           const location = isUnassignedLocationName(directBin)
-            ? resolved || directBin
-            : directBin || resolved || "Unassigned";
+            ? resolved || directBin || ""
+            : directBin || resolved || "";
           const stockLevel =
             optionalNumericField(r, [
               "StockLevel",
