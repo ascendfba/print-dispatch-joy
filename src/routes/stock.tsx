@@ -364,24 +364,28 @@ function ExpandedDetails({
                 autoFocus
                 disabled={transfer?.submitting}
                 autoComplete="off"
-                list="dest-location-suggestions"
               />
-              <datalist id="dest-location-suggestions">
-                {locationSuggestions.map((l) => (
-                  <option key={`${l.warehouseName}-${l.name}`} value={l.name}>
-                    {l.warehouseName}
-                  </option>
-                ))}
-              </datalist>
               {locationsQuery.isLoading ? (
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Loader2 className="h-3 w-3 animate-spin" />
                   Loading locations…
                 </div>
-              ) : locationsQuery.data && transfer?.toLocation ? (
-                <div className="text-xs text-muted-foreground">
-                  {locationSuggestions.length} match
-                  {locationSuggestions.length === 1 ? "" : "es"}
+              ) : (transfer?.toLocation?.trim().length ?? 0) > 0 &&
+                locationSuggestions.length > 0 ? (
+                <div className="max-h-56 overflow-y-auto rounded border border-border bg-white text-sm shadow-sm dark:bg-popover">
+                  {locationSuggestions.map((l) => (
+                    <button
+                      key={`${l.warehouseName}-${l.name}`}
+                      type="button"
+                      className="flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left hover:bg-muted"
+                      onClick={() =>
+                        setTransfer((t) => (t ? { ...t, toLocation: l.name } : t))
+                      }
+                    >
+                      <span className="font-mono">{l.name}</span>
+                      <span className="text-xs text-muted-foreground">{l.warehouseName}</span>
+                    </button>
+                  ))}
                 </div>
               ) : null}
             </div>
