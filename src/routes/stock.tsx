@@ -188,9 +188,8 @@ function StockPage() {
                   const isOpen = expandedId === p.ID;
                   const locState = locations[p.ID];
                   return (
-                    <>
+                    <Fragment key={p.ID}>
                     <TableRow
-                      key={p.ID}
                       className="cursor-pointer"
                       onClick={() => toggleRow(p.ID)}
                     >
@@ -231,7 +230,7 @@ function StockPage() {
                       </TableCell>
                     </TableRow>
                     {isOpen && (
-                      <TableRow key={`${p.ID}-locs`} className="bg-muted/30 hover:bg-muted/30">
+                      <TableRow className="bg-muted/30 hover:bg-muted/30">
                         <TableCell colSpan={4}>
                           {locState?.loading ? (
                             <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
@@ -269,7 +268,7 @@ function StockPage() {
                         </TableCell>
                       </TableRow>
                     )}
-                    </>
+                    </Fragment>
                   );
                 })}
               </TableBody>
