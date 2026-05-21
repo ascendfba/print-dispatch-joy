@@ -636,7 +636,7 @@ function BookInCard({
             LocationId: r.locationId,
             Quantity: r.qty,
             Complete: mode === "full",
-            BestBeforeDate: r.bbf || undefined,
+            BestBeforeDate: r.bbf ? isoToDdmmyyyy(r.bbf) : undefined,
           });
         } catch (e) {
           // Mintsoft sometimes returns an error on over-expected receives
