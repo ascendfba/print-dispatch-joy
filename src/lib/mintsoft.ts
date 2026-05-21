@@ -622,20 +622,38 @@ async function resolveLocationName(
   const cached = locationNameCache.get(locationId);
   if (cached) return cached;
   if (Number.isFinite(warehouseId)) {
+    const locations = await listWarehouseLocations(settings, warehouseId);
+    const listedLocation = locations.find((location) => location.id === locationId);
+    const listedName = usableLocationName(listedLocation?.code || listedLocation?.name);
+    if (listedName) {
+      locationNameCache.set(locationId, listedName);
+      return listedName;
+    }
+
     const location = await fetchWarehouseLocation(settings, warehouseId, locationId);
-    if (location?.name) {
-      locationNameCache.set(locationId, location.name);
-      return location.name;
+    const locationName = usableLocationName(location?.code || location?.name);
+    if (locationName) {
+      locationNameCache.set(locationId, locationName);
+      return locationName;
     }
   }
   // Warehouse unknown — search all warehouses for this location.
   try {
     const warehouses = await listWarehouses(settings);
     for (const w of warehouses) {
+      const locations = await listWarehouseLocations(settings, w.id);
+      const listedLocation = locations.find((location) => location.id === locationId);
+      const listedName = usableLocationName(listedLocation?.code || listedLocation?.name);
+      if (listedName) {
+        locationNameCache.set(locationId, listedName);
+        return listedName;
+      }
+
       const location = await fetchWarehouseLocation(settings, w.id, locationId);
-      if (location?.name) {
-        locationNameCache.set(locationId, location.name);
-        return location.name;
+      const locationName = usableLocationName(location?.code || location?.name);
+      if (locationName) {
+        locationNameCache.set(locationId, locationName);
+        return locationName;
       }
     }
   } catch {
