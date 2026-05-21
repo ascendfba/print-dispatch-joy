@@ -20,13 +20,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { MultiSelect } from "@/components/MultiSelect";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -107,7 +101,7 @@ function OrdersPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [filter, setFilter] = useState("");
-  const [clientFilter, setClientFilter] = useState("");
+  const [clientFilter, setClientFilter] = useState<string[]>([]);
   const [trackingFor, setTrackingFor] = useState<MintsoftOrder | null>(null);
   const [trackingValue, setTrackingValue] = useState("");
   const trackingRef = useRef<HTMLInputElement>(null);
@@ -309,9 +303,8 @@ function OrdersPage() {
             .some((v) => String(v).toLowerCase().includes(q)),
         )
       : list;
-    if (clientFilter && clientFilter !== "all") {
-      const cid = Number(clientFilter);
-      matches = matches.filter((o) => (o as { ClientId?: number }).ClientId === cid);
+    if (clientFilter.length > 0) {
+      matches = matches.filter((o) => clientFilter.includes(String((o as { ClientId?: number }).ClientId ?? 0)));
     }
     // Oldest first — most urgent at the top
     return [...matches].sort(
@@ -328,9 +321,8 @@ function OrdersPage() {
             .some((v) => String(v).toLowerCase().includes(q)),
         )
       : list;
-    if (clientFilter && clientFilter !== "all") {
-      const cid = Number(clientFilter);
-      matches = matches.filter((o) => (o as { ClientId?: number }).ClientId === cid);
+    if (clientFilter.length > 0) {
+      matches = matches.filter((o) => clientFilter.includes(String((o as { ClientId?: number }).ClientId ?? 0)));
     }
     return [...matches].sort(
       (a, b) => (ageInHours(b.OrderDate as string) ?? 0) - (ageInHours(a.OrderDate as string) ?? 0),
@@ -745,19 +737,15 @@ function OrdersPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Select value={clientFilter} onValueChange={setClientFilter}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="All clients" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All clients</SelectItem>
-              {(clientsQuery.data ?? []).map((c) => (
-                <SelectItem key={c.ID} value={String(c.ID)}>
-                  {c.BrandName || c.ShortName || c.Name || `Client #${c.ID}`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            options={(clientsQuery.data ?? []).map((c) => ({
+              value: String(c.ID),
+              label: c.BrandName || c.ShortName || c.Name || `Client #${c.ID}`,
+            }))}
+            value={clientFilter}
+            onChange={setClientFilter}
+            placeholder="All clients"
+          />
           <Input
             placeholder="Filter…"
             className="w-64"

@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { MultiSelect } from "@/components/MultiSelect";
 import {
   Select,
   SelectContent,
@@ -63,7 +64,7 @@ function AsnsPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [filter, setFilter] = useState("");
-  const [clientFilter, setClientFilter] = useState("");
+  const [clientFilter, setClientFilter] = useState<string[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [statusTab, setStatusTab] = useState<
     "new" | "partial" | "completed"
@@ -164,9 +165,8 @@ function AsnsPage() {
           .some((v) => String(v).toLowerCase().includes(q)),
       );
     }
-    if (clientFilter && clientFilter !== "all") {
-      const cid = Number(clientFilter);
-      list = list.filter((a) => a.ClientId === cid);
+    if (clientFilter.length > 0) {
+      list = list.filter((a) => clientFilter.includes(String(a.ClientId ?? 0)));
     }
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -221,19 +221,15 @@ function AsnsPage() {
             {filtered.length} ASN{filtered.length === 1 ? "" : "s"}
           </CardTitle>
           <div className="flex items-center gap-2">
-            <Select value={clientFilter} onValueChange={setClientFilter}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="All clients" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All clients</SelectItem>
-                {(clientsQuery.data ?? []).map((c) => (
-                  <SelectItem key={c.ID} value={String(c.ID)}>
-                    {c.BrandName || c.ShortName || c.Name || `Client #${c.ID}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <MultiSelect
+              options={(clientsQuery.data ?? []).map((c) => ({
+                value: String(c.ID),
+                label: c.BrandName || c.ShortName || c.Name || `Client #${c.ID}`,
+              }))}
+              value={clientFilter}
+              onChange={setClientFilter}
+              placeholder="All clients"
+            />
             <Input
               placeholder="Search reference, supplier, warehouse…"
               value={filter}
