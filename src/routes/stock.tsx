@@ -266,7 +266,7 @@ function ExpandedDetails({
                         <span>
                           {batch.batchNumber ? `Batch ${batch.batchNumber}` : "Batch"}
                           {batch.bestBeforeDate
-                            ? ` · BBE ${new Date(batch.bestBeforeDate).toLocaleDateString()}`
+                            ? ` · BBE ${formatBbe(batch.bestBeforeDate)}`
                             : ""}
                         </span>
                         <span className="font-mono">×{batch.quantity}</span>
