@@ -2083,6 +2083,8 @@ function WeightEstimateFooter({
 
 type PackingBox = {
   weight: string;
+  weightAuto: boolean;
+  tare: number;
   length: string;
   width: string;
   height: string;
@@ -2090,7 +2092,7 @@ type PackingBox = {
 };
 
 function makeEmptyBox(): PackingBox {
-  return { weight: "", length: "", width: "", height: "", contents: [] };
+  return { weight: "", weightAuto: true, tare: 0, length: "", width: "", height: "", contents: [] };
 }
 
 function PackingListDialog({
