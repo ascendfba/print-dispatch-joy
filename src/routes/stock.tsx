@@ -351,37 +351,10 @@ function StockPage() {
                         {isOpen && (
                           <TableRow className="bg-muted/30 hover:bg-muted/30">
                             <TableCell colSpan={6}>
-                              {locState?.loading ? (
-                                <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                  Loading stock locations…
-                                </div>
-                              ) : locState?.error ? (
-                                <div className="py-2 text-sm text-destructive">{locState.error}</div>
-                              ) : !locState?.data || locState.data.length === 0 ? (
-                                <div className="py-2 text-sm text-muted-foreground">
-                                  No stock locations found.
-                                </div>
-                              ) : (
-                                <div className="py-2">
-                                  <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                    Stock locations
-                                  </div>
-                                  <ul className="space-y-1">
-                                    {locState.data.map((l, i) => (
-                                      <li
-                                        key={`${l.location}-${i}`}
-                                        className="flex items-center justify-between rounded border border-border bg-background px-3 py-1.5 text-sm"
-                                      >
-                                        <span className="font-mono">{l.location}</span>
-                                        <span className="text-muted-foreground">
-                                          Qty: {l.quantity}
-                                        </span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
+                              <ExpandedDetails
+                                locState={locState}
+                                allocState={orderAllocs[p.id]}
+                              />
                             </TableCell>
                           </TableRow>
                         )}
