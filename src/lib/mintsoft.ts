@@ -1992,19 +1992,57 @@ export async function uploadOrderDocument(
     contentType: string;
     bytes: Uint8Array;
     label?: string;
+    documentTypeName?: string;
+    documentTypeId?: number;
+    printWithOrder?: boolean;
   },
 ): Promise<void> {
+  let documentTypeId = doc.documentTypeId;
+  if (documentTypeId == null) {
+    const wanted = (doc.documentTypeName ?? "Box Packing List").trim().toLowerCase();
+    const types = await fetchOrderDocumentTypes(settings).catch(() => []);
+    const match = types.find((t) => (t.Name ?? "").trim().toLowerCase() === wanted);
+    if (!match?.ID) {
+      throw new Error(
+        `Mintsoft document type "${doc.documentTypeName ?? "Box Packing List"}" not found. ` +
+          `Available: ${types.map((t) => t.Name).filter(Boolean).join(", ") || "(none)"}`,
+      );
+    }
+    documentTypeId = match.ID;
+  }
   const body = {
     FileName: doc.fileName,
-    ContentType: doc.contentType,
     Base64Data: bytesToBase64(doc.bytes),
-    Comments: doc.label ?? doc.fileName,
+    Comment: doc.label ?? doc.fileName,
+    OrderDocumentTypeId: documentTypeId,
   };
-  await authedJson(settings, `/api/Order/${orderId}/Documents`, {
+  const qs = new URLSearchParams({
+    PrintWithOrder: String(doc.printWithOrder ?? false),
+    DocumentTypeId: String(documentTypeId),
+  });
+  await authedJson(settings, `/api/Order/${orderId}/Documents?${qs.toString()}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+}
+
+export type MintsoftOrderDocumentType = {
+  ID?: number;
+  Name?: string | null;
+};
+
+let orderDocTypeCache: MintsoftOrderDocumentType[] | null = null;
+export async function fetchOrderDocumentTypes(
+  settings: Settings,
+): Promise<MintsoftOrderDocumentType[]> {
+  if (orderDocTypeCache) return orderDocTypeCache;
+  const res = await authedJson<MintsoftOrderDocumentType[]>(
+    settings,
+    `/api/Order/Documents/DocumentTypes`,
+  );
+  orderDocTypeCache = Array.isArray(res) ? res : [];
+  return orderDocTypeCache;
 }
 
 export type MintsoftOrderComment = {
