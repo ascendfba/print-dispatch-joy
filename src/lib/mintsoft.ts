@@ -504,6 +504,18 @@ function numericField(record: Record<string, unknown>, keys: string[]): number {
   return 0;
 }
 
+async function resolveLocationName(
+  settings: Settings,
+  locationId: number,
+  warehouseId: number,
+): Promise<string> {
+  if (Number.isFinite(locationId) && Number.isFinite(warehouseId)) {
+    const location = await fetchWarehouseLocation(settings, warehouseId, locationId);
+    if (location?.name) return location.name;
+  }
+  return Number.isFinite(locationId) ? `Location #${locationId}` : "";
+}
+
 export type ProductStockEntry = {
   location: string;
   quantity: number;
