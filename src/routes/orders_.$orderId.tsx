@@ -908,6 +908,27 @@ function OrderDetailPage() {
             submitted={chargesSubmitted}
             attention={!chargesSubmitted}
           />
+          {(() => {
+            const courier =
+              (order as { CourierServiceName?: string } | undefined)?.CourierServiceName ?? "";
+            const required = /packing list required/i.test(courier);
+            return (
+              <Button
+                className={`w-full ${required ? "border-amber-500 bg-amber-50 text-amber-900 hover:bg-amber-100" : ""}`}
+                variant="outline"
+                onClick={() => setPackingOpen(true)}
+                disabled={!order}
+              >
+                <Package className="mr-2 h-4 w-4" />
+                Enter Packing List
+                {required && (
+                  <span className="ml-2 rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900">
+                    Required
+                  </span>
+                )}
+              </Button>
+            );
+          })()}
           <Button
             className={`w-full ${chargesSubmitted && !labelsPrinted ? "animate-attention" : ""}`}
             variant="outline"
