@@ -619,6 +619,7 @@ function OrdersPage() {
           </TableHead>
           <TableHead className="w-[180px]">Order #</TableHead>
           <TableHead>Client</TableHead>
+          <TableHead>Courier</TableHead>
           <TableHead className="w-24 text-right">Units</TableHead>
           <TableHead className="w-32 text-right">FNSKU labels</TableHead>
           <TableHead className="w-24 text-right">Bundles</TableHead>
@@ -658,6 +659,13 @@ function OrdersPage() {
                 )}
               </TableCell>
               <TableCell>{client}</TableCell>
+              <TableCell>
+                {o.CourierName ? (
+                  <span className="text-xs">{o.CourierName}</span>
+                ) : (
+                  <span className="text-xs text-muted-foreground">—</span>
+                )}
+              </TableCell>
               <TableCell className="text-right">
                 <OrderItemsCell orderId={o.ID} fallbackUnits={totalItems} />
               </TableCell>
@@ -690,7 +698,7 @@ function OrdersPage() {
         })}
         {list.length === 0 && !ordersQuery.isLoading && (
           <TableRow>
-            <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+            <TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
               No orders in this view.
             </TableCell>
           </TableRow>
