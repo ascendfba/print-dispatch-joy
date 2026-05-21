@@ -1065,6 +1065,62 @@ export type OrderDocument = {
   bytes: Uint8Array;
 };
 
+export type ProductOrderAllocation = {
+  orderId: number;
+  orderNumber?: string;
+  customerName?: string;
+  location?: string;
+  quantity: number;
+};
+
+/**
+ * For a given product, scan open orders and return each allocation row
+ * (one per order/location) so the UI can show which orders are holding
+ * stock and from which physical location.
+ */
+export async function fetchProductOpenOrderAllocations(
+  settings: Settings,
+  productId: number,
+): Promise<ProductOrderAllocation[]> {
+  let orders: MintsoftOrder[] = [];
+  try {
+    orders = await listOpenOrders(settings);
+  } catch {
+    return [];
+  }
+  const out: ProductOrderAllocation[] = [];
+  const concurrency = 8;
+  let i = 0;
+  async function worker() {
+    while (i < orders.length) {
+      const idx = i++;
+      const o = orders[idx];
+      try {
+        const allocs = await fetchOrderAllocations(settings, o.ID);
+        for (const a of allocs) {
+          if (a.productId && a.productId !== productId) continue;
+          if (!a.productId && a.sku) {
+            // sku-only allocation; skip if can't match
+          }
+          if (a.productId !== productId) continue;
+          out.push({
+            orderId: o.ID,
+            orderNumber: o.OrderNumber,
+            customerName: o.CustomerName,
+            location: a.locationName,
+            quantity: a.quantity,
+          });
+        }
+      } catch {
+        /* ignore individual order failures */
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, orders.length) }, worker));
+  return out;
+}
+
+
 type MintsoftApiOrderDocument = {
   ID?: number;
   OrderDocumentTypeId?: number;

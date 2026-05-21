@@ -20,7 +20,9 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChevronDown, ChevronRight, Loader2, Package, RefreshCw } from "lucide-react";
 import {
   fetchProductStockLocations,
+  fetchProductOpenOrderAllocations,
   type StockLocation,
+  type ProductOrderAllocation,
 } from "@/lib/mintsoft";
 import {
   getCachedClients,
@@ -51,6 +53,112 @@ export const Route = createFileRoute("/stock")({
   component: StockPage,
 });
 
+function ExpandedDetails({
+  locState,
+  allocState,
+}: {
+  locState?: { loading: boolean; data?: StockLocation[]; error?: string };
+  allocState?: { loading: boolean; data?: ProductOrderAllocation[]; error?: string };
+}) {
+  const allocsByLocation = useMemo(() => {
+    const map = new Map<string, ProductOrderAllocation[]>();
+    for (const a of allocState?.data ?? []) {
+      const key = a.location || "Unassigned";
+      const arr = map.get(key) ?? [];
+      arr.push(a);
+      map.set(key, arr);
+    }
+    return map;
+  }, [allocState?.data]);
+
+  return (
+    <div className="grid gap-6 py-2 md:grid-cols-2">
+      <div>
+        <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Stock locations
+        </div>
+        {locState?.loading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading…
+          </div>
+        ) : locState?.error ? (
+          <div className="text-sm text-destructive">{locState.error}</div>
+        ) : !locState?.data || locState.data.length === 0 ? (
+          <div className="text-sm text-muted-foreground">No stock locations found.</div>
+        ) : (
+          <ul className="space-y-2">
+            {locState.data.map((l, i) => {
+              const orders = allocsByLocation.get(l.location) ?? [];
+              return (
+                <li
+                  key={`${l.location}-${i}`}
+                  className="rounded border border-border bg-background px-3 py-2 text-sm"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono">{l.location}</span>
+                    <span className="text-muted-foreground">Qty: {l.quantity}</span>
+                  </div>
+                  {orders.length > 0 && (
+                    <ul className="mt-2 space-y-1 border-t border-border pt-2 text-xs">
+                      {orders.map((o, j) => (
+                        <li key={`${o.orderId}-${j}`} className="flex items-center justify-between">
+                          <span className="font-mono text-muted-foreground">
+                            {o.orderNumber || `#${o.orderId}`}
+                            {o.customerName ? ` · ${o.customerName}` : ""}
+                          </span>
+                          <span className="text-amber-600 dark:text-amber-400">×{o.quantity}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+      <div>
+        <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Allocated to orders
+        </div>
+        {allocState?.loading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Scanning open orders…
+          </div>
+        ) : allocState?.error ? (
+          <div className="text-sm text-destructive">{allocState.error}</div>
+        ) : !allocState?.data || allocState.data.length === 0 ? (
+          <div className="text-sm text-muted-foreground">
+            No open orders have this product allocated.
+          </div>
+        ) : (
+          <ul className="space-y-1">
+            {allocState.data.map((a, i) => (
+              <li
+                key={`${a.orderId}-${a.location}-${i}`}
+                className="flex items-center justify-between rounded border border-border bg-background px-3 py-1.5 text-sm"
+              >
+                <span className="font-mono">
+                  {a.orderNumber || `#${a.orderId}`}
+                  {a.customerName ? (
+                    <span className="ml-2 text-muted-foreground">{a.customerName}</span>
+                  ) : null}
+                </span>
+                <span className="text-muted-foreground">
+                  {a.location ? <span className="mr-3 font-mono">{a.location}</span> : null}
+                  <span className="text-amber-600 dark:text-amber-400">×{a.quantity}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function StockPage() {
   const queryClient = useQueryClient();
   const fetchProducts = useServerFn(getCachedProducts);
@@ -67,6 +175,9 @@ function StockPage() {
   const [locations, setLocations] = useState<
     Record<number, { loading: boolean; data?: StockLocation[]; error?: string }>
   >({});
+  const [orderAllocs, setOrderAllocs] = useState<
+    Record<number, { loading: boolean; data?: ProductOrderAllocation[]; error?: string }>
+  >({});
 
   const toggleRow = async (productId: number) => {
     if (expandedId === productId) {
@@ -74,17 +185,32 @@ function StockPage() {
       return;
     }
     setExpandedId(productId);
-    if (locations[productId]?.data || locations[productId]?.loading) return;
-    setLocations((s) => ({ ...s, [productId]: { loading: true } }));
-    try {
-      const settings = loadSettings();
-      const data = await fetchProductStockLocations(settings, productId);
-      setLocations((s) => ({ ...s, [productId]: { loading: false, data } }));
-    } catch (e) {
-      setLocations((s) => ({
-        ...s,
-        [productId]: { loading: false, error: (e as Error).message },
-      }));
+    const settings = loadSettings();
+    if (!locations[productId]?.data && !locations[productId]?.loading) {
+      setLocations((s) => ({ ...s, [productId]: { loading: true } }));
+      fetchProductStockLocations(settings, productId)
+        .then((data) =>
+          setLocations((s) => ({ ...s, [productId]: { loading: false, data } })),
+        )
+        .catch((e) =>
+          setLocations((s) => ({
+            ...s,
+            [productId]: { loading: false, error: (e as Error).message },
+          })),
+        );
+    }
+    if (!orderAllocs[productId]?.data && !orderAllocs[productId]?.loading) {
+      setOrderAllocs((s) => ({ ...s, [productId]: { loading: true } }));
+      fetchProductOpenOrderAllocations(settings, productId)
+        .then((data) =>
+          setOrderAllocs((s) => ({ ...s, [productId]: { loading: false, data } })),
+        )
+        .catch((e) =>
+          setOrderAllocs((s) => ({
+            ...s,
+            [productId]: { loading: false, error: (e as Error).message },
+          })),
+        );
     }
   };
 
@@ -331,37 +457,10 @@ function StockPage() {
                         {isOpen && (
                           <TableRow className="bg-muted/30 hover:bg-muted/30">
                             <TableCell colSpan={6}>
-                              {locState?.loading ? (
-                                <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                  Loading stock locations…
-                                </div>
-                              ) : locState?.error ? (
-                                <div className="py-2 text-sm text-destructive">{locState.error}</div>
-                              ) : !locState?.data || locState.data.length === 0 ? (
-                                <div className="py-2 text-sm text-muted-foreground">
-                                  No stock locations found.
-                                </div>
-                              ) : (
-                                <div className="py-2">
-                                  <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                    Stock locations
-                                  </div>
-                                  <ul className="space-y-1">
-                                    {locState.data.map((l, i) => (
-                                      <li
-                                        key={`${l.location}-${i}`}
-                                        className="flex items-center justify-between rounded border border-border bg-background px-3 py-1.5 text-sm"
-                                      >
-                                        <span className="font-mono">{l.location}</span>
-                                        <span className="text-muted-foreground">
-                                          Qty: {l.quantity}
-                                        </span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
+                              <ExpandedDetails
+                                locState={locState}
+                                allocState={orderAllocs[p.id]}
+                              />
                             </TableCell>
                           </TableRow>
                         )}
