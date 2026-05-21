@@ -2139,6 +2139,79 @@ function makeEmptyBox(): PackingBox {
   return { weight: "", weightAuto: true, tare: 0, length: "", width: "", height: "", contents: [] };
 }
 
+async function buildPackingListPdf({
+  orderRef,
+  boxes,
+}: {
+  orderRef: string;
+  boxes: PackingBox[];
+}): Promise<Uint8Array> {
+  const { PDFDocument: PDFDoc, StandardFonts, rgb } = await import("pdf-lib");
+  const pdf = await PDFDoc.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+
+  const pageWidth = 595.28; // A4
+  const pageHeight = 841.89;
+  const margin = 40;
+  const lineGap = 14;
+  let page = pdf.addPage([pageWidth, pageHeight]);
+  let y = pageHeight - margin;
+
+  const ensureRoom = (needed: number) => {
+    if (y - needed < margin) {
+      page = pdf.addPage([pageWidth, pageHeight]);
+      y = pageHeight - margin;
+    }
+  };
+  const draw = (text: string, opts: { size?: number; bold?: boolean } = {}) => {
+    const size = opts.size ?? 10;
+    ensureRoom(size + 2);
+    page.drawText(text, {
+      x: margin,
+      y: y - size,
+      size,
+      font: opts.bold ? bold : font,
+      color: rgb(0, 0, 0),
+    });
+    y -= size + 4;
+  };
+
+  draw(`Packing List — ${orderRef}`, { size: 18, bold: true });
+  draw(`Generated: ${new Date().toLocaleString()}`, { size: 9 });
+  draw(`Total boxes: ${boxes.length}`, { size: 10, bold: true });
+  y -= 6;
+
+  boxes.forEach((b, i) => {
+    ensureRoom(60);
+    draw(`Box ${i + 1}`, { size: 13, bold: true });
+    const dims =
+      b.length || b.width || b.height
+        ? `${b.length || "?"} × ${b.width || "?"} × ${b.height || "?"} cm`
+        : "no dimensions";
+    draw(`Dimensions: ${dims}    Weight: ${b.weight || "?"} kg`, { size: 10 });
+    const rows = b.contents.filter((c) => c.qty > 0);
+    if (rows.length === 0) {
+      draw("  (no SKUs assigned)", { size: 10 });
+    } else {
+      draw("  SKU                                                       Qty", {
+        size: 10,
+        bold: true,
+      });
+      rows.forEach((c) => {
+        ensureRoom(lineGap);
+        const sku = c.sku.length > 50 ? c.sku.slice(0, 49) + "…" : c.sku;
+        draw(`  ${sku.padEnd(52, " ")} ${String(c.qty).padStart(4, " ")}`, {
+          size: 10,
+        });
+      });
+    }
+    y -= 6;
+  });
+
+  return await pdf.save();
+}
+
 function PackingListDialog({
   open,
   onOpenChange,
@@ -2159,9 +2232,6 @@ function PackingListDialog({
   const [boxCount, setBoxCount] = useState(1);
   const [boxes, setBoxes] = useState<PackingBox[]>([makeEmptyBox()]);
   const [submitting, setSubmitting] = useState(false);
-  const [step, setStep] = useState<"edit" | "upload">("edit");
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
 
   // Available SKUs from the order (sku + total ordered qty).
   const orderSkus = useMemo(() => {
@@ -2209,9 +2279,6 @@ function PackingListDialog({
     setBoxCount(1);
     setBoxes([makeEmptyBox()]);
     setSubmitting(false);
-    setStep("edit");
-    setUploadFile(null);
-    setUploading(false);
   }, [open]);
 
   const applyBoxCount = (n: number) => {
@@ -2341,34 +2408,32 @@ function PackingListDialog({
       await addOrderComment(loadSettings(), orderId, comment, true);
       toast.success("Packing list saved to order");
       onSaved?.(boxes.length);
-      setStep("upload");
+
+      // Generate a PDF from the entered packing list and upload to Mintsoft.
+      try {
+        const pdfBytes = await buildPackingListPdf({
+          orderRef: ref,
+          boxes,
+        });
+        await uploadOrderDocument(loadSettings(), orderId, {
+          fileName: `Packing List ${ref}.pdf`,
+          contentType: "application/pdf",
+          bytes: pdfBytes,
+          label: "Packing List",
+        });
+        toast.success("Packing list PDF uploaded to Mintsoft");
+        onOpenChange(false);
+      } catch (e) {
+        toast.error(
+          e instanceof Error
+            ? `PDF upload failed: ${e.message}`
+            : "Failed to upload packing list PDF",
+        );
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save packing list");
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const handleUpload = async () => {
-    if (!uploadFile) {
-      toast.error("Choose a PDF to upload");
-      return;
-    }
-    setUploading(true);
-    try {
-      const buf = new Uint8Array(await uploadFile.arrayBuffer());
-      await uploadOrderDocument(loadSettings(), orderId, {
-        fileName: uploadFile.name || "Packing List.pdf",
-        contentType: uploadFile.type || "application/pdf",
-        bytes: buf,
-        label: "Packing List",
-      });
-      toast.success("Packing list uploaded to Mintsoft");
-      onOpenChange(false);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to upload packing list");
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -2378,51 +2443,13 @@ function PackingListDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            {step === "edit" ? "Enter Packing List" : "Upload Packing List PDF"}
+            Enter Packing List
           </DialogTitle>
           <DialogDescription>
-            {step === "edit"
-              ? "Drag SKUs from the left into a box. Each drop adds qty 1 — edit the qty as needed."
-              : "Upload the signed packing list PDF. It will be attached to the order documents in Mintsoft as \"Packing List\"."}
+            Drag SKUs from the left into a box. Each drop adds qty 1 — edit the qty as needed. A PDF will be generated and attached to the order in Mintsoft as "Packing List".
           </DialogDescription>
         </DialogHeader>
 
-        {step === "upload" ? (
-          <div className="space-y-4 py-2">
-            <div className="rounded-md border border-emerald-500/40 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800">
-              Packing list saved to order ✓ — now upload the signed PDF.
-            </div>
-            <div>
-              <Label className="text-sm">Packing list PDF</Label>
-              <Input
-                type="file"
-                accept="application/pdf,.pdf"
-                onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
-                className="mt-1"
-              />
-              {uploadFile && (
-                <div className="mt-2 text-xs text-muted-foreground">
-                  Selected: <span className="font-mono">{uploadFile.name}</span> (
-                  {(uploadFile.size / 1024).toFixed(1)} KB)
-                </div>
-              )}
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={uploading}
-              >
-                Skip
-              </Button>
-              <Button onClick={handleUpload} disabled={uploading || !uploadFile}>
-                {uploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Upload to Mintsoft
-              </Button>
-            </div>
-          </div>
-        ) : (
-        <>
         {(() => {
           const totalOrdered = orderSkus.reduce((s, x) => s + x.qty, 0);
           const totalPlaced = orderSkus.reduce(
@@ -2705,8 +2732,6 @@ function PackingListDialog({
           </div>
         </div>
         </div>
-        </>
-        )}
       </DialogContent>
     </Dialog>
   );
