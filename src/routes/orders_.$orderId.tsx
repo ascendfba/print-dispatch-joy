@@ -2087,11 +2087,11 @@ type PackingBox = {
   length: string;
   width: string;
   height: string;
-  contents: string;
+  contents: Array<{ sku: string; qty: number }>;
 };
 
 function makeEmptyBox(): PackingBox {
-  return { weight: "", length: "", width: "", height: "", contents: "" };
+  return { weight: "", length: "", width: "", height: "", contents: [] };
 }
 
 function PackingListDialog({
@@ -2113,22 +2113,31 @@ function PackingListDialog({
   const [boxes, setBoxes] = useState<PackingBox[]>([makeEmptyBox()]);
   const [submitting, setSubmitting] = useState(false);
 
-  // Default contents for box 1 = full order SKU list.
-  const defaultContents = useMemo(() => {
-    return items
-      .map((it) => {
-        const sku = it.SKU ?? products?.get(it.ProductId)?.SKU ?? `#${it.ProductId}`;
-        return `${sku} x ${it.Quantity}`;
-      })
-      .join("\n");
+  // Available SKUs from the order (sku + total ordered qty).
+  const orderSkus = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const it of items) {
+      const sku = it.SKU ?? products?.get(it.ProductId)?.SKU ?? `#${it.ProductId}`;
+      map.set(sku, (map.get(sku) ?? 0) + (it.Quantity ?? 0));
+    }
+    return Array.from(map.entries()).map(([sku, qty]) => ({ sku, qty }));
   }, [items, products]);
+
+  // Remaining = ordered - already placed across all boxes.
+  const placedBySku = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const b of boxes) {
+      for (const c of b.contents) m.set(c.sku, (m.get(c.sku) ?? 0) + (Number(c.qty) || 0));
+    }
+    return m;
+  }, [boxes]);
 
   useEffect(() => {
     if (!open) return;
     setBoxCount(1);
-    setBoxes([{ ...makeEmptyBox(), contents: defaultContents }]);
+    setBoxes([makeEmptyBox()]);
     setSubmitting(false);
-  }, [open, defaultContents]);
+  }, [open]);
 
   const applyBoxCount = (n: number) => {
     const next = Math.max(1, Math.min(50, Math.floor(n || 1)));
@@ -2144,6 +2153,47 @@ function PackingListDialog({
     setBoxes((prev) => prev.map((b, i) => (i === idx ? { ...b, ...patch } : b)));
   };
 
+  const addSkuToBox = (idx: number, sku: string) => {
+    setBoxes((prev) =>
+      prev.map((b, i) => {
+        if (i !== idx) return b;
+        const existing = b.contents.find((c) => c.sku === sku);
+        if (existing) {
+          return {
+            ...b,
+            contents: b.contents.map((c) =>
+              c.sku === sku ? { ...c, qty: (Number(c.qty) || 0) + 1 } : c,
+            ),
+          };
+        }
+        return { ...b, contents: [...b.contents, { sku, qty: 1 }] };
+      }),
+    );
+  };
+
+  const updateContentQty = (idx: number, sku: string, qty: number) => {
+    setBoxes((prev) =>
+      prev.map((b, i) =>
+        i === idx
+          ? {
+              ...b,
+              contents: b.contents.map((c) =>
+                c.sku === sku ? { ...c, qty: Math.max(0, Math.floor(qty || 0)) } : c,
+              ),
+            }
+          : b,
+      ),
+    );
+  };
+
+  const removeContent = (idx: number, sku: string) => {
+    setBoxes((prev) =>
+      prev.map((b, i) =>
+        i === idx ? { ...b, contents: b.contents.filter((c) => c.sku !== sku) } : b,
+      ),
+    );
+  };
+
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
@@ -2154,9 +2204,13 @@ function PackingListDialog({
           b.length || b.width || b.height
             ? `${b.length || "?"}×${b.width || "?"}×${b.height || "?"} cm`
             : "no dims";
+        const contentsText = b.contents
+          .filter((c) => c.qty > 0)
+          .map((c) => `  ${c.sku} x ${c.qty}`)
+          .join("\n");
         lines.push(
           `Box ${i + 1}: ${b.weight || "?"} kg, ${dims}` +
-            (b.contents.trim() ? `\n  ${b.contents.trim().replace(/\n/g, "\n  ")}` : ""),
+            (contentsText ? `\n${contentsText}` : ""),
         );
       });
       const comment = lines.join("\n");
@@ -2172,17 +2226,50 @@ function PackingListDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
             Enter Packing List
           </DialogTitle>
           <DialogDescription>
-            Record the number of boxes, weight, dimensions, and contents for this
-            shipment.
+            Drag SKUs from the left into a box. Each drop adds qty 1 — edit the
+            qty as needed.
           </DialogDescription>
         </DialogHeader>
+
+        <div className="grid gap-4 md:grid-cols-[220px_1fr]">
+          <div className="rounded-md border p-3 space-y-2 bg-muted/20 md:max-h-[60vh] md:overflow-y-auto">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Order SKUs
+            </div>
+            {orderSkus.length === 0 && (
+              <div className="text-xs text-muted-foreground">No SKUs on this order.</div>
+            )}
+            {orderSkus.map(({ sku, qty }) => {
+              const placed = placedBySku.get(sku) ?? 0;
+              const remaining = qty - placed;
+              return (
+                <div
+                  key={sku}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("text/plain", sku);
+                    e.dataTransfer.effectAllowed = "copy";
+                  }}
+                  className={`cursor-grab rounded border bg-background px-2 py-1.5 text-xs select-none active:cursor-grabbing ${
+                    remaining <= 0 ? "opacity-50" : "hover:border-primary"
+                  }`}
+                  title="Drag into a box"
+                >
+                  <div className="font-mono">{sku}</div>
+                  <div className="text-[10px] text-muted-foreground tabular-nums">
+                    {placed} / {qty} packed
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
         <div className="space-y-4">
           <div className="flex items-center gap-3">
@@ -2202,7 +2289,19 @@ function PackingListDialog({
 
           <div className="space-y-4">
             {boxes.map((b, i) => (
-              <div key={i} className="rounded-md border p-3 space-y-3 bg-muted/20">
+              <div
+                key={i}
+                className="rounded-md border p-3 space-y-3 bg-muted/20"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "copy";
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const sku = e.dataTransfer.getData("text/plain");
+                  if (sku) addSkuToBox(i, sku);
+                }}
+              >
                 <div className="text-sm font-semibold">Box {i + 1}</div>
                 <div className="flex flex-wrap gap-2">
                   {[
@@ -2268,14 +2367,38 @@ function PackingListDialog({
                   </div>
                 </div>
                 <div>
-                  <Label className="text-xs">Contents (one SKU × qty per line)</Label>
-                  <Textarea
-                    rows={Math.max(3, Math.min(8, b.contents.split("\n").length))}
-                    value={b.contents}
-                    onChange={(e) => updateBox(i, { contents: e.target.value })}
-                    placeholder="SKU-123 x 2"
-                    className="font-mono text-xs"
-                  />
+                  <Label className="text-xs">Contents</Label>
+                  <div className="mt-1 rounded border border-dashed bg-background/60 p-2 min-h-[60px] space-y-1">
+                    {b.contents.length === 0 && (
+                      <div className="text-xs text-muted-foreground italic">
+                        Drag SKUs here…
+                      </div>
+                    )}
+                    {b.contents.map((c) => (
+                      <div key={c.sku} className="flex items-center gap-2">
+                        <div className="font-mono text-xs flex-1">{c.sku}</div>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={c.qty}
+                          onChange={(e) =>
+                            updateContentQty(i, c.sku, Number(e.target.value))
+                          }
+                          className="h-7 w-20 text-xs"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={() => removeContent(i, c.sku)}
+                          aria-label="Remove"
+                        >
+                          <Minus className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             ))}
@@ -2290,6 +2413,7 @@ function PackingListDialog({
               Save packing list
             </Button>
           </div>
+        </div>
         </div>
       </DialogContent>
     </Dialog>
