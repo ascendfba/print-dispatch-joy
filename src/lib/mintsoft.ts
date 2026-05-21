@@ -1070,21 +1070,27 @@ export async function fetchOrderAllocations(
   for (const r of arr as Array<Record<string, unknown>>) {
     const locationId = Number(r.LocationId ?? r.LocationID);
     const warehouseId = Number(r.WarehouseId ?? r.WarehouseID);
-    const directLocationName =
-      (typeof r.SimpleLocationName === "string" && r.SimpleLocationName) ||
-      (typeof r.LocationName === "string" && r.LocationName) ||
-      (typeof r.Location === "string" && r.Location) ||
-      (typeof r.BinLocation === "string" && r.BinLocation) ||
-      (typeof r.LocationCode === "string" && r.LocationCode) ||
-      (typeof r.Code === "string" && r.Code) ||
-      undefined;
+    const directLocationName = optionalStringField(r, [
+      "SimpleLocationName",
+      "simpleLocationName",
+      "simplelocationname",
+      "BinLocation",
+      "LocationCode",
+      "Bin",
+      "Code",
+      "LocationName",
+      "Location",
+    ]);
+    const resolvedLocationName = await resolveLocationName(settings, locationId, warehouseId);
     out.push({
       orderItemId: Number(r.OrderItemId ?? r.OrderItemID) || undefined,
       productId: Number(r.ProductId ?? r.ProductID) || undefined,
       sku: typeof r.SKU === "string" ? r.SKU : undefined,
       quantity: Number(r.Quantity ?? 0),
       locationId: Number.isFinite(locationId) ? locationId : undefined,
-      locationName: directLocationName || (await resolveLocationName(settings, locationId, warehouseId)) || undefined,
+      locationName: isUnassignedLocationName(directLocationName)
+        ? resolvedLocationName || directLocationName
+        : directLocationName || resolvedLocationName || undefined,
       warehouseId: Number.isFinite(warehouseId) ? warehouseId : undefined,
       warehouseName: typeof r.WarehouseName === "string" ? r.WarehouseName : undefined,
       bestBefore: typeof r.BestBefore === "string" ? r.BestBefore : undefined,
