@@ -584,6 +584,14 @@ function usableLocationName(value?: string | null): string | undefined {
   return cleaned && cleaned.toLowerCase() !== "unassigned" ? cleaned : undefined;
 }
 
+function firstUsableLocationName(...values: Array<string | null | undefined>): string | undefined {
+  for (const value of values) {
+    const cleaned = usableLocationName(value);
+    if (cleaned) return cleaned;
+  }
+  return undefined;
+}
+
 function locationStringField(record: Record<string, unknown>, keys: string[]): string | undefined {
   const sku = skuLikeField(record);
   const read = (source: Record<string, unknown>): string | undefined => {
@@ -624,14 +632,14 @@ async function resolveLocationName(
   if (Number.isFinite(warehouseId)) {
     const locations = await listWarehouseLocations(settings, warehouseId);
     const listedLocation = locations.find((location) => location.id === locationId);
-    const listedName = usableLocationName(listedLocation?.code || listedLocation?.name);
+    const listedName = firstUsableLocationName(listedLocation?.code, listedLocation?.name);
     if (listedName) {
       locationNameCache.set(locationId, listedName);
       return listedName;
     }
 
     const location = await fetchWarehouseLocation(settings, warehouseId, locationId);
-    const locationName = usableLocationName(location?.code || location?.name);
+    const locationName = firstUsableLocationName(location?.code, location?.name);
     if (locationName) {
       locationNameCache.set(locationId, locationName);
       return locationName;
@@ -643,14 +651,14 @@ async function resolveLocationName(
     for (const w of warehouses) {
       const locations = await listWarehouseLocations(settings, w.id);
       const listedLocation = locations.find((location) => location.id === locationId);
-      const listedName = usableLocationName(listedLocation?.code || listedLocation?.name);
+      const listedName = firstUsableLocationName(listedLocation?.code, listedLocation?.name);
       if (listedName) {
         locationNameCache.set(locationId, listedName);
         return listedName;
       }
 
       const location = await fetchWarehouseLocation(settings, w.id, locationId);
-      const locationName = usableLocationName(location?.code || location?.name);
+      const locationName = firstUsableLocationName(location?.code, location?.name);
       if (locationName) {
         locationNameCache.set(locationId, locationName);
         return locationName;
@@ -755,10 +763,10 @@ export async function fetchProductStockLocations(
   productId: number,
 ): Promise<StockLocation[]> {
   const paths = [
-    `/api/Product/${productId}/Inventory?breakdown=true`,
     `/api/Product/${productId}/Stock`,
     `/api/Product/${productId}/StockLocations`,
     `/api/Product/${productId}/Locations`,
+    `/api/Product/${productId}/Inventory?breakdown=true`,
   ];
   for (const p of paths) {
     try {
@@ -786,6 +794,7 @@ export async function fetchProductStockLocations(
           ]);
           const resolved = await resolveLocationName(settings, locationId, warehouseId);
           const location = directBin || resolved || "";
+          if (!directBin && (!Number.isFinite(locationId) || locationId === 0)) continue;
           const batchNumber = optionalStringField(r, ["BatchNumber", "BatchNo", "Batch"]);
           const bestBeforeDate = optionalStringField(r, [
             "BestBeforeDate",
@@ -1102,18 +1111,19 @@ export async function listWarehouseLocations(
       for (const r of arr as Array<Record<string, unknown>>) {
         const id = Number(r.ID ?? r.Id ?? r.LocationId ?? r.LocationID ?? r.WarehouseLocationId);
         const name =
-          (typeof r.SimpleLocationName === "string" && r.SimpleLocationName) ||
-          (typeof r.LocationName === "string" && r.LocationName) ||
-          (typeof r.Name === "string" && r.Name) ||
-          (typeof r.Location === "string" && r.Location) ||
-          (typeof r.BinLocation === "string" && r.BinLocation) ||
-          (typeof r.Code === "string" && r.Code) ||
-          "";
-        const code =
-          (typeof r.SimpleLocationName === "string" && r.SimpleLocationName) ||
-          (typeof r.Code === "string" && r.Code) ||
-          (typeof r.LocationCode === "string" && r.LocationCode) ||
-          undefined;
+          firstUsableLocationName(
+            typeof r.SimpleLocationName === "string" ? r.SimpleLocationName : undefined,
+            typeof r.LocationName === "string" ? r.LocationName : undefined,
+            typeof r.Name === "string" ? r.Name : undefined,
+            typeof r.Location === "string" ? r.Location : undefined,
+            typeof r.BinLocation === "string" ? r.BinLocation : undefined,
+            typeof r.Code === "string" ? r.Code : undefined,
+          ) ?? "";
+        const code = firstUsableLocationName(
+          typeof r.SimpleLocationName === "string" ? r.SimpleLocationName : undefined,
+          typeof r.Code === "string" ? r.Code : undefined,
+          typeof r.LocationCode === "string" ? r.LocationCode : undefined,
+        );
         if (Number.isFinite(id) && name) out.push({ id, name, code });
       }
       if (out.length > 0) return out;
@@ -1136,18 +1146,19 @@ export async function fetchWarehouseLocation(
     );
     const id = Number(r.ID ?? r.Id ?? r.LocationId ?? r.LocationID ?? r.WarehouseLocationId);
     const name =
-      (typeof r.SimpleLocationName === "string" && r.SimpleLocationName) ||
-      (typeof r.LocationName === "string" && r.LocationName) ||
-      (typeof r.Name === "string" && r.Name) ||
-      (typeof r.Location === "string" && r.Location) ||
-      (typeof r.BinLocation === "string" && r.BinLocation) ||
-      (typeof r.Code === "string" && r.Code) ||
-      "";
-    const code =
-      (typeof r.SimpleLocationName === "string" && r.SimpleLocationName) ||
-      (typeof r.Code === "string" && r.Code) ||
-      (typeof r.LocationCode === "string" && r.LocationCode) ||
-      undefined;
+      firstUsableLocationName(
+        typeof r.SimpleLocationName === "string" ? r.SimpleLocationName : undefined,
+        typeof r.LocationName === "string" ? r.LocationName : undefined,
+        typeof r.Name === "string" ? r.Name : undefined,
+        typeof r.Location === "string" ? r.Location : undefined,
+        typeof r.BinLocation === "string" ? r.BinLocation : undefined,
+        typeof r.Code === "string" ? r.Code : undefined,
+      ) ?? "";
+    const code = firstUsableLocationName(
+      typeof r.SimpleLocationName === "string" ? r.SimpleLocationName : undefined,
+      typeof r.Code === "string" ? r.Code : undefined,
+      typeof r.LocationCode === "string" ? r.LocationCode : undefined,
+    );
     if (!Number.isFinite(id) || !name) return null;
     return { id, name, code };
   } catch {
