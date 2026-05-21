@@ -284,6 +284,8 @@ function OrderDetailPage() {
   const [overweightOpen, setOverweightOpen] = useState(false);
   const [packingOpen, setPackingOpen] = useState(false);
   const [packingBoxCount, setPackingBoxCount] = useState<number | null>(null);
+  const [packingResetKey, setPackingResetKey] = useState(0);
+  const [deletingPacking, setDeletingPacking] = useState(false);
 
   // Load order summary from the cached open-orders list (avoids an extra fetch).
   const ordersQuery = useQuery({
