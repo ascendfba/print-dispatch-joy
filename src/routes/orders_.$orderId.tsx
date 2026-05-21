@@ -2185,56 +2185,65 @@ function PackingListDialog({
   };
 
   const addSkuToBox = (idx: number, sku: string) => {
-    setBoxes((prev) =>
-      (() => {
-        const ordered =
-          orderSkus.find((s) => s.sku === sku)?.qty ?? Infinity;
-        const placed = prev.reduce(
-          (sum, b) =>
-            sum +
-            b.contents
-              .filter((c) => c.sku === sku)
-              .reduce((s, c) => s + (Number(c.qty) || 0), 0),
-          0,
-        );
-        if (placed >= ordered) {
-          toast.error(`All ${ordered} of ${sku} are already assigned`);
-          return prev;
-        }
-        return
-      prev.map((b, i) => {
+    setBoxes((prev) => {
+      const ordered = orderSkus.find((s) => s.sku === sku)?.qty ?? Infinity;
+      const placed = prev.reduce(
+        (sum, b) =>
+          sum +
+          b.contents
+            .filter((c) => c.sku === sku)
+            .reduce((s, c) => s + (Number(c.qty) || 0), 0),
+        0,
+      );
+      if (placed >= ordered) {
+        toast.error(`All ${ordered} of ${sku} are already assigned`);
+        return prev;
+      }
+      return prev.map((b, i) => {
         if (i !== idx) return b;
-        let next: PackingBox;
         const existing = b.contents.find((c) => c.sku === sku);
-        if (existing) {
-          next = {
-            ...b,
-            contents: b.contents.map((c) =>
-              c.sku === sku ? { ...c, qty: (Number(c.qty) || 0) + 1 } : c,
-            ),
-          };
-        } else {
-          next = { ...b, contents: [...b.contents, { sku, qty: 1 }] };
-        }
+        const next: PackingBox = existing
+          ? {
+              ...b,
+              contents: b.contents.map((c) =>
+                c.sku === sku ? { ...c, qty: (Number(c.qty) || 0) + 1 } : c,
+              ),
+            }
+          : { ...b, contents: [...b.contents, { sku, qty: 1 }] };
         return recomputeWeight(next);
       });
-      })(),
-    );
+    });
   };
 
   const updateContentQty = (idx: number, sku: string, qty: number) => {
-    setBoxes((prev) =>
-      prev.map((b, i) =>
+    setBoxes((prev) => {
+      const ordered = orderSkus.find((s) => s.sku === sku)?.qty ?? Infinity;
+      const placedElsewhere = prev.reduce((sum, b, bi) => {
+        if (bi === idx) return sum;
+        return (
+          sum +
+          b.contents
+            .filter((c) => c.sku === sku)
+            .reduce((s, c) => s + (Number(c.qty) || 0), 0)
+        );
+      }, 0);
+      const maxForThisBox = Math.max(0, ordered - placedElsewhere);
+      const requested = Math.max(0, Math.floor(qty || 0));
+      const capped = Math.min(requested, maxForThisBox);
+      if (requested > maxForThisBox) {
+        toast.error(`Only ${maxForThisBox} of ${sku} left to assign`);
+      }
+      return prev.map((b, i) =>
         i === idx
           ? recomputeWeight({
               ...b,
               contents: b.contents.map((c) =>
-                c.sku === sku ? { ...c, qty: Math.max(0, Math.floor(qty || 0)) } : c,
+                c.sku === sku ? { ...c, qty: capped } : c,
               ),
             })
           : b,
-      ),
-    );
+      );
+    });
   };
 
   const removeContent = (idx: number, sku: string) => {
