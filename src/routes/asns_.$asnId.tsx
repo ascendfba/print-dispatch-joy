@@ -270,6 +270,39 @@ function productRequiresBbf(p: unknown): boolean {
   return false;
 }
 
+// Normalise a user-typed BBF value into ISO YYYY-MM-DD for Mintsoft.
+// Accepts:
+//   - 6 digits DDMMYY    → 20YY-MM-DD (e.g. 010126 → 2026-01-01)
+//   - 8 digits DDMMYYYY  → YYYY-MM-DD
+//   - DD/MM/YY or DD/MM/YYYY (any non-digit separator)
+//   - already-ISO YYYY-MM-DD passes through
+// Returns "" if it can't be parsed into a valid date.
+function normaliseBbf(raw: string): string {
+  const s = (raw ?? "").trim();
+  if (!s) return "";
+  // Already ISO
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (iso) return s;
+  const digits = s.replace(/\D/g, "");
+  let dd = "", mm = "", yyyy = "";
+  if (digits.length === 6) {
+    dd = digits.slice(0, 2);
+    mm = digits.slice(2, 4);
+    yyyy = "20" + digits.slice(4, 6);
+  } else if (digits.length === 8) {
+    dd = digits.slice(0, 2);
+    mm = digits.slice(2, 4);
+    yyyy = digits.slice(4, 8);
+  } else {
+    return "";
+  }
+  const d = Number(dd), m = Number(mm), y = Number(yyyy);
+  if (!d || !m || !y || d > 31 || m > 12) return "";
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return "";
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 function BookInCard({
   asnId,
   warehouseId,
