@@ -657,7 +657,7 @@ export async function fetchProductStockLocations(
             "OnHandQuantity",
             "Level",
           ]);
-          const quantity = stockLevel || onHand;
+          const quantity = stockLevel || onHand || 0;
           if (location) {
             out.push({
               location,
