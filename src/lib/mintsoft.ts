@@ -634,7 +634,7 @@ export async function fetchProductStockLocations(
             (typeof r.Bin === "string" && r.Bin) ||
             "";
           const location = directLocation || (await resolveLocationName(settings, locationId, warehouseId));
-          const stockLevel = numericField(r, [
+          const stockLevel = optionalNumericField(r, [
             "StockLevel",
             "Stock Level",
             "TotalStockLevel",
@@ -642,14 +642,14 @@ export async function fetchProductStockLocations(
             "Quantity",
             "Qty",
             "Available",
-          ]);
-          const allocated = numericField(r, [
+          ]) ?? 0;
+          const allocated = optionalNumericField(r, [
             "Allocated",
             "StockAllocated",
             "QuantityAllocated",
             "AllocatedQuantity",
-          ]);
-          const onHand = numericField(r, [
+          ]) ?? 0;
+          const onHand = optionalNumericField(r, [
             "OnHand",
             "On Hand",
             "StockOnHand",
@@ -664,7 +664,7 @@ export async function fetchProductStockLocations(
               quantity,
               stockLevel,
               allocated,
-              onHand: onHand || stockLevel,
+              onHand: onHand ?? stockLevel,
               locationId: Number.isFinite(locationId) ? locationId : undefined,
               warehouseId: Number.isFinite(warehouseId) ? warehouseId : undefined,
             });
