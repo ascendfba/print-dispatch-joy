@@ -1164,6 +1164,8 @@ function ReworkChargesCard({
   onSubmitted,
   submitted,
   attention,
+  packingBoxCount,
+  disabled,
 }: {
   items: Array<{
     Quantity: number;
@@ -1181,6 +1183,8 @@ function ReworkChargesCard({
   onSubmitted: () => void;
   submitted: boolean;
   attention?: boolean;
+  packingBoxCount?: number | null;
+  disabled?: boolean;
 }) {
   const findByKey = (key: string) => REWORK_CATALOG.find((c) => c.key === key)!;
   const settingsForRates = loadSettings();
@@ -1191,10 +1195,16 @@ function ReworkChargesCard({
   // - FNSKU labels: number of label pages on the 51×25mm picking-label PDF.
   // - Bundles (<6 units): total number of bundles across all bundle lines
   //   (sum of qty / unitsPerBundle for each line tagged with BUNDLE-ID).
-  // - Shipping carton supplied: defaults to 1 per order, override as needed.
+  // - Shipping carton supplied / forwarded: defaults to packing-list box count
+  //   when a packing list is saved, otherwise derived from shipping pages.
   const fnskuCount = fnskuLabelCount;
   // Cartons Forwarded: 2 pages per box on the shipping-label PDF.
-  const cartonsForwarded = Math.max(1, Math.ceil(shippingLabelPages / 2));
+  const cartonsForwarded =
+    packingBoxCount && packingBoxCount > 0
+      ? packingBoxCount
+      : Math.max(1, Math.ceil(shippingLabelPages / 2));
+  const cartonsSupplied =
+    packingBoxCount && packingBoxCount > 0 ? packingBoxCount : 1;
 
   const bundleCount = items.reduce((sum, it) => {
     const tag = (it.OrderItemNameValues ?? []).find(
@@ -1211,16 +1221,16 @@ function ReworkChargesCard({
     () => ({
       fnsku: fnskuCount,
       bundle: bundleCount,
-      carton_supplied: 1,
+      carton_supplied: cartonsSupplied,
       carton_forwarded: cartonsForwarded,
       bundle_over6: 0,
     }),
-    [fnskuCount, bundleCount, cartonsForwarded],
+    [fnskuCount, bundleCount, cartonsForwarded, cartonsSupplied],
   );
   const autoMap: Record<string, number> = {
     fnsku: fnskuCount,
     bundle: bundleCount,
-    carton_supplied: 1,
+    carton_supplied: cartonsSupplied,
     carton_forwarded: cartonsForwarded,
     bundle_over6: 0,
   };
