@@ -28,13 +28,7 @@ import {
   triggerSync,
 } from "@/lib/mintsoft-cache.functions";
 import { loadSettings } from "@/lib/storage";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { MultiSelect } from "@/components/MultiSelect";
 import {
   Pagination,
   PaginationContent,
