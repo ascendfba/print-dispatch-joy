@@ -559,10 +559,19 @@ function optionalDirectStringField(
 }
 
 function skuLikeField(record: Record<string, unknown>): string | undefined {
-  return optionalDirectStringField(record, ["SKU", "Sku", "ProductSKU", "ProductSku", "ProductCode"]);
+  return optionalDirectStringField(record, [
+    "SKU",
+    "Sku",
+    "ProductSKU",
+    "ProductSku",
+    "ProductCode",
+  ]);
 }
 
-function notSkuValue(value: string | undefined, record: Record<string, unknown>): string | undefined {
+function notSkuValue(
+  value: string | undefined,
+  record: Record<string, unknown>,
+): string | undefined {
   const sku = skuLikeField(record);
   return value && (!sku || value.trim().toLowerCase() !== sku.trim().toLowerCase())
     ? value
