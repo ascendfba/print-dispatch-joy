@@ -518,14 +518,32 @@ function optionalStringField(record: Record<string, unknown>, keys: string[]): s
   for (const key of keys) {
     const value = record[key];
     if (typeof value === "string" && value.trim()) return value.trim();
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const nested = optionalStringField(value as Record<string, unknown>, keys);
+      if (nested) return nested;
+    }
   }
   const lowerKeyMap = new Map(Object.keys(record).map((key) => [key.toLowerCase(), key]));
   for (const key of keys) {
     const actualKey = lowerKeyMap.get(key.toLowerCase());
     const value = actualKey ? record[actualKey] : undefined;
     if (typeof value === "string" && value.trim()) return value.trim();
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const nested = optionalStringField(value as Record<string, unknown>, keys);
+      if (nested) return nested;
+    }
+  }
+  for (const value of Object.values(record)) {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const nested = optionalStringField(value as Record<string, unknown>, keys);
+      if (nested) return nested;
+    }
   }
   return undefined;
+}
+
+function isUnassignedLocationName(value?: string): boolean {
+  return (value || "").trim().toLowerCase() === "unassigned";
 }
 
 const locationNameCache = new Map<number, string>();
@@ -673,22 +691,26 @@ export async function fetchProductStockLocations(
             "Code",
           ]);
           const resolved = await resolveLocationName(settings, locationId, warehouseId);
-          const location = directBin || resolved || "Unassigned";
-          const stockLevel = optionalNumericField(r, [
-            "StockLevel",
-            "Stock Level",
-            "TotalStockLevel",
-            "Total Stock Level",
-            "Quantity",
-            "Qty",
-            "Available",
-          ]) ?? 0;
-          const allocated = optionalNumericField(r, [
-            "Allocated",
-            "StockAllocated",
-            "QuantityAllocated",
-            "AllocatedQuantity",
-          ]) ?? 0;
+          const location = isUnassignedLocationName(directBin)
+            ? resolved || directBin
+            : directBin || resolved || "Unassigned";
+          const stockLevel =
+            optionalNumericField(r, [
+              "StockLevel",
+              "Stock Level",
+              "TotalStockLevel",
+              "Total Stock Level",
+              "Quantity",
+              "Qty",
+              "Available",
+            ]) ?? 0;
+          const allocated =
+            optionalNumericField(r, [
+              "Allocated",
+              "StockAllocated",
+              "QuantityAllocated",
+              "AllocatedQuantity",
+            ]) ?? 0;
           const onHand = optionalNumericField(r, [
             "OnHand",
             "On Hand",
@@ -1059,20 +1081,25 @@ export async function fetchOrderAllocations(
     const locationId = Number(r.LocationId ?? r.LocationID);
     const warehouseId = Number(r.WarehouseId ?? r.WarehouseID);
     const directLocationName =
-      (typeof r.SimpleLocationName === "string" && r.SimpleLocationName) ||
-      (typeof r.LocationName === "string" && r.LocationName) ||
-      (typeof r.Location === "string" && r.Location) ||
-      (typeof r.BinLocation === "string" && r.BinLocation) ||
-      (typeof r.LocationCode === "string" && r.LocationCode) ||
-      (typeof r.Code === "string" && r.Code) ||
-      undefined;
+      optionalStringField(r, [
+        "SimpleLocationName",
+        "simpleLocationName",
+        "simplelocationname",
+        "BinLocation",
+        "LocationCode",
+        "Bin",
+        "Code",
+      ]) || optionalStringField(r, ["LocationName", "Location"]);
+    const resolvedLocationName = await resolveLocationName(settings, locationId, warehouseId);
     out.push({
       orderItemId: Number(r.OrderItemId ?? r.OrderItemID) || undefined,
       productId: Number(r.ProductId ?? r.ProductID) || undefined,
       sku: typeof r.SKU === "string" ? r.SKU : undefined,
       quantity: Number(r.Quantity ?? 0),
       locationId: Number.isFinite(locationId) ? locationId : undefined,
-      locationName: directLocationName || (await resolveLocationName(settings, locationId, warehouseId)) || undefined,
+      locationName: isUnassignedLocationName(directLocationName)
+        ? resolvedLocationName || directLocationName
+        : directLocationName || resolvedLocationName || undefined,
       warehouseId: Number.isFinite(warehouseId) ? warehouseId : undefined,
       warehouseName: typeof r.WarehouseName === "string" ? r.WarehouseName : undefined,
       bestBefore: typeof r.BestBefore === "string" ? r.BestBefore : undefined,
