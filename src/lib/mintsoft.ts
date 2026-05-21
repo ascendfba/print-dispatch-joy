@@ -1112,8 +1112,8 @@ export async function listWarehouseLocations(
         const id = Number(r.ID ?? r.Id ?? r.LocationId ?? r.LocationID ?? r.WarehouseLocationId);
         const name =
           firstUsableLocationName(
-            typeof r.SimpleLocationName === "string" ? r.SimpleLocationName : undefined,
             typeof r.LocationName === "string" ? r.LocationName : undefined,
+            typeof r.SimpleLocationName === "string" ? r.SimpleLocationName : undefined,
             typeof r.Name === "string" ? r.Name : undefined,
             typeof r.Location === "string" ? r.Location : undefined,
             typeof r.BinLocation === "string" ? r.BinLocation : undefined,
@@ -1147,8 +1147,8 @@ export async function fetchWarehouseLocation(
     const id = Number(r.ID ?? r.Id ?? r.LocationId ?? r.LocationID ?? r.WarehouseLocationId);
     const name =
       firstUsableLocationName(
-        typeof r.SimpleLocationName === "string" ? r.SimpleLocationName : undefined,
         typeof r.LocationName === "string" ? r.LocationName : undefined,
+        typeof r.SimpleLocationName === "string" ? r.SimpleLocationName : undefined,
         typeof r.Name === "string" ? r.Name : undefined,
         typeof r.Location === "string" ? r.Location : undefined,
         typeof r.BinLocation === "string" ? r.BinLocation : undefined,
