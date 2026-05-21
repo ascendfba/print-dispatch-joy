@@ -584,6 +584,14 @@ function usableLocationName(value?: string | null): string | undefined {
   return cleaned && cleaned.toLowerCase() !== "unassigned" ? cleaned : undefined;
 }
 
+function firstUsableLocationName(...values: Array<string | null | undefined>): string | undefined {
+  for (const value of values) {
+    const cleaned = usableLocationName(value);
+    if (cleaned) return cleaned;
+  }
+  return undefined;
+}
+
 function locationStringField(record: Record<string, unknown>, keys: string[]): string | undefined {
   const sku = skuLikeField(record);
   const read = (source: Record<string, unknown>): string | undefined => {
@@ -624,14 +632,14 @@ async function resolveLocationName(
   if (Number.isFinite(warehouseId)) {
     const locations = await listWarehouseLocations(settings, warehouseId);
     const listedLocation = locations.find((location) => location.id === locationId);
-    const listedName = usableLocationName(listedLocation?.code || listedLocation?.name);
+    const listedName = firstUsableLocationName(listedLocation?.code, listedLocation?.name);
     if (listedName) {
       locationNameCache.set(locationId, listedName);
       return listedName;
     }
 
     const location = await fetchWarehouseLocation(settings, warehouseId, locationId);
-    const locationName = usableLocationName(location?.code || location?.name);
+    const locationName = firstUsableLocationName(location?.code, location?.name);
     if (locationName) {
       locationNameCache.set(locationId, locationName);
       return locationName;
@@ -643,14 +651,14 @@ async function resolveLocationName(
     for (const w of warehouses) {
       const locations = await listWarehouseLocations(settings, w.id);
       const listedLocation = locations.find((location) => location.id === locationId);
-      const listedName = usableLocationName(listedLocation?.code || listedLocation?.name);
+      const listedName = firstUsableLocationName(listedLocation?.code, listedLocation?.name);
       if (listedName) {
         locationNameCache.set(locationId, listedName);
         return listedName;
       }
 
       const location = await fetchWarehouseLocation(settings, w.id, locationId);
-      const locationName = usableLocationName(location?.code || location?.name);
+      const locationName = firstUsableLocationName(location?.code, location?.name);
       if (locationName) {
         locationNameCache.set(locationId, locationName);
         return locationName;
