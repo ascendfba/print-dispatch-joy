@@ -25,6 +25,7 @@ import {
   type StockLocation,
   type ProductOrderAllocation,
 } from "@/lib/mintsoft";
+import { listWarehouses, listWarehouseLocations } from "@/lib/mintsoft";
 import {
   getCachedClients,
   getCachedProducts,
@@ -168,6 +169,43 @@ function ExpandedDetails({
     quantity: string;
     submitting: boolean;
   } | null>(null);
+
+  const locationsQuery = useQuery({
+    queryKey: ["all-warehouse-locations"],
+    enabled: transfer !== null,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const settings = loadSettings();
+      const warehouses = await listWarehouses(settings);
+      const lists = await Promise.all(
+        warehouses.map((w) =>
+          listWarehouseLocations(settings, w.id)
+            .then((locs) => locs.map((l) => ({ ...l, warehouseName: w.name })))
+            .catch(() => []),
+        ),
+      );
+      const seen = new Set<string>();
+      const out: { name: string; warehouseName: string }[] = [];
+      for (const l of lists.flat()) {
+        const key = `${l.warehouseName}::${l.name}`;
+        if (l.name && !seen.has(key)) {
+          seen.add(key);
+          out.push({ name: l.name, warehouseName: l.warehouseName });
+        }
+      }
+      return out.sort((a, b) => a.name.localeCompare(b.name));
+    },
+  });
+
+  const locationSuggestions = useMemo(() => {
+    const all = locationsQuery.data ?? [];
+    const q = (transfer?.toLocation ?? "").trim().toLowerCase();
+    const wh = transfer?.warehouseName;
+    const scoped = wh ? all.filter((l) => l.warehouseName === wh) : all;
+    const pool = scoped.length > 0 ? scoped : all;
+    if (!q) return pool.slice(0, 20);
+    return pool.filter((l) => l.name.toLowerCase().includes(q)).slice(0, 20);
+  }, [locationsQuery.data, transfer?.toLocation, transfer?.warehouseName]);
 
   const submitTransfer = async () => {
     if (!transfer) return;
@@ -325,7 +363,27 @@ function ExpandedDetails({
                 placeholder="e.g. B11-S2-PB6"
                 autoFocus
                 disabled={transfer?.submitting}
+                autoComplete="off"
+                list="dest-location-suggestions"
               />
+              <datalist id="dest-location-suggestions">
+                {locationSuggestions.map((l) => (
+                  <option key={`${l.warehouseName}-${l.name}`} value={l.name}>
+                    {l.warehouseName}
+                  </option>
+                ))}
+              </datalist>
+              {locationsQuery.isLoading ? (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Loading locations…
+                </div>
+              ) : locationsQuery.data && transfer?.toLocation ? (
+                <div className="text-xs text-muted-foreground">
+                  {locationSuggestions.length} match
+                  {locationSuggestions.length === 1 ? "" : "es"}
+                </div>
+              ) : null}
             </div>
             <div className="space-y-1">
               <Label htmlFor="dest-qty">Quantity (max {transfer?.maxQty ?? 0})</Label>
