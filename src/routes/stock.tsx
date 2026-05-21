@@ -19,6 +19,7 @@ import {
   listAllProducts,
   listClients,
   fetchProductStockLocations,
+  fetchProductStockTotals,
   type StockLocation,
 } from "@/lib/mintsoft";
 import { loadSettings } from "@/lib/storage";
@@ -76,6 +77,22 @@ function StockPage() {
     refetchOnWindowFocus: false,
   });
 
+  const productIds = useMemo(
+    () => (productsQuery.data ?? []).map((p) => p.ID),
+    [productsQuery.data],
+  );
+
+  const stockTotalsQuery = useQuery({
+    queryKey: ["stock-totals", productIds.length],
+    enabled: inStockOnly && productIds.length > 0,
+    queryFn: async () => {
+      const settings = loadSettings();
+      return fetchProductStockTotals(settings, productIds, { concurrency: 10 });
+    },
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+
   const clientsQuery = useQuery({
     queryKey: ["clients"],
     queryFn: async () => {
@@ -114,16 +131,18 @@ function StockPage() {
       items = items.filter((p) => (p.ClientId ?? p.ClientID ?? 0) === cid);
     }
     if (inStockOnly) {
-      items = items.filter((p) => {
-        const onHand =
-          Number(p.StockOnHand ?? p.QuantityOnHand ?? 0) || 0;
-        const allocated =
-          Number(p.StockAllocated ?? p.QuantityAllocated ?? 0) || 0;
-        return onHand > 0 || allocated > 0;
-      });
+      const totals = stockTotalsQuery.data;
+      if (totals) {
+        items = items.filter((p) => {
+          const t = totals.get(p.ID);
+          const onHand = t?.onHand ?? Number(p.StockOnHand ?? p.QuantityOnHand ?? 0) ?? 0;
+          const allocated = t?.allocated ?? Number(p.StockAllocated ?? p.QuantityAllocated ?? 0) ?? 0;
+          return onHand > 0 || allocated > 0;
+        });
+      }
     }
     return items;
-  }, [productsQuery.data, filter, clientFilter, clientNameById, inStockOnly]);
+  }, [productsQuery.data, filter, clientFilter, clientNameById, inStockOnly, stockTotalsQuery.data]);
 
   return (
     <div className="space-y-4">
@@ -173,7 +192,9 @@ function StockPage() {
             <Package className="h-4 w-4" />
             {productsQuery.isLoading
               ? "Loading products…"
-              : `${rows.length} product${rows.length === 1 ? "" : "s"}`}
+              : inStockOnly && stockTotalsQuery.isLoading
+                ? "Checking stock levels…"
+                : `${rows.length} product${rows.length === 1 ? "" : "s"}`}
           </CardTitle>
         </CardHeader>
         <CardContent>
