@@ -1088,6 +1088,7 @@ export type ProductOrderAllocation = {
   orderNumber?: string;
   customerName?: string;
   location?: string;
+  locationId?: number;
   quantity: number;
 };
 
@@ -1126,6 +1127,7 @@ export async function fetchProductOpenOrderAllocations(
             orderNumber: o.OrderNumber,
             customerName: o.CustomerName,
             location: a.locationName,
+            locationId: a.locationId,
             quantity: a.quantity,
           });
         }
