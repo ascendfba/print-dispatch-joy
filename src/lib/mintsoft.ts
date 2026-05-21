@@ -514,6 +514,20 @@ function optionalNumericField(record: Record<string, unknown>, keys: string[]): 
   return undefined;
 }
 
+function optionalStringField(record: Record<string, unknown>, keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  const lowerKeyMap = new Map(Object.keys(record).map((key) => [key.toLowerCase(), key]));
+  for (const key of keys) {
+    const actualKey = lowerKeyMap.get(key.toLowerCase());
+    const value = actualKey ? record[actualKey] : undefined;
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return undefined;
+}
+
 const locationNameCache = new Map<number, string>();
 
 async function resolveLocationName(
@@ -647,15 +661,17 @@ export async function fetchProductStockLocations(
           // Prefer bin-code style fields (e.g. "A-A19-B87-S3-P01"). Avoid
           // generic `Location` / `LocationName` which Mintsoft often uses
           // for the warehouse name rather than the bin.
-          const directBin =
-            (typeof r.SimpleLocationName === "string" && r.SimpleLocationName) ||
-            (typeof r.BinLocation === "string" && r.BinLocation) ||
-            (typeof r.LocationCode === "string" && r.LocationCode) ||
-            (typeof r.Bin === "string" && r.Bin) ||
-            (typeof r.Code === "string" && r.Code) ||
-            "";
+          const directBin = optionalStringField(r, [
+            "SimpleLocationName",
+            "simpleLocationName",
+            "simplelocationname",
+            "BinLocation",
+            "LocationCode",
+            "Bin",
+            "Code",
+          ]);
           const resolved = await resolveLocationName(settings, locationId, warehouseId);
-          const location = resolved || directBin;
+          const location = directBin || resolved;
           const stockLevel = optionalNumericField(r, [
             "StockLevel",
             "Stock Level",
