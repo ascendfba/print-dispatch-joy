@@ -2257,6 +2257,16 @@ function PackingListDialog({
   };
 
   const handleSubmit = async () => {
+    const missing = boxes
+      .map((b, i) => ({ i, hasDims: !!(b.length && b.width && b.height) }))
+      .filter((x) => !x.hasDims)
+      .map((x) => x.i + 1);
+    if (missing.length > 0) {
+      toast.error(
+        `Pick a box size for Box ${missing.join(", ")} before saving`,
+      );
+      return;
+    }
     setSubmitting(true);
     try {
       const ref = orderNumber ?? `#${orderId}`;
