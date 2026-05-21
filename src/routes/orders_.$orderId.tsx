@@ -2448,25 +2448,9 @@ function PackingListDialog({
   return (
     <Dialog
       open={open}
-      onOpenChange={(next) => {
-        if (!next) {
-          saveAndClose();
-          return;
-        }
-        onOpenChange(next);
-      }}
+      onOpenChange={onOpenChange}
     >
-      <DialogContent
-        className="max-w-4xl max-h-[85vh] overflow-y-auto"
-        onInteractOutside={(event) => {
-          event.preventDefault();
-          saveAndClose();
-        }}
-        onEscapeKeyDown={(event) => {
-          event.preventDefault();
-          saveAndClose();
-        }}
-      >
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
