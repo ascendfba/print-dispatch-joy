@@ -2185,39 +2185,65 @@ function PackingListDialog({
   };
 
   const addSkuToBox = (idx: number, sku: string) => {
-    setBoxes((prev) =>
-      prev.map((b, i) => {
+    setBoxes((prev) => {
+      const ordered = orderSkus.find((s) => s.sku === sku)?.qty ?? Infinity;
+      const placed = prev.reduce(
+        (sum, b) =>
+          sum +
+          b.contents
+            .filter((c) => c.sku === sku)
+            .reduce((s, c) => s + (Number(c.qty) || 0), 0),
+        0,
+      );
+      if (placed >= ordered) {
+        toast.error(`All ${ordered} of ${sku} are already assigned`);
+        return prev;
+      }
+      return prev.map((b, i) => {
         if (i !== idx) return b;
-        let next: PackingBox;
         const existing = b.contents.find((c) => c.sku === sku);
-        if (existing) {
-          next = {
-            ...b,
-            contents: b.contents.map((c) =>
-              c.sku === sku ? { ...c, qty: (Number(c.qty) || 0) + 1 } : c,
-            ),
-          };
-        } else {
-          next = { ...b, contents: [...b.contents, { sku, qty: 1 }] };
-        }
+        const next: PackingBox = existing
+          ? {
+              ...b,
+              contents: b.contents.map((c) =>
+                c.sku === sku ? { ...c, qty: (Number(c.qty) || 0) + 1 } : c,
+              ),
+            }
+          : { ...b, contents: [...b.contents, { sku, qty: 1 }] };
         return recomputeWeight(next);
-      }),
-    );
+      });
+    });
   };
 
   const updateContentQty = (idx: number, sku: string, qty: number) => {
-    setBoxes((prev) =>
-      prev.map((b, i) =>
+    setBoxes((prev) => {
+      const ordered = orderSkus.find((s) => s.sku === sku)?.qty ?? Infinity;
+      const placedElsewhere = prev.reduce((sum, b, bi) => {
+        if (bi === idx) return sum;
+        return (
+          sum +
+          b.contents
+            .filter((c) => c.sku === sku)
+            .reduce((s, c) => s + (Number(c.qty) || 0), 0)
+        );
+      }, 0);
+      const maxForThisBox = Math.max(0, ordered - placedElsewhere);
+      const requested = Math.max(0, Math.floor(qty || 0));
+      const capped = Math.min(requested, maxForThisBox);
+      if (requested > maxForThisBox) {
+        toast.error(`Only ${maxForThisBox} of ${sku} left to assign`);
+      }
+      return prev.map((b, i) =>
         i === idx
           ? recomputeWeight({
               ...b,
               contents: b.contents.map((c) =>
-                c.sku === sku ? { ...c, qty: Math.max(0, Math.floor(qty || 0)) } : c,
+                c.sku === sku ? { ...c, qty: capped } : c,
               ),
             })
           : b,
-      ),
-    );
+      );
+    });
   };
 
   const removeContent = (idx: number, sku: string) => {
@@ -2274,6 +2300,29 @@ function PackingListDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {(() => {
+          const totalOrdered = orderSkus.reduce((s, x) => s + x.qty, 0);
+          const totalPlaced = orderSkus.reduce(
+            (s, x) => s + Math.min(x.qty, placedBySku.get(x.sku) ?? 0),
+            0,
+          );
+          const remainingTotal = Math.max(0, totalOrdered - totalPlaced);
+          const allDone = totalOrdered > 0 && remainingTotal === 0;
+          return (
+            <div
+              className={`mb-3 rounded-md border px-3 py-2 text-xs font-medium ${
+                allDone
+                  ? "border-emerald-500/40 bg-emerald-50 text-emerald-800"
+                  : "border-amber-500/40 bg-amber-50 text-amber-800"
+              }`}
+            >
+              {allDone
+                ? `All ${totalOrdered} units assigned to boxes ✓`
+                : `${remainingTotal} of ${totalOrdered} units awaiting assignment`}
+            </div>
+          );
+        })()}
+
         <div className="grid gap-4 md:grid-cols-[220px_1fr]">
           <div className="rounded-md border p-3 space-y-2 bg-muted/20 md:sticky md:top-0 md:self-start md:max-h-[70vh] md:overflow-y-auto">
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -2285,21 +2334,39 @@ function PackingListDialog({
             {orderSkus.map(({ sku, qty }) => {
               const placed = placedBySku.get(sku) ?? 0;
               const remaining = qty - placed;
+              const full = remaining <= 0;
+              const partial = placed > 0 && !full;
               return (
                 <div
                   key={sku}
-                  draggable
+                  draggable={!full}
                   onDragStart={(e) => {
+                    if (full) {
+                      e.preventDefault();
+                      return;
+                    }
                     e.dataTransfer.setData("text/plain", sku);
                     e.dataTransfer.effectAllowed = "copy";
                   }}
-                  className={`cursor-grab rounded border bg-background px-2 py-1.5 text-xs select-none active:cursor-grabbing ${
-                    remaining <= 0 ? "opacity-50" : "hover:border-primary"
+                  className={`rounded border px-2 py-1.5 text-xs select-none ${
+                    full
+                      ? "cursor-not-allowed border-emerald-500/50 bg-emerald-50 text-emerald-900"
+                      : partial
+                        ? "cursor-grab bg-amber-50 border-amber-300 hover:border-amber-500 active:cursor-grabbing"
+                        : "cursor-grab bg-background hover:border-primary active:cursor-grabbing"
                   }`}
-                  title="Drag into a box"
+                  title={full ? "All units assigned" : "Drag into a box"}
                 >
                   <div className="font-mono">{sku}</div>
-                  <div className="text-[10px] text-muted-foreground tabular-nums">
+                  <div
+                    className={`text-[10px] tabular-nums ${
+                      full
+                        ? "text-emerald-700 font-semibold"
+                        : partial
+                          ? "text-amber-700"
+                          : "text-muted-foreground"
+                    }`}
+                  >
                     {placed} / {qty} packed
                   </div>
                 </div>
