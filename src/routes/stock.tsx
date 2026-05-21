@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChevronDown, ChevronRight, Loader2, Package, RefreshCw } from "lucide-react";
 import {
   fetchProductStockLocations,
@@ -59,6 +60,7 @@ function StockPage() {
   const [filter, setFilter] = useState("");
   const [clientFilter, setClientFilter] = useState<string[]>([]);
   const [inStockOnly, setInStockOnly] = useState(true);
+  const [tab, setTab] = useState<"all" | "allocated">("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -123,6 +125,9 @@ function StockPage() {
 
   const rows = useMemo(() => {
     let items = productsQuery.data ?? [];
+    if (tab === "allocated") {
+      items = items.filter((p) => (p.allocated ?? 0) > 0);
+    }
     if (inStockOnly) {
       items = items.filter((p) => p.stock_level > 0 || p.allocated > 0 || p.on_hand > 0);
     }
@@ -150,6 +155,7 @@ function StockPage() {
     clientFilter,
     clientNameById,
     inStockOnly,
+    tab,
   ]);
 
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
@@ -213,12 +219,20 @@ function StockPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Package className="h-4 w-4" />
-              {productsQuery.isLoading
-                ? "Loading products…"
-                : `${rows.length} product${rows.length === 1 ? "" : "s"}`}
-            </CardTitle>
+            <div className="flex items-center gap-4">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Package className="h-4 w-4" />
+                {productsQuery.isLoading
+                  ? "Loading products…"
+                  : `${rows.length} product${rows.length === 1 ? "" : "s"}`}
+              </CardTitle>
+              <Tabs value={tab} onValueChange={(v) => { setTab(v as "all" | "allocated"); setPage(1); }}>
+                <TabsList>
+                  <TabsTrigger value="all">All</TabsTrigger>
+                  <TabsTrigger value="allocated">Allocated</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>Show</span>
               <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
@@ -258,6 +272,8 @@ function StockPage() {
                     <TableHead>SKU</TableHead>
                     <TableHead className="w-[80px]">Image</TableHead>
                     <TableHead>Barcode</TableHead>
+                    <TableHead className="w-[110px] text-right">Stock</TableHead>
+                    <TableHead className="w-[110px] text-right">Allocated</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -305,10 +321,16 @@ function StockPage() {
                           <TableCell className="font-mono text-sm">
                             {barcode || <span className="text-muted-foreground">—</span>}
                           </TableCell>
+                          <TableCell className="text-right font-mono text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                            {p.stock_level ?? 0}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-sm text-amber-600 dark:text-amber-400">
+                            {p.allocated ?? 0}
+                          </TableCell>
                         </TableRow>
                         {isOpen && (
                           <TableRow className="bg-muted/30 hover:bg-muted/30">
-                            <TableCell colSpan={4}>
+                            <TableCell colSpan={6}>
                               {locState?.loading ? (
                                 <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
                                   <Loader2 className="h-4 w-4 animate-spin" />
