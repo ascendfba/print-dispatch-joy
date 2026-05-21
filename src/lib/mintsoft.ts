@@ -492,6 +492,7 @@ export type StockLocation = {
   onHand?: number;
   locationId?: number;
   warehouseId?: number;
+  warehouseName?: string;
   batchNumber?: string;
   bestBeforeDate?: string;
 };
@@ -932,6 +933,7 @@ function stockLocationsFromReport(
       typeof (r as { AllocatedOrder?: unknown }).AllocatedOrder === "string" &&
       ((r as { AllocatedOrder?: string }).AllocatedOrder ?? "").trim().length > 0;
     const key = location;
+    const warehouseName = (r.Warehouse ?? "").toString().trim() || undefined;
     const existing = byLocation.get(key);
     if (existing) {
       existing.quantity += qty;
@@ -945,6 +947,7 @@ function stockLocationsFromReport(
         stockLevel: qty,
         allocated: isAllocated ? qty : 0,
         onHand: qty,
+        warehouseName,
         batchNumber: r.BatchNo?.toString().trim() || undefined,
         bestBeforeDate: r.BestBefore?.toString().trim() || undefined,
       });
@@ -1298,6 +1301,98 @@ export async function stockMovementIn(
   if (result.Success === false) {
     throw new Error(result.Message || result.WarningMessage || "Mintsoft stock movement failed");
   }
+}
+
+/**
+ * Transfer stock from one warehouse location to another using Mintsoft
+ * StockMovement Action=17 (TransferLocation). The source and destination
+ * locations are resolved by name within the given warehouse (or — if a
+ * destination warehouse is supplied — across warehouses).
+ */
+export async function transferStockLocation(
+  settings: Settings,
+  params: {
+    productId: number;
+    warehouseName?: string;
+    warehouseId?: number;
+    fromLocationName: string;
+    toLocationName: string;
+    toWarehouseName?: string;
+    quantity: number;
+    comment?: string;
+  },
+): Promise<void> {
+  const normalize = (s: string) => s.trim().toLowerCase();
+  let warehouseId = params.warehouseId;
+  if (!Number.isFinite(warehouseId ?? Number.NaN)) {
+    const warehouses = await listWarehouses(settings);
+    const wh = warehouses.find(
+      (w) =>
+        (params.warehouseName && normalize(w.name) === normalize(params.warehouseName)) ||
+        (params.warehouseName && normalize(w.code ?? "") === normalize(params.warehouseName)),
+    );
+    if (!wh) throw new Error(`Warehouse "${params.warehouseName ?? ""}" not found`);
+    warehouseId = wh.id;
+  }
+  let destWarehouseId = warehouseId;
+  if (params.toWarehouseName) {
+    const warehouses = await listWarehouses(settings);
+    const wh = warehouses.find(
+      (w) =>
+        normalize(w.name) === normalize(params.toWarehouseName ?? "") ||
+        normalize(w.code ?? "") === normalize(params.toWarehouseName ?? ""),
+    );
+    if (!wh) throw new Error(`Destination warehouse "${params.toWarehouseName}" not found`);
+    destWarehouseId = wh.id;
+  }
+  const sourceLocations = await listWarehouseLocations(settings, warehouseId!);
+  const sourceMatch = sourceLocations.find(
+    (l) =>
+      normalize(l.name) === normalize(params.fromLocationName) ||
+      normalize(l.code ?? "") === normalize(params.fromLocationName),
+  );
+  if (!sourceMatch) {
+    throw new Error(`Source location "${params.fromLocationName}" not found in warehouse`);
+  }
+  const destLocations =
+    destWarehouseId === warehouseId
+      ? sourceLocations
+      : await listWarehouseLocations(settings, destWarehouseId!);
+  const destMatch = destLocations.find(
+    (l) =>
+      normalize(l.name) === normalize(params.toLocationName) ||
+      normalize(l.code ?? "") === normalize(params.toLocationName),
+  );
+  if (!destMatch) {
+    throw new Error(
+      `Destination location "${params.toLocationName}" does not exist. Create it in Mintsoft first.`,
+    );
+  }
+  if (destMatch.id === sourceMatch.id && destWarehouseId === warehouseId) {
+    throw new Error("Destination location is the same as the source.");
+  }
+  const result = await authedJson<MintsoftToolkitResult>(
+    settings,
+    `/api/Warehouse/StockMovement?Action=17`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ProductId: params.productId,
+        WarehouseId: warehouseId,
+        LocationId: sourceMatch.id,
+        Quantity: params.quantity,
+        DestinationWarehouseId: destWarehouseId,
+        DestinationLocationId: destMatch.id,
+        Comment: params.comment ?? `Transfer ${params.fromLocationName} → ${params.toLocationName}`,
+      }),
+    },
+  );
+  if (result.Success === false) {
+    throw new Error(result.Message || result.WarningMessage || "Mintsoft transfer failed");
+  }
+  // Invalidate the report cache so the UI shows the new location after refetch.
+  productsInLocationReportCache = undefined;
 }
 
 export type MintsoftWarehouse = {
