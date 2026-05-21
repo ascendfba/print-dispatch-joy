@@ -933,6 +933,7 @@ function stockLocationsFromReport(
       typeof (r as { AllocatedOrder?: unknown }).AllocatedOrder === "string" &&
       ((r as { AllocatedOrder?: string }).AllocatedOrder ?? "").trim().length > 0;
     const key = location;
+    const warehouseName = (r.Warehouse ?? "").toString().trim() || undefined;
     const existing = byLocation.get(key);
     if (existing) {
       existing.quantity += qty;
@@ -946,6 +947,7 @@ function stockLocationsFromReport(
         stockLevel: qty,
         allocated: isAllocated ? qty : 0,
         onHand: qty,
+        warehouseName,
         batchNumber: r.BatchNo?.toString().trim() || undefined,
         bestBeforeDate: r.BestBefore?.toString().trim() || undefined,
       });
