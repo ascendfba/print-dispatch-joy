@@ -514,12 +514,17 @@ function optionalNumericField(record: Record<string, unknown>, keys: string[]): 
   return undefined;
 }
 
-function optionalStringField(record: Record<string, unknown>, keys: string[]): string | undefined {
+function optionalStringField(
+  record: Record<string, unknown>,
+  keys: string[],
+): string | undefined {
   for (const key of keys) {
     const value = record[key];
     if (typeof value === "string" && value.trim()) return value.trim();
   }
-  const lowerKeyMap = new Map(Object.keys(record).map((key) => [key.toLowerCase(), key]));
+  const lowerKeyMap = new Map(
+    Object.keys(record).map((key) => [key.toLowerCase(), key]),
+  );
   for (const key of keys) {
     const actualKey = lowerKeyMap.get(key.toLowerCase());
     const value = actualKey ? record[actualKey] : undefined;
