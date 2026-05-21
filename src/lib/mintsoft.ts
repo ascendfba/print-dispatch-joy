@@ -545,6 +545,30 @@ function optionalStringField(record: Record<string, unknown>, keys: string[]): s
   return undefined;
 }
 
+function optionalDirectStringField(
+  record: Record<string, unknown>,
+  keys: string[],
+): string | undefined {
+  const lowerKeyMap = new Map(Object.keys(record).map((key) => [key.toLowerCase(), key]));
+  for (const key of keys) {
+    const actualKey = key in record ? key : lowerKeyMap.get(key.toLowerCase());
+    const value = actualKey ? record[actualKey] : undefined;
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return undefined;
+}
+
+function skuLikeField(record: Record<string, unknown>): string | undefined {
+  return optionalDirectStringField(record, ["SKU", "Sku", "ProductSKU", "ProductSku", "ProductCode"]);
+}
+
+function notSkuValue(value: string | undefined, record: Record<string, unknown>): string | undefined {
+  const sku = skuLikeField(record);
+  return value && (!sku || value.trim().toLowerCase() !== sku.trim().toLowerCase())
+    ? value
+    : undefined;
+}
+
 const locationNameCache = new Map<number, string>();
 
 async function resolveLocationName(
