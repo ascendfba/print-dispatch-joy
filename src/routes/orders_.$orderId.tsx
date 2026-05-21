@@ -2658,9 +2658,6 @@ function PackingListDialog({
             </Button>
           </div>
         </div>
-        </div>
-        </>
-        )}
       </DialogContent>
     </Dialog>
   );
