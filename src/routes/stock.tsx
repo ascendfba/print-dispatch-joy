@@ -17,14 +17,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  ChevronDown,
-  ChevronRight,
-  Loader2,
-  Package,
-  Pencil,
-  RefreshCw,
-} from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2, Package, Pencil, RefreshCw } from "lucide-react";
 import {
   fetchProductStockLocations,
   fetchProductOpenOrderAllocations,
@@ -308,9 +301,7 @@ function ExpandedDetails({
               <Input
                 id="dest-location"
                 value={transfer?.toLocation ?? ""}
-                onChange={(e) =>
-                  setTransfer((t) => (t ? { ...t, toLocation: e.target.value } : t))
-                }
+                onChange={(e) => setTransfer((t) => (t ? { ...t, toLocation: e.target.value } : t))}
                 placeholder="e.g. B11-S2-PB6"
                 autoFocus
                 disabled={transfer?.submitting}
@@ -324,9 +315,7 @@ function ExpandedDetails({
                 min={1}
                 max={transfer?.maxQty ?? 1}
                 value={transfer?.quantity ?? ""}
-                onChange={(e) =>
-                  setTransfer((t) => (t ? { ...t, quantity: e.target.value } : t))
-                }
+                onChange={(e) => setTransfer((t) => (t ? { ...t, quantity: e.target.value } : t))}
                 disabled={transfer?.submitting}
               />
             </div>
