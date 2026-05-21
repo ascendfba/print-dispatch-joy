@@ -493,6 +493,8 @@ export type StockLocation = {
   onHand?: number;
   locationId?: number;
   warehouseId?: number;
+  batchNumber?: string;
+  bestBeforeDate?: string;
 };
 
 function numericField(record: Record<string, unknown>, keys: string[]): number {
@@ -540,10 +542,6 @@ function optionalStringField(record: Record<string, unknown>, keys: string[]): s
     }
   }
   return undefined;
-}
-
-function isUnassignedLocationName(value?: string): boolean {
-  return (value || "").trim().toLowerCase() === "unassigned";
 }
 
 const locationNameCache = new Map<number, string>();
