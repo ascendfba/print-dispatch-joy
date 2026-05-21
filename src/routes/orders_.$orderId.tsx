@@ -2083,6 +2083,8 @@ function WeightEstimateFooter({
 
 type PackingBox = {
   weight: string;
+  weightAuto: boolean;
+  tare: number;
   length: string;
   width: string;
   height: string;
@@ -2090,7 +2092,7 @@ type PackingBox = {
 };
 
 function makeEmptyBox(): PackingBox {
-  return { weight: "", length: "", width: "", height: "", contents: [] };
+  return { weight: "", weightAuto: true, tare: 0, length: "", width: "", height: "", contents: [] };
 }
 
 function PackingListDialog({
@@ -2122,6 +2124,28 @@ function PackingListDialog({
     return Array.from(map.entries()).map(([sku, qty]) => ({ sku, qty }));
   }, [items, products]);
 
+  // sku -> unit weight in kg (from Mintsoft product data).
+  const skuWeightKg = useMemo(() => {
+    const m = new Map<string, number>();
+    if (!products) return m;
+    for (const it of items) {
+      const p = products.get(it.ProductId);
+      const sku = it.SKU ?? p?.SKU ?? `#${it.ProductId}`;
+      let kg = 0;
+      if (typeof p?.Weight === "number" && p.Weight > 0) kg = p.Weight;
+      else if (typeof p?.WeightGrams === "number" && p.WeightGrams > 0)
+        kg = p.WeightGrams / 1000;
+      if (kg > 0) m.set(sku, kg);
+    }
+    return m;
+  }, [items, products]);
+
+  const itemsWeightForBox = (b: PackingBox) =>
+    b.contents.reduce(
+      (sum, c) => sum + (skuWeightKg.get(c.sku) ?? 0) * (Number(c.qty) || 0),
+      0,
+    );
+
   // Remaining = ordered - already placed across all boxes.
   const placedBySku = useMemo(() => {
     const m = new Map<string, number>();
@@ -2148,24 +2172,35 @@ function PackingListDialog({
     });
   };
 
+  const recomputeWeight = (b: PackingBox): PackingBox => {
+    if (!b.weightAuto) return b;
+    const total = b.tare + itemsWeightForBox(b);
+    return { ...b, weight: total > 0 ? total.toFixed(2) : "" };
+  };
+
   const updateBox = (idx: number, patch: Partial<PackingBox>) => {
-    setBoxes((prev) => prev.map((b, i) => (i === idx ? { ...b, ...patch } : b)));
+    setBoxes((prev) =>
+      prev.map((b, i) => (i === idx ? recomputeWeight({ ...b, ...patch }) : b)),
+    );
   };
 
   const addSkuToBox = (idx: number, sku: string) => {
     setBoxes((prev) =>
       prev.map((b, i) => {
         if (i !== idx) return b;
+        let next: PackingBox;
         const existing = b.contents.find((c) => c.sku === sku);
         if (existing) {
-          return {
+          next = {
             ...b,
             contents: b.contents.map((c) =>
               c.sku === sku ? { ...c, qty: (Number(c.qty) || 0) + 1 } : c,
             ),
           };
+        } else {
+          next = { ...b, contents: [...b.contents, { sku, qty: 1 }] };
         }
-        return { ...b, contents: [...b.contents, { sku, qty: 1 }] };
+        return recomputeWeight(next);
       }),
     );
   };
@@ -2174,12 +2209,12 @@ function PackingListDialog({
     setBoxes((prev) =>
       prev.map((b, i) =>
         i === idx
-          ? {
+          ? recomputeWeight({
               ...b,
               contents: b.contents.map((c) =>
                 c.sku === sku ? { ...c, qty: Math.max(0, Math.floor(qty || 0)) } : c,
               ),
-            }
+            })
           : b,
       ),
     );
@@ -2188,7 +2223,9 @@ function PackingListDialog({
   const removeContent = (idx: number, sku: string) => {
     setBoxes((prev) =>
       prev.map((b, i) =>
-        i === idx ? { ...b, contents: b.contents.filter((c) => c.sku !== sku) } : b,
+        i === idx
+          ? recomputeWeight({ ...b, contents: b.contents.filter((c) => c.sku !== sku) })
+          : b,
       ),
     );
   };
@@ -2318,7 +2355,7 @@ function PackingListDialog({
                           length: preset.size,
                           width: preset.size,
                           height: preset.size,
-                          weight: preset.weight,
+                          tare: Number(preset.weight),
                         })
                       }
                     >
@@ -2334,8 +2371,50 @@ function PackingListDialog({
                       step="0.01"
                       min={0}
                       value={b.weight}
-                      onChange={(e) => updateBox(i, { weight: e.target.value })}
+                      onChange={(e) =>
+                        setBoxes((prev) =>
+                          prev.map((bb, ii) =>
+                            ii === i
+                              ? { ...bb, weight: e.target.value, weightAuto: false }
+                              : bb,
+                          ),
+                        )
+                      }
                     />
+                    {(() => {
+                      const itemsKg = itemsWeightForBox(b);
+                      const autoTotal = b.tare + itemsKg;
+                      return (
+                        <div className="mt-1 text-[10px] text-muted-foreground">
+                          Est: box {b.tare.toFixed(2)} + items {itemsKg.toFixed(2)} ={" "}
+                          <span className="font-semibold tabular-nums">
+                            {autoTotal.toFixed(2)} kg
+                          </span>
+                          {!b.weightAuto && (
+                            <button
+                              type="button"
+                              className="ml-2 underline text-primary"
+                              onClick={() =>
+                                setBoxes((prev) =>
+                                  prev.map((bb, ii) =>
+                                    ii === i
+                                      ? {
+                                          ...bb,
+                                          weightAuto: true,
+                                          weight:
+                                            autoTotal > 0 ? autoTotal.toFixed(2) : "",
+                                        }
+                                      : bb,
+                                  ),
+                                )
+                              }
+                            >
+                              use estimate
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div>
                     <Label className="text-xs">L (cm)</Label>
