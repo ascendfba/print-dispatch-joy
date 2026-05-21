@@ -51,6 +51,7 @@ import {
   type MintsoftOrderItem,
   type MintsoftProduct,
   addOrderComment,
+  uploadOrderDocument,
 } from "@/lib/mintsoft";
 import { detectFromBytes, type LabelKind } from "@/lib/pdfSize";
 import { PDFDocument } from "pdf-lib";
@@ -2158,6 +2159,9 @@ function PackingListDialog({
   const [boxCount, setBoxCount] = useState(1);
   const [boxes, setBoxes] = useState<PackingBox[]>([makeEmptyBox()]);
   const [submitting, setSubmitting] = useState(false);
+  const [step, setStep] = useState<"edit" | "upload">("edit");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   // Available SKUs from the order (sku + total ordered qty).
   const orderSkus = useMemo(() => {
@@ -2205,6 +2209,9 @@ function PackingListDialog({
     setBoxCount(1);
     setBoxes([makeEmptyBox()]);
     setSubmitting(false);
+    setStep("edit");
+    setUploadFile(null);
+    setUploading(false);
   }, [open]);
 
   const applyBoxCount = (n: number) => {
@@ -2334,11 +2341,34 @@ function PackingListDialog({
       await addOrderComment(loadSettings(), orderId, comment, true);
       toast.success("Packing list saved to order");
       onSaved?.(boxes.length);
-      onOpenChange(false);
+      setStep("upload");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save packing list");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!uploadFile) {
+      toast.error("Choose a PDF to upload");
+      return;
+    }
+    setUploading(true);
+    try {
+      const buf = new Uint8Array(await uploadFile.arrayBuffer());
+      await uploadOrderDocument(loadSettings(), orderId, {
+        fileName: uploadFile.name || "Packing List.pdf",
+        contentType: uploadFile.type || "application/pdf",
+        bytes: buf,
+        label: "Packing List",
+      });
+      toast.success("Packing list uploaded to Mintsoft");
+      onOpenChange(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to upload packing list");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -2348,14 +2378,51 @@ function PackingListDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            Enter Packing List
+            {step === "edit" ? "Enter Packing List" : "Upload Packing List PDF"}
           </DialogTitle>
           <DialogDescription>
-            Drag SKUs from the left into a box. Each drop adds qty 1 — edit the
-            qty as needed.
+            {step === "edit"
+              ? "Drag SKUs from the left into a box. Each drop adds qty 1 — edit the qty as needed."
+              : "Upload the signed packing list PDF. It will be attached to the order documents in Mintsoft as \"Packing List\"."}
           </DialogDescription>
         </DialogHeader>
 
+        {step === "upload" ? (
+          <div className="space-y-4 py-2">
+            <div className="rounded-md border border-emerald-500/40 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800">
+              Packing list saved to order ✓ — now upload the signed PDF.
+            </div>
+            <div>
+              <Label className="text-sm">Packing list PDF</Label>
+              <Input
+                type="file"
+                accept="application/pdf,.pdf"
+                onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
+                className="mt-1"
+              />
+              {uploadFile && (
+                <div className="mt-2 text-xs text-muted-foreground">
+                  Selected: <span className="font-mono">{uploadFile.name}</span> (
+                  {(uploadFile.size / 1024).toFixed(1)} KB)
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={uploading}
+              >
+                Skip
+              </Button>
+              <Button onClick={handleUpload} disabled={uploading || !uploadFile}>
+                {uploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Upload to Mintsoft
+              </Button>
+            </div>
+          </div>
+        ) : (
+        <>
         {(() => {
           const totalOrdered = orderSkus.reduce((s, x) => s + x.qty, 0);
           const totalPlaced = orderSkus.reduce(
@@ -2638,6 +2705,8 @@ function PackingListDialog({
           </div>
         </div>
         </div>
+        </>
+        )}
       </DialogContent>
     </Dialog>
   );
