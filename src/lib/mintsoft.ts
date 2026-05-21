@@ -1095,9 +1095,7 @@ export async function fetchOrderAllocations(
       sku: typeof r.SKU === "string" ? r.SKU : undefined,
       quantity: Number(r.Quantity ?? 0),
       locationId: Number.isFinite(locationId) ? locationId : undefined,
-      locationName: isUnassignedLocationName(directLocationName)
-        ? resolvedLocationName || directLocationName
-        : directLocationName || resolvedLocationName || undefined,
+      locationName: directLocationName || resolvedLocationName || undefined,
       warehouseId: Number.isFinite(warehouseId) ? warehouseId : undefined,
       warehouseName: typeof r.WarehouseName === "string" ? r.WarehouseName : undefined,
       bestBefore: typeof r.BestBefore === "string" ? r.BestBefore : undefined,
