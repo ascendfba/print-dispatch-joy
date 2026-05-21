@@ -661,7 +661,15 @@ function OrdersPage() {
               <TableCell>{client}</TableCell>
               <TableCell>
                 {o.CourierServiceName ? (
-                  <span className="text-xs">{o.CourierServiceName}</span>
+                  <span
+                    className={`text-xs inline-block rounded px-2 py-0.5 ${
+                      /packing list required/i.test(o.CourierServiceName)
+                        ? "bg-amber-100 text-amber-800 border border-amber-300 font-medium"
+                        : ""
+                    }`}
+                  >
+                    {o.CourierServiceName}
+                  </span>
                 ) : (
                   <span className="text-xs text-muted-foreground">—</span>
                 )}
