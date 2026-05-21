@@ -594,8 +594,8 @@ export async function fetchProductStockLocations(
   for (const p of paths) {
     try {
       const data = await authedJson<unknown>(settings, p);
-      if (Array.isArray(data)) {
-        const rows = arrayPayload(data) ?? [];
+      const rows = arrayPayload(data) ?? [];
+      if (rows.length > 0) {
         const out: StockLocation[] = [];
         for (const r of rows) {
           const locationId = Number(r.LocationId ?? r.LocationID ?? r.Location_Id ?? r.WarehouseLocationId);
