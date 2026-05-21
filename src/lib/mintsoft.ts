@@ -1168,8 +1168,7 @@ export async function fetchOrderAllocations(
     const locationId = Number(r.LocationId ?? r.LocationID);
     const warehouseId = Number(r.WarehouseId ?? r.WarehouseID);
     const directLocationName =
-      notSkuValue(
-        optionalStringField(r, [
+      locationStringField(r, [
           "SimpleLocationName",
           "simpleLocationName",
           "simplelocationname",
@@ -1178,9 +1177,7 @@ export async function fetchOrderAllocations(
           "BinLocation",
           "LocationCode",
           "Bin",
-        ]),
-        r,
-      ) || notSkuValue(optionalDirectStringField(r, ["LocationName", "Location"]), r);
+      ]) || notSkuValue(optionalDirectStringField(r, ["LocationName", "Location"]), r);
     const resolvedLocationName = await resolveLocationName(settings, locationId, warehouseId);
     out.push({
       orderItemId: Number(r.OrderItemId ?? r.OrderItemID) || undefined,
