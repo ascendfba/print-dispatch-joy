@@ -660,8 +660,8 @@ function OrdersPage() {
               </TableCell>
               <TableCell>{client}</TableCell>
               <TableCell>
-                {o.CourierService ? (
-                  <span className="text-xs">{o.CourierService}</span>
+                {o.CourierServiceName ? (
+                  <span className="text-xs">{o.CourierServiceName}</span>
                 ) : (
                   <span className="text-xs text-muted-foreground">—</span>
                 )}
