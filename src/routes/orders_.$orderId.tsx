@@ -281,6 +281,7 @@ function OrderDetailPage() {
   const [despatched, setDespatched] = useState(false);
   const [overweightOpen, setOverweightOpen] = useState(false);
   const [packingOpen, setPackingOpen] = useState(false);
+  const [packingBoxCount, setPackingBoxCount] = useState<number | null>(null);
 
   // Load order summary from the cached open-orders list (avoids an extra fetch).
   const ordersQuery = useQuery({
@@ -907,33 +908,59 @@ function OrderDetailPage() {
             onSubmitted={() => setChargesSubmitted(true)}
             submitted={chargesSubmitted}
             attention={!chargesSubmitted}
+            packingBoxCount={packingBoxCount}
+            disabled={
+              /packing list required/i.test(
+                (order as { CourierServiceName?: string } | undefined)?.CourierServiceName ?? "",
+              ) && packingBoxCount === null
+            }
           />
           {(() => {
             const courier =
               (order as { CourierServiceName?: string } | undefined)?.CourierServiceName ?? "";
             const required = /packing list required/i.test(courier);
+            const saved = packingBoxCount !== null;
             return (
               <Button
-                className={`w-full ${required ? "border-amber-500 bg-amber-50 text-amber-900 hover:bg-amber-100" : ""}`}
+                className={`w-full ${
+                  required && !saved
+                    ? "border-amber-500 bg-amber-50 text-amber-900 hover:bg-amber-100"
+                    : saved
+                      ? "border-emerald-500 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
+                      : ""
+                }`}
                 variant="outline"
                 onClick={() => setPackingOpen(true)}
                 disabled={!order}
               >
                 <Package className="mr-2 h-4 w-4" />
                 Enter Packing List
-                {required && (
+                {required && !saved && (
                   <span className="ml-2 rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900">
                     Required
+                  </span>
+                )}
+                {saved && (
+                  <span className="ml-2 rounded bg-emerald-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-900">
+                    {packingBoxCount} box{packingBoxCount === 1 ? "" : "es"}
                   </span>
                 )}
               </Button>
             );
           })()}
+          {(() => {
+            const courier =
+              (order as { CourierServiceName?: string } | undefined)?.CourierServiceName ?? "";
+            const packingBlock =
+              /packing list required/i.test(courier) && packingBoxCount === null;
+            return (
+              <>
           <Button
             className={`w-full ${chargesSubmitted && !labelsPrinted ? "animate-attention" : ""}`}
             variant="outline"
             onClick={() => printLabels.mutate()}
-            disabled={printing || !order}
+            disabled={printing || !order || packingBlock}
+            title={packingBlock ? "Save the packing list first" : undefined}
           >
             {printing ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -948,11 +975,15 @@ function OrderDetailPage() {
             className={`w-full ${chargesSubmitted && labelsPrinted ? "animate-attention" : ""}`}
             size="lg"
             onClick={handleDespatchClick}
-            disabled={despatch.isPending || !order}
+            disabled={despatch.isPending || !order || packingBlock}
+            title={packingBlock ? "Save the packing list first" : undefined}
           >
             {despatch.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Despatch
           </Button>
+              </>
+            );
+          })()}
           {despatched && (
             <Button
               className="w-full"
@@ -996,6 +1027,7 @@ function OrderDetailPage() {
         products={productsQuery.data}
         orderId={id}
         orderNumber={orderReference}
+        onSaved={(count) => setPackingBoxCount(count)}
       />
 
       <AlertDialog open={confirmDespatch} onOpenChange={setConfirmDespatch}>
@@ -1131,6 +1163,8 @@ function ReworkChargesCard({
   onSubmitted,
   submitted,
   attention,
+  packingBoxCount,
+  disabled,
 }: {
   items: Array<{
     Quantity: number;
@@ -1148,6 +1182,8 @@ function ReworkChargesCard({
   onSubmitted: () => void;
   submitted: boolean;
   attention?: boolean;
+  packingBoxCount?: number | null;
+  disabled?: boolean;
 }) {
   const findByKey = (key: string) => REWORK_CATALOG.find((c) => c.key === key)!;
   const settingsForRates = loadSettings();
@@ -1158,10 +1194,16 @@ function ReworkChargesCard({
   // - FNSKU labels: number of label pages on the 51×25mm picking-label PDF.
   // - Bundles (<6 units): total number of bundles across all bundle lines
   //   (sum of qty / unitsPerBundle for each line tagged with BUNDLE-ID).
-  // - Shipping carton supplied: defaults to 1 per order, override as needed.
+  // - Shipping carton supplied / forwarded: defaults to packing-list box count
+  //   when a packing list is saved, otherwise derived from shipping pages.
   const fnskuCount = fnskuLabelCount;
   // Cartons Forwarded: 2 pages per box on the shipping-label PDF.
-  const cartonsForwarded = Math.max(1, Math.ceil(shippingLabelPages / 2));
+  const cartonsForwarded =
+    packingBoxCount && packingBoxCount > 0
+      ? packingBoxCount
+      : Math.max(1, Math.ceil(shippingLabelPages / 2));
+  const cartonsSupplied =
+    packingBoxCount && packingBoxCount > 0 ? packingBoxCount : 1;
 
   const bundleCount = items.reduce((sum, it) => {
     const tag = (it.OrderItemNameValues ?? []).find(
@@ -1178,16 +1220,16 @@ function ReworkChargesCard({
     () => ({
       fnsku: fnskuCount,
       bundle: bundleCount,
-      carton_supplied: 1,
+      carton_supplied: cartonsSupplied,
       carton_forwarded: cartonsForwarded,
       bundle_over6: 0,
     }),
-    [fnskuCount, bundleCount, cartonsForwarded],
+    [fnskuCount, bundleCount, cartonsForwarded, cartonsSupplied],
   );
   const autoMap: Record<string, number> = {
     fnsku: fnskuCount,
     bundle: bundleCount,
-    carton_supplied: 1,
+    carton_supplied: cartonsSupplied,
     carton_forwarded: cartonsForwarded,
     bundle_over6: 0,
   };
@@ -1391,7 +1433,8 @@ function ReworkChargesCard({
           <Button
             className="flex-1 rounded-r-none bg-emerald-600 text-white hover:bg-emerald-700 px-[25px]"
             onClick={handleSubmit}
-            disabled={submitting || submitted}
+            disabled={submitting || submitted || disabled}
+            title={disabled ? "Save the packing list first" : undefined}
           >
             {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {submitted && <Check className="mr-2 h-4 w-4" />}
@@ -2102,6 +2145,7 @@ function PackingListDialog({
   products,
   orderId,
   orderNumber,
+  onSaved,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -2109,6 +2153,7 @@ function PackingListDialog({
   products: Map<number, MintsoftProduct | null> | undefined;
   orderId: number;
   orderNumber: string | null;
+  onSaved?: (boxCount: number) => void;
 }) {
   const [boxCount, setBoxCount] = useState(1);
   const [boxes, setBoxes] = useState<PackingBox[]>([makeEmptyBox()]);
@@ -2288,6 +2333,7 @@ function PackingListDialog({
       const comment = lines.join("\n");
       await addOrderComment(loadSettings(), orderId, comment, true);
       toast.success("Packing list saved to order");
+      onSaved?.(boxes.length);
       onOpenChange(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save packing list");
