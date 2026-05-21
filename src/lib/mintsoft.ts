@@ -779,22 +779,22 @@ export async function fetchProductStockLocations(
             r.LocationId ?? r.LocationID ?? r.Location_Id ?? r.WarehouseLocationId,
           );
           const warehouseId = Number(r.WarehouseId ?? r.WarehouseID ?? r.Warehouse_Id);
-          // Prefer bin-code style fields (e.g. "A-A19-B87-S3-P01"). Avoid
-          // generic `Location` / `LocationName` which Mintsoft often uses
-          // for the warehouse name rather than the bin.
-          const directBin = locationStringField(r, [
+          const directLocationName = locationStringField(r, [
+            "LocationName",
+            "locationName",
+            "locationname",
+            "WarehouseLocationName",
+            "WarehouseLocation",
             "SimpleLocationName",
             "simpleLocationName",
             "simplelocationname",
-            "WarehouseLocationName",
-            "WarehouseLocation",
             "BinLocation",
             "LocationCode",
             "Bin",
           ]);
           const resolved = await resolveLocationName(settings, locationId, warehouseId);
-          const location = directBin || resolved || "";
-          if (!directBin && (!Number.isFinite(locationId) || locationId === 0)) continue;
+          const location = directLocationName || resolved || "";
+          if (!directLocationName && (!Number.isFinite(locationId) || locationId === 0)) continue;
           const batchNumber = optionalStringField(r, ["BatchNumber", "BatchNo", "Batch"]);
           const bestBeforeDate = optionalStringField(r, [
             "BestBeforeDate",
