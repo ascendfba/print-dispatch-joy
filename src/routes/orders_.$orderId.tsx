@@ -2204,6 +2204,30 @@ function PackingListDialog({
             {boxes.map((b, i) => (
               <div key={i} className="rounded-md border p-3 space-y-3 bg-muted/20">
                 <div className="text-sm font-semibold">Box {i + 1}</div>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { label: "S DISP/B", size: "37", weight: "0.7" },
+                    { label: "M DISP/B", size: "48", weight: "1.2" },
+                    { label: "L DISP/B", size: "60", weight: "1.84" },
+                  ].map((preset) => (
+                    <Button
+                      key={preset.label}
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        updateBox(i, {
+                          length: preset.size,
+                          width: preset.size,
+                          height: preset.size,
+                          weight: preset.weight,
+                        })
+                      }
+                    >
+                      {preset.label}
+                    </Button>
+                  ))}
+                </div>
                 <div className="grid grid-cols-4 gap-2">
                   <div>
                     <Label className="text-xs">Weight (kg)</Label>
