@@ -587,6 +587,7 @@ export async function fetchProductStockLocations(
   productId: number,
 ): Promise<StockLocation[]> {
   const paths = [
+    `/api/Product/${productId}/Inventory?breakdown=true`,
     `/api/Product/${productId}/Stock`,
     `/api/Product/${productId}/StockLocations`,
     `/api/Product/${productId}/Locations`,
@@ -600,7 +601,7 @@ export async function fetchProductStockLocations(
         for (const r of rows) {
           const locationId = Number(r.LocationId ?? r.LocationID ?? r.Location_Id ?? r.WarehouseLocationId);
           const warehouseId = Number(r.WarehouseId ?? r.WarehouseID ?? r.Warehouse_Id);
-          const location =
+          const directLocation =
             (typeof r.SimpleLocationName === "string" && r.SimpleLocationName) ||
             (typeof r.Location === "string" && r.Location) ||
             (typeof r.LocationName === "string" && r.LocationName) ||
@@ -609,10 +610,13 @@ export async function fetchProductStockLocations(
             (typeof r.LocationCode === "string" && r.LocationCode) ||
             (typeof r.Code === "string" && r.Code) ||
             (typeof r.Bin === "string" && r.Bin) ||
-            (Number.isFinite(locationId) ? `Location #${locationId}` : "");
+            "";
+          const location = directLocation || (await resolveLocationName(settings, locationId, warehouseId));
           const stockLevel = numericField(r, [
             "StockLevel",
             "Stock Level",
+            "TotalStockLevel",
+            "Total Stock Level",
             "Quantity",
             "Qty",
             "Available",
@@ -629,6 +633,7 @@ export async function fetchProductStockLocations(
             "StockOnHand",
             "QuantityOnHand",
             "OnHandQuantity",
+            "Level",
           ]);
           const quantity = stockLevel || onHand;
           if (location) {
