@@ -658,6 +658,13 @@ function OrdersPage() {
                 )}
               </TableCell>
               <TableCell>{client}</TableCell>
+              <TableCell>
+                {o.CourierName ? (
+                  <span className="text-xs">{o.CourierName}</span>
+                ) : (
+                  <span className="text-xs text-muted-foreground">—</span>
+                )}
+              </TableCell>
               <TableCell className="text-right">
                 <OrderItemsCell orderId={o.ID} fallbackUnits={totalItems} />
               </TableCell>
