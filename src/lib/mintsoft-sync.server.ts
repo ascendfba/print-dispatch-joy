@@ -31,19 +31,30 @@ function num(r: Record<string, unknown>, keys: string[]): number {
 type Totals = { stockLevel: number; allocated: number; onHand: number };
 
 async function listAllProductsServer() {
-  const pageSize = 100;
+  const pageSize = 250;
   const all: Array<Record<string, unknown>> = [];
+  const seenIds = new Set<number>();
   let lastFirstId: unknown;
-  for (let page = 1; page < 500; page++) {
+  for (let page = 1; page < 2000; page++) {
     const data = await msFetch<Record<string, unknown>[] | { Results?: Record<string, unknown>[] }>(
       `/api/Product/List?PageNumber=${page}&PageSize=${pageSize}`,
     );
     const batch = Array.isArray(data) ? data : ((data as { Results?: Record<string, unknown>[] })?.Results ?? []);
     if (batch.length === 0) break;
+    // Mintsoft sometimes echoes the same page when paging beyond data — detect via first-id dedupe.
     if (page > 1 && batch[0]?.ID === lastFirstId) break;
     lastFirstId = batch[0]?.ID;
-    all.push(...batch);
-    if (batch.length < pageSize) break;
+    // Dedupe across pages in case Mintsoft returns overlapping pages.
+    let added = 0;
+    for (const p of batch) {
+      const id = Number(p.ID);
+      if (!Number.isFinite(id) || seenIds.has(id)) continue;
+      seenIds.add(id);
+      all.push(p);
+      added++;
+    }
+    // Only break on a clearly short page (more than half empty) — Mintsoft may cap PageSize.
+    if (added === 0) break;
   }
   return all;
 }
