@@ -38,6 +38,7 @@ export const Route = createFileRoute("/stock")({
 function StockPage() {
   const [filter, setFilter] = useState("");
   const [clientFilter, setClientFilter] = useState("");
+  const [inStockOnly, setInStockOnly] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [locations, setLocations] = useState<
     Record<number, { loading: boolean; data?: StockLocation[]; error?: string }>
