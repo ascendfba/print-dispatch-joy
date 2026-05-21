@@ -525,10 +525,6 @@ export async function fetchProductStockLocations(
  * WarehouseId / LocationId fields needed for stock movement calls.
  */
 export async function fetchProductStock(
-  settings: Settings,
-  productId: number,
-): Promise<ProductStockEntry[]>;
-
 /**
  * Fetch the total on-hand and allocated quantities for many products in
  * parallel (concurrency-limited). Returns a Map keyed by productId.
