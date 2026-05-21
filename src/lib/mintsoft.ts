@@ -535,7 +535,7 @@ async function resolveLocationName(
   locationId: number,
   warehouseId: number,
 ): Promise<string> {
-  if (!Number.isFinite(locationId) || locationId <= 0) return "";
+  if (!Number.isFinite(locationId)) return "";
   const cached = locationNameCache.get(locationId);
   if (cached) return cached;
   if (Number.isFinite(warehouseId)) {
@@ -673,7 +673,7 @@ export async function fetchProductStockLocations(
             "Code",
           ]);
           const resolved = await resolveLocationName(settings, locationId, warehouseId);
-          const location = directBin || resolved;
+          const location = directBin || resolved || "Unassigned";
           const stockLevel = optionalNumericField(r, [
             "StockLevel",
             "Stock Level",
