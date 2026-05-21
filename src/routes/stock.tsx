@@ -50,7 +50,7 @@ function StockPage() {
   const fetchSyncState = useServerFn(getSyncState);
   const runSync = useServerFn(triggerSync);
   const [filter, setFilter] = useState("");
-  const [clientFilter, setClientFilter] = useState("");
+  const [clientFilter, setClientFilter] = useState<string[]>([]);
   const [inStockOnly, setInStockOnly] = useState(true);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
@@ -133,9 +133,8 @@ function StockPage() {
         );
       });
     }
-    if (clientFilter && clientFilter !== "all") {
-      const cid = Number(clientFilter);
-      items = items.filter((p) => (p.client_id ?? 0) === cid);
+    if (clientFilter.length > 0) {
+      items = items.filter((p) => clientFilter.includes(String(p.client_id ?? 0)));
     }
     return items;
   }, [
@@ -186,19 +185,15 @@ function StockPage() {
               In stock
             </Label>
           </div>
-          <Select value={clientFilter} onValueChange={(v) => { setClientFilter(v); setPage(1); }}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="All clients" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All clients</SelectItem>
-              {(clientsQuery.data ?? []).map((c) => (
-                <SelectItem key={c.id} value={String(c.id)}>
-                  {c.brand_name || c.short_name || c.name || `Client #${c.id}`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            options={(clientsQuery.data ?? []).map((c) => ({
+              value: String(c.id),
+              label: c.brand_name || c.short_name || c.name || `Client #${c.id}`,
+            }))}
+            value={clientFilter}
+            onChange={(v) => { setClientFilter(v); setPage(1); }}
+            placeholder="All clients"
+          />
           <Input
             value={filter}
             onChange={(e) => { setFilter(e.target.value); setPage(1); }}
