@@ -370,13 +370,17 @@ export async function listProducts(
 }
 
 export async function listAllProducts(settings: Settings): Promise<MintsoftProduct[]> {
-  const pageSize = 500;
+  const pageSize = 200;
   const all: MintsoftProduct[] = [];
   let skip = 0;
+  let lastFirstId: number | undefined;
   // Safety cap to avoid runaway loops
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 200; i++) {
     const batch = await listProducts(settings, { take: pageSize, skip });
     if (batch.length === 0) break;
+    // Detect non-paginating endpoint returning same page repeatedly
+    if (i > 0 && batch[0]?.ID === lastFirstId) break;
+    lastFirstId = batch[0]?.ID;
     all.push(...batch);
     if (batch.length < pageSize) break;
     skip += pageSize;
