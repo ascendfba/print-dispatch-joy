@@ -103,15 +103,10 @@ async function fetchTotalsForWarehouse(warehouseId: number): Promise<Map<number,
       for (const r of arr as Record<string, unknown>[]) {
         const pid = Number(r.ProductId ?? r.ProductID ?? r.ID ?? r.Id);
         if (!Number.isFinite(pid)) continue;
-        const breakdown = Array.isArray(r.Breakdown) ? (r.Breakdown as Record<string, unknown>[]) : [];
-        const allocatedFromBreakdown = breakdown.reduce((s, item) => {
-          const t = String(item?.Type ?? "").toLowerCase();
-          return t.includes("allocation") ? s + num(item, ["Quantity", "Qty"]) : s;
-        }, 0);
         out.set(pid, {
           stockLevel: num(r, ["StockLevel", "Stock Level", "TotalStockLevel", "Level"]),
-          allocated: num(r, ["Allocated", "StockAllocated", "QuantityAllocated"]) || allocatedFromBreakdown,
-          onHand: num(r, ["OnHand", "On Hand", "StockOnHand", "QuantityOnHand", "Level"]),
+          allocated: num(r, ["Allocated", "StockAllocated", "QuantityAllocated"]),
+          onHand: num(r, ["OnHand", "On Hand", "StockOnHand", "QuantityOnHand"]),
         });
       }
       return out;
