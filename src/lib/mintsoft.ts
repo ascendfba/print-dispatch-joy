@@ -535,7 +535,7 @@ async function resolveLocationName(
   locationId: number,
   warehouseId: number,
 ): Promise<string> {
-  if (!Number.isFinite(locationId)) return "";
+  if (!Number.isFinite(locationId) || locationId <= 0) return "";
   const cached = locationNameCache.get(locationId);
   if (cached) return cached;
   if (Number.isFinite(warehouseId)) {
