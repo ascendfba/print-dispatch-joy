@@ -2278,8 +2278,6 @@ function PackingListDialog({
 
   useEffect(() => {
     if (!open) return;
-    setBoxCount(1);
-    setBoxes([makeEmptyBox()]);
     setSubmitting(false);
   }, [open]);
 
