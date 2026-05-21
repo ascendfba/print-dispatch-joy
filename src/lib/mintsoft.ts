@@ -504,6 +504,58 @@ export type ProductStockEntry = {
   bestBeforeDate?: string;
 };
 
+type ProductStockTotal = { stockLevel: number; allocated: number; onHand: number };
+
+function arrayPayload(data: unknown): Array<Record<string, unknown>> | null {
+  const arr = Array.isArray(data)
+    ? data
+    : Array.isArray((data as { Results?: unknown })?.Results)
+      ? (data as { Results: unknown[] }).Results
+      : null;
+  return arr as Array<Record<string, unknown>> | null;
+}
+
+function stockTotalFromRecord(r: Record<string, unknown>): ProductStockTotal {
+  const breakdown = Array.isArray(r.Breakdown) ? r.Breakdown : [];
+  const allocatedFromBreakdown = breakdown.reduce((sum, item) => {
+    if (!item || typeof item !== "object") return sum;
+    const entry = item as Record<string, unknown>;
+    const type = String(entry.Type ?? "").toLowerCase();
+    return type.includes("allocation") ? sum + numericField(entry, ["Quantity", "Qty"]) : sum;
+  }, 0);
+  return {
+    stockLevel: numericField(r, ["StockLevel", "Stock Level", "TotalStockLevel", "Total Stock Level", "Level"]),
+    allocated: numericField(r, ["Allocated", "StockAllocated", "QuantityAllocated"]) || allocatedFromBreakdown,
+    onHand: numericField(r, ["OnHand", "On Hand", "StockOnHand", "QuantityOnHand", "Level"]),
+  };
+}
+
+async function fetchWarehouseStockLevels(
+  settings: Settings,
+  warehouseId: number,
+): Promise<Map<number, ProductStockTotal>> {
+  const paths = [
+    `/api/Product/StockLevels?WarehouseID=${warehouseId}&Breakdown=true`,
+    `/api/Product/StockLevels?WarehouseId=${warehouseId}&Breakdown=true`,
+  ];
+  for (const p of paths) {
+    try {
+      const data = await authedJson<unknown>(settings, p);
+      const arr = arrayPayload(data);
+      if (!arr) continue;
+      const out = new Map<number, ProductStockTotal>();
+      for (const r of arr) {
+        const productId = Number(r.ProductId ?? r.ProductID ?? r.ID ?? r.Id);
+        if (Number.isFinite(productId)) out.set(productId, stockTotalFromRecord(r));
+      }
+      return out;
+    } catch {
+      /* try next stock-level path */
+    }
+  }
+  return new Map();
+}
+
 /**
  * Fetch the warehouse / bin locations holding stock for a product. Mintsoft
  * exposes this on a per-product sub-resource; the exact path varies by
@@ -576,6 +628,29 @@ export async function fetchProductStockTotals(
   productIds: number[],
   opts: { concurrency?: number } = {},
 ): Promise<Map<number, { stockLevel: number; allocated: number; onHand: number }>> {
+  try {
+    const warehouses = await listWarehouses(settings);
+    const allWarehouseTotals = new Map<number, ProductStockTotal>();
+    for (const warehouse of warehouses) {
+      const warehouseTotals = await fetchWarehouseStockLevels(settings, warehouse.id);
+      for (const [productId, totals] of warehouseTotals) {
+        const existing = allWarehouseTotals.get(productId) ?? {
+          stockLevel: 0,
+          allocated: 0,
+          onHand: 0,
+        };
+        allWarehouseTotals.set(productId, {
+          stockLevel: existing.stockLevel + totals.stockLevel,
+          allocated: existing.allocated + totals.allocated,
+          onHand: existing.onHand + totals.onHand,
+        });
+      }
+    }
+    if (allWarehouseTotals.size > 0) return allWarehouseTotals;
+  } catch {
+    /* fall back to product-level stock paths */
+  }
+
   const concurrency = Math.max(1, opts.concurrency ?? 8);
   const result = new Map<number, { stockLevel: number; allocated: number; onHand: number }>();
   let idx = 0;
