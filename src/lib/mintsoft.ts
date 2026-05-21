@@ -340,6 +340,8 @@ export type MintsoftProduct = {
   "On Hand"?: number | null;
   QuantityOnHand?: number | null;
   QuantityAllocated?: number | null;
+  Weight?: number | null;
+  WeightGrams?: number | null;
 };
 
 export async function listProducts(
