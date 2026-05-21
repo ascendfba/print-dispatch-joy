@@ -504,6 +504,16 @@ function numericField(record: Record<string, unknown>, keys: string[]): number {
   return 0;
 }
 
+function optionalNumericField(record: Record<string, unknown>, keys: string[]): number | undefined {
+  for (const key of keys) {
+    if (!(key in record)) continue;
+    const value = record[key];
+    const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
+    if (Number.isFinite(n)) return n;
+  }
+  return undefined;
+}
+
 async function resolveLocationName(
   settings: Settings,
   locationId: number,
