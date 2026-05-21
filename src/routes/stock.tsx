@@ -141,20 +141,13 @@ function StockPage() {
       const cid = Number(clientFilter);
       items = items.filter((p) => (p.ClientId ?? p.ClientID ?? 0) === cid);
     }
-    if (inStockOnly && !stockTotalsQuery.data) {
-      const totals = stockTotalsQuery.data;
-      if (totals) {
-        items = items.filter((p) => {
-          const t = totals.get(p.ID);
-          const stockLevel =
-            t?.stockLevel ?? Number(p.StockLevel ?? p["Stock Level"] ?? p.StockAvailable ?? 0);
-          const allocated =
-            t?.allocated ?? Number(p.Allocated ?? p.StockAllocated ?? p.QuantityAllocated ?? 0);
-          const onHand =
-            t?.onHand ?? Number(p.OnHand ?? p["On Hand"] ?? p.StockOnHand ?? p.QuantityOnHand ?? 0);
-          return stockLevel > 0 || allocated > 0 || onHand > 0;
-        });
-      }
+    if (inStockOnly && stockTotalsQuery.isError) {
+      items = items.filter((p) => {
+        const stockLevel = Number(p.StockLevel ?? p["Stock Level"] ?? p.StockAvailable ?? 0);
+        const allocated = Number(p.Allocated ?? p.StockAllocated ?? p.QuantityAllocated ?? 0);
+        const onHand = Number(p.OnHand ?? p["On Hand"] ?? p.StockOnHand ?? p.QuantityOnHand ?? 0);
+        return stockLevel > 0 || allocated > 0 || onHand > 0;
+      });
     }
     return items;
   }, [
