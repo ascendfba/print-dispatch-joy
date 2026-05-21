@@ -2159,9 +2159,6 @@ function PackingListDialog({
   const [boxCount, setBoxCount] = useState(1);
   const [boxes, setBoxes] = useState<PackingBox[]>([makeEmptyBox()]);
   const [submitting, setSubmitting] = useState(false);
-  const [step, setStep] = useState<"edit" | "upload">("edit");
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
 
   // Available SKUs from the order (sku + total ordered qty).
   const orderSkus = useMemo(() => {
@@ -2209,9 +2206,6 @@ function PackingListDialog({
     setBoxCount(1);
     setBoxes([makeEmptyBox()]);
     setSubmitting(false);
-    setStep("edit");
-    setUploadFile(null);
-    setUploading(false);
   }, [open]);
 
   const applyBoxCount = (n: number) => {
