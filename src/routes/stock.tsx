@@ -65,7 +65,14 @@ function ExpandedDetails({
   const rows = useMemo(() => {
     const map = new Map<
       string,
-      { label: string; stockLevel: number; allocated: number; onHand: number; orders: ProductOrderAllocation[] }
+      {
+        label: string;
+        stockLevel: number;
+        allocated: number;
+        onHand: number;
+        batches: Array<{ batchNumber?: string; bestBeforeDate?: string; quantity: number }>;
+        orders: ProductOrderAllocation[];
+      }
     >();
     for (const l of locState?.data ?? []) {
       const key = l.locationId ? `id:${l.locationId}` : normalize(l.location) || "unassigned";
@@ -80,7 +87,16 @@ function ExpandedDetails({
           stockLevel: l.stockLevel ?? l.quantity ?? 0,
           allocated: l.allocated ?? 0,
           onHand: l.onHand ?? l.quantity ?? l.stockLevel ?? 0,
+          batches: [],
           orders: [],
+        });
+      }
+      const row = map.get(key);
+      if (row && (l.batchNumber || l.bestBeforeDate)) {
+        row.batches.push({
+          batchNumber: l.batchNumber,
+          bestBeforeDate: l.bestBeforeDate,
+          quantity: l.quantity ?? l.stockLevel ?? l.onHand ?? 0,
         });
       }
     }
@@ -88,7 +104,14 @@ function ExpandedDetails({
       const key = a.locationId ? `id:${a.locationId}` : normalize(a.location) || "unassigned";
       let row = map.get(key);
       if (!row) {
-        row = { label: a.location || "Unassigned", stockLevel: 0, allocated: 0, onHand: 0, orders: [] };
+        row = {
+          label: a.location || "Unassigned",
+          stockLevel: 0,
+          allocated: 0,
+          onHand: 0,
+          batches: [],
+          orders: [],
+        };
         map.set(key, row);
       }
       row.orders.push(a);
@@ -124,7 +147,8 @@ function ExpandedDetails({
             <span className="text-right">On hand</span>
           </div>
           {rows.map((row, i) => {
-            const allocatedQty = row.allocated || row.orders.reduce((sum, o) => sum + (o.quantity || 0), 0);
+            const allocatedQty =
+              row.allocated || row.orders.reduce((sum, o) => sum + (o.quantity || 0), 0);
             return (
               <div
                 key={`${row.label}-${i}`}
@@ -133,23 +157,40 @@ function ExpandedDetails({
                 <div className="grid grid-cols-[minmax(160px,1fr)_110px_110px_110px] gap-3 items-center">
                   <span className="font-mono font-medium">{row.label}</span>
                   <span className="text-right font-mono">{row.stockLevel}</span>
-                  <span className="text-right font-mono text-amber-600 dark:text-amber-400">{allocatedQty}</span>
-                  <span className="text-right font-mono text-emerald-600 dark:text-emerald-400">{row.onHand}</span>
+                  <span className="text-right font-mono text-amber-600 dark:text-amber-400">
+                    {allocatedQty}
+                  </span>
+                  <span className="text-right font-mono text-emerald-600 dark:text-emerald-400">
+                    {row.onHand}
+                  </span>
                 </div>
                 {row.orders.length > 0 && (
                   <ul className="mt-2 ml-[min(12rem,30%)] space-y-1 border-t border-border pt-2 text-xs">
                     {row.orders.map((o, j) => (
-                      <li
-                        key={`${o.orderId}-${j}`}
-                        className="flex items-center justify-between"
-                      >
+                      <li key={`${o.orderId}-${j}`} className="flex items-center justify-between">
                         <span className="font-mono text-muted-foreground">
                           {o.orderNumber || `#${o.orderId}`}
                           {o.customerName ? ` · ${o.customerName}` : ""}
                         </span>
-                        <span className="text-amber-600 dark:text-amber-400">
-                          ×{o.quantity}
+                        <span className="text-amber-600 dark:text-amber-400">×{o.quantity}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {row.batches.length > 0 && (
+                  <ul className="mt-2 ml-[min(12rem,30%)] space-y-1 border-t border-border pt-2 text-xs text-muted-foreground">
+                    {row.batches.map((batch, j) => (
+                      <li
+                        key={`${batch.batchNumber ?? "bbe"}-${batch.bestBeforeDate ?? "none"}-${j}`}
+                        className="flex items-center justify-between"
+                      >
+                        <span>
+                          {batch.batchNumber ? `Batch ${batch.batchNumber}` : "Batch"}
+                          {batch.bestBeforeDate
+                            ? ` · BBE ${new Date(batch.bestBeforeDate).toLocaleDateString()}`
+                            : ""}
                         </span>
+                        <span className="font-mono">×{batch.quantity}</span>
                       </li>
                     ))}
                   </ul>
@@ -199,9 +240,7 @@ function StockPage() {
     if (!locations[productId]?.data && !locations[productId]?.loading) {
       setLocations((s) => ({ ...s, [productId]: { loading: true } }));
       fetchProductStockLocations(settings, productId)
-        .then((data) =>
-          setLocations((s) => ({ ...s, [productId]: { loading: false, data } })),
-        )
+        .then((data) => setLocations((s) => ({ ...s, [productId]: { loading: false, data } })))
         .catch((e) =>
           setLocations((s) => ({
             ...s,
@@ -212,9 +251,7 @@ function StockPage() {
     if (!orderAllocs[productId]?.data && !orderAllocs[productId]?.loading) {
       setOrderAllocs((s) => ({ ...s, [productId]: { loading: true } }));
       fetchProductOpenOrderAllocations(settings, productId)
-        .then((data) =>
-          setOrderAllocs((s) => ({ ...s, [productId]: { loading: false, data } })),
-        )
+        .then((data) => setOrderAllocs((s) => ({ ...s, [productId]: { loading: false, data } })))
         .catch((e) =>
           setOrderAllocs((s) => ({
             ...s,
@@ -285,14 +322,7 @@ function StockPage() {
       items = items.filter((p) => clientFilter.includes(String(p.client_id ?? 0)));
     }
     return items;
-  }, [
-    productsQuery.data,
-    filter,
-    clientFilter,
-    clientNameById,
-    inStockOnly,
-    tab,
-  ]);
+  }, [productsQuery.data, filter, clientFilter, clientNameById, inStockOnly, tab]);
 
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
   const paginatedRows = rows.slice((page - 1) * pageSize, page * pageSize);
@@ -329,7 +359,14 @@ function StockPage() {
             Refresh
           </Button>
           <div className="flex items-center gap-2">
-            <Switch id="in-stock-toggle" checked={inStockOnly} onCheckedChange={(v) => { setInStockOnly(v); setPage(1); }} />
+            <Switch
+              id="in-stock-toggle"
+              checked={inStockOnly}
+              onCheckedChange={(v) => {
+                setInStockOnly(v);
+                setPage(1);
+              }}
+            />
             <Label htmlFor="in-stock-toggle" className="cursor-pointer text-sm">
               In stock
             </Label>
@@ -340,12 +377,18 @@ function StockPage() {
               label: c.brand_name || c.short_name || c.name || `Client #${c.id}`,
             }))}
             value={clientFilter}
-            onChange={(v) => { setClientFilter(v); setPage(1); }}
+            onChange={(v) => {
+              setClientFilter(v);
+              setPage(1);
+            }}
             placeholder="All clients"
           />
           <Input
             value={filter}
-            onChange={(e) => { setFilter(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setFilter(e.target.value);
+              setPage(1);
+            }}
             placeholder="Search SKU, name, barcode or client…"
             className="max-w-sm"
           />
@@ -362,7 +405,13 @@ function StockPage() {
                   ? "Loading products…"
                   : `${rows.length} product${rows.length === 1 ? "" : "s"}`}
               </CardTitle>
-              <Tabs value={tab} onValueChange={(v) => { setTab(v as "all" | "allocated"); setPage(1); }}>
+              <Tabs
+                value={tab}
+                onValueChange={(v) => {
+                  setTab(v as "all" | "allocated");
+                  setPage(1);
+                }}
+              >
                 <TabsList>
                   <TabsTrigger value="all">All</TabsTrigger>
                   <TabsTrigger value="allocated">Allocated</TabsTrigger>
@@ -371,13 +420,21 @@ function StockPage() {
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>Show</span>
-              <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+              <Select
+                value={String(pageSize)}
+                onValueChange={(v) => {
+                  setPageSize(Number(v));
+                  setPage(1);
+                }}
+              >
                 <SelectTrigger className="h-8 w-[80px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {[10, 25, 50, 100, 250].map((n) => (
-                    <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                    <SelectItem key={n} value={String(n)}>
+                      {n}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -397,7 +454,8 @@ function StockPage() {
             </div>
           ) : rows.length === 0 ? (
             <div className="py-8 text-sm text-muted-foreground">
-              No products found. {syncState?.last_success_at ? null : "Click Refresh to populate the cache."}
+              No products found.{" "}
+              {syncState?.last_success_at ? null : "Click Refresh to populate the cache."}
             </div>
           ) : (
             <>
@@ -467,10 +525,7 @@ function StockPage() {
                         {isOpen && (
                           <TableRow className="bg-muted/30 hover:bg-muted/30">
                             <TableCell colSpan={6}>
-                              <ExpandedDetails
-                                locState={locState}
-                                allocState={orderAllocs[p.id]}
-                              />
+                              <ExpandedDetails locState={locState} allocState={orderAllocs[p.id]} />
                             </TableCell>
                           </TableRow>
                         )}
@@ -489,7 +544,10 @@ function StockPage() {
                       <PaginationItem>
                         <PaginationPrevious
                           href="#"
-                          onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)); }}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setPage((p) => Math.max(1, p - 1));
+                          }}
                           className={page <= 1 ? "pointer-events-none opacity-50" : ""}
                         />
                       </PaginationItem>
@@ -498,7 +556,10 @@ function StockPage() {
                           <PaginationLink
                             href="#"
                             isActive={p === page}
-                            onClick={(e) => { e.preventDefault(); setPage(p); }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setPage(p);
+                            }}
                           >
                             {p}
                           </PaginationLink>
@@ -507,7 +568,10 @@ function StockPage() {
                       <PaginationItem>
                         <PaginationNext
                           href="#"
-                          onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(totalPages, p + 1)); }}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setPage((p) => Math.min(totalPages, p + 1));
+                          }}
                           className={page >= totalPages ? "pointer-events-none opacity-50" : ""}
                         />
                       </PaginationItem>
