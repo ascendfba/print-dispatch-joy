@@ -691,9 +691,7 @@ export async function fetchProductStockLocations(
             "Code",
           ]);
           const resolved = await resolveLocationName(settings, locationId, warehouseId);
-          const location = isUnassignedLocationName(directBin)
-            ? resolved || directBin
-            : directBin || resolved || "Unassigned";
+          const location = directBin || resolved || "";
           const stockLevel =
             optionalNumericField(r, [
               "StockLevel",
@@ -1097,9 +1095,7 @@ export async function fetchOrderAllocations(
       sku: typeof r.SKU === "string" ? r.SKU : undefined,
       quantity: Number(r.Quantity ?? 0),
       locationId: Number.isFinite(locationId) ? locationId : undefined,
-      locationName: isUnassignedLocationName(directLocationName)
-        ? resolvedLocationName || directLocationName
-        : directLocationName || resolvedLocationName || undefined,
+      locationName: directLocationName || resolvedLocationName || undefined,
       warehouseId: Number.isFinite(warehouseId) ? warehouseId : undefined,
       warehouseName: typeof r.WarehouseName === "string" ? r.WarehouseName : undefined,
       bestBefore: typeof r.BestBefore === "string" ? r.BestBefore : undefined,
