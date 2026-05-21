@@ -2416,6 +2416,12 @@ function PackingListDialog({
                 }}
               >
                 <div className="text-sm font-semibold">Box {i + 1}</div>
+                {!(b.length && b.width && b.height) && (
+                  <div className="rounded border border-amber-400 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800">
+                    <AlertTriangle className="mr-1 inline h-3 w-3" />
+                    Pick a box size below before saving
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-2">
                   {[
                     { label: "S DISP/B", size: "37", weight: "0.7" },
