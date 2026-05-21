@@ -31,20 +31,23 @@ function num(r: Record<string, unknown>, keys: string[]): number {
 type Totals = { stockLevel: number; allocated: number; onHand: number };
 
 async function listAllProductsServer() {
-  const pageSize = 250;
+  const pageSize = 100; // Mintsoft caps PageSize at 100
   const all: Array<Record<string, unknown>> = [];
   const seenIds = new Set<number>();
   let lastFirstId: unknown;
+  let lastBatchLen = -1;
   for (let page = 1; page < 2000; page++) {
     const data = await msFetch<Record<string, unknown>[] | { Results?: Record<string, unknown>[] }>(
       `/api/Product/List?PageNumber=${page}&PageSize=${pageSize}`,
     );
     const batch = Array.isArray(data) ? data : ((data as { Results?: Record<string, unknown>[] })?.Results ?? []);
+    console.log(`[mintsoft-sync] page=${page} batchLen=${batch.length} firstId=${batch[0]?.ID} lastId=${batch[batch.length - 1]?.ID} totalSoFar=${all.length}`);
     if (batch.length === 0) break;
-    // Mintsoft sometimes echoes the same page when paging beyond data — detect via first-id dedupe.
-    if (page > 1 && batch[0]?.ID === lastFirstId) break;
+    if (page > 1 && batch[0]?.ID === lastFirstId) {
+      console.log(`[mintsoft-sync] echo detected at page ${page}, stopping`);
+      break;
+    }
     lastFirstId = batch[0]?.ID;
-    // Dedupe across pages in case Mintsoft returns overlapping pages.
     let added = 0;
     for (const p of batch) {
       const id = Number(p.ID);
@@ -53,9 +56,18 @@ async function listAllProductsServer() {
       all.push(p);
       added++;
     }
-    // Only break on a clearly short page (more than half empty) — Mintsoft may cap PageSize.
-    if (added === 0) break;
+    if (added === 0) {
+      console.log(`[mintsoft-sync] no new IDs at page ${page}, stopping`);
+      break;
+    }
+    if (batch.length < pageSize) {
+      console.log(`[mintsoft-sync] short page ${batch.length}<${pageSize}, stopping`);
+      break;
+    }
+    lastBatchLen = batch.length;
   }
+  void lastBatchLen;
+  console.log(`[mintsoft-sync] DONE — total unique products=${all.length}`);
   return all;
 }
 
