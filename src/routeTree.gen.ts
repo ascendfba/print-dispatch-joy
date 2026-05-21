@@ -35,6 +35,7 @@ import { Route as DRouteImport } from './routes/d.'
 import { Route as ApiPublicSetupWarningLabelsBucketRouteImport } from './routes/api/public/setup-warning-labels-bucket'
 import { Route as ApiPublicSetupDesktopBucketRouteImport } from './routes/api/public/setup-desktop-bucket'
 import { Route as ApiPublicDSlugRouteImport } from './routes/api/public/d/$slug'
+import { Route as ApiPublicCronSyncMintsoftRouteImport } from './routes/api/public/cron/sync-mintsoft'
 
 const StockRoute = StockRouteImport.update({
   id: '/stock',
@@ -168,6 +169,12 @@ const ApiPublicDSlugRoute = ApiPublicDSlugRouteImport.update({
   path: '/api/public/d/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronSyncMintsoftRoute =
+  ApiPublicCronSyncMintsoftRouteImport.update({
+    id: '/api/public/cron/sync-mintsoft',
+    path: '/api/public/cron/sync-mintsoft',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -195,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/orders/$orderId': typeof OrdersOrderIdRoute
   '/api/public/setup-desktop-bucket': typeof ApiPublicSetupDesktopBucketRoute
   '/api/public/setup-warning-labels-bucket': typeof ApiPublicSetupWarningLabelsBucketRoute
+  '/api/public/cron/sync-mintsoft': typeof ApiPublicCronSyncMintsoftRoute
   '/api/public/d/$slug': typeof ApiPublicDSlugRoute
 }
 export interface FileRoutesByTo {
@@ -223,6 +231,7 @@ export interface FileRoutesByTo {
   '/orders/$orderId': typeof OrdersOrderIdRoute
   '/api/public/setup-desktop-bucket': typeof ApiPublicSetupDesktopBucketRoute
   '/api/public/setup-warning-labels-bucket': typeof ApiPublicSetupWarningLabelsBucketRoute
+  '/api/public/cron/sync-mintsoft': typeof ApiPublicCronSyncMintsoftRoute
   '/api/public/d/$slug': typeof ApiPublicDSlugRoute
 }
 export interface FileRoutesById {
@@ -252,6 +261,7 @@ export interface FileRoutesById {
   '/orders_/$orderId': typeof OrdersOrderIdRoute
   '/api/public/setup-desktop-bucket': typeof ApiPublicSetupDesktopBucketRoute
   '/api/public/setup-warning-labels-bucket': typeof ApiPublicSetupWarningLabelsBucketRoute
+  '/api/public/cron/sync-mintsoft': typeof ApiPublicCronSyncMintsoftRoute
   '/api/public/d/$slug': typeof ApiPublicDSlugRoute
 }
 export interface FileRouteTypes {
@@ -282,6 +292,7 @@ export interface FileRouteTypes {
     | '/orders/$orderId'
     | '/api/public/setup-desktop-bucket'
     | '/api/public/setup-warning-labels-bucket'
+    | '/api/public/cron/sync-mintsoft'
     | '/api/public/d/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -310,6 +321,7 @@ export interface FileRouteTypes {
     | '/orders/$orderId'
     | '/api/public/setup-desktop-bucket'
     | '/api/public/setup-warning-labels-bucket'
+    | '/api/public/cron/sync-mintsoft'
     | '/api/public/d/$slug'
   id:
     | '__root__'
@@ -338,6 +350,7 @@ export interface FileRouteTypes {
     | '/orders_/$orderId'
     | '/api/public/setup-desktop-bucket'
     | '/api/public/setup-warning-labels-bucket'
+    | '/api/public/cron/sync-mintsoft'
     | '/api/public/d/$slug'
   fileRoutesById: FileRoutesById
 }
@@ -367,6 +380,7 @@ export interface RootRouteChildren {
   OrdersOrderIdRoute: typeof OrdersOrderIdRoute
   ApiPublicSetupDesktopBucketRoute: typeof ApiPublicSetupDesktopBucketRoute
   ApiPublicSetupWarningLabelsBucketRoute: typeof ApiPublicSetupWarningLabelsBucketRoute
+  ApiPublicCronSyncMintsoftRoute: typeof ApiPublicCronSyncMintsoftRoute
   ApiPublicDSlugRoute: typeof ApiPublicDSlugRoute
 }
 
@@ -554,6 +568,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicDSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/sync-mintsoft': {
+      id: '/api/public/cron/sync-mintsoft'
+      path: '/api/public/cron/sync-mintsoft'
+      fullPath: '/api/public/cron/sync-mintsoft'
+      preLoaderRoute: typeof ApiPublicCronSyncMintsoftRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -584,6 +605,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicSetupDesktopBucketRoute: ApiPublicSetupDesktopBucketRoute,
   ApiPublicSetupWarningLabelsBucketRoute:
     ApiPublicSetupWarningLabelsBucketRoute,
+  ApiPublicCronSyncMintsoftRoute: ApiPublicCronSyncMintsoftRoute,
   ApiPublicDSlugRoute: ApiPublicDSlugRoute,
 }
 export const routeTree = rootRouteImport

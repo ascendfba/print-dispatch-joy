@@ -1,8 +1,10 @@
 import { requireAuth } from "@/lib/require-auth";
 import { createFileRoute } from "@tanstack/react-router";
 import { Fragment, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -14,14 +16,17 @@ import {
 } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ChevronDown, ChevronRight, Loader2, Package } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2, Package, RefreshCw } from "lucide-react";
 import {
-  listAllProducts,
-  listClients,
   fetchProductStockLocations,
-  fetchProductStockTotals,
   type StockLocation,
 } from "@/lib/mintsoft";
+import {
+  getCachedClients,
+  getCachedProducts,
+  getSyncState,
+  triggerSync,
+} from "@/lib/mintsoft-cache.functions";
 import { loadSettings } from "@/lib/storage";
 import {
   Select,
@@ -45,6 +50,11 @@ export const Route = createFileRoute("/stock")({
 });
 
 function StockPage() {
+  const queryClient = useQueryClient();
+  const fetchProducts = useServerFn(getCachedProducts);
+  const fetchClients = useServerFn(getCachedClients);
+  const fetchSyncState = useServerFn(getSyncState);
+  const runSync = useServerFn(triggerSync);
   const [filter, setFilter] = useState("");
   const [clientFilter, setClientFilter] = useState("");
   const [inStockOnly, setInStockOnly] = useState(true);
@@ -76,88 +86,62 @@ function StockPage() {
   };
 
   const productsQuery = useQuery({
-    queryKey: ["stock-products"],
-    queryFn: async () => {
-      const settings = loadSettings();
-      if (!settings.mintsoftApiKey && !settings.mintsoftUsername) {
-        throw new Error("Configure Mintsoft in Settings first (API key or username)");
-      }
-      return listAllProducts(settings);
-    },
-    refetchOnWindowFocus: false,
-  });
-
-  const productIds = useMemo(
-    () => (productsQuery.data ?? []).map((p) => p.ID),
-    [productsQuery.data],
-  );
-
-  const stockTotalsQuery = useQuery({
-    queryKey: ["stock-totals", productIds.length],
-    enabled: inStockOnly && productIds.length > 0,
-    queryFn: async () => {
-      const settings = loadSettings();
-      return fetchProductStockTotals(settings, productIds, { concurrency: 10 });
-    },
-    staleTime: 60_000,
+    queryKey: ["stock-products-cached"],
+    queryFn: () => fetchProducts(),
     refetchOnWindowFocus: false,
   });
 
   const clientsQuery = useQuery({
-    queryKey: ["clients"],
-    queryFn: async () => {
-      const settings = loadSettings();
-      return listClients(settings);
-    },
+    queryKey: ["stock-clients-cached"],
+    queryFn: () => fetchClients(),
     refetchOnWindowFocus: false,
+  });
+
+  const syncStateQuery = useQuery({
+    queryKey: ["stock-sync-state"],
+    queryFn: () => fetchSyncState(),
+    refetchOnWindowFocus: false,
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: () => runSync(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["stock-products-cached"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-clients-cached"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-sync-state"] });
+    },
   });
 
   const clientNameById = useMemo(() => {
     const map = new Map<number, string>();
     for (const c of clientsQuery.data ?? []) {
-      map.set(c.ID, c.Name || c.BrandName || c.ShortName || `#${c.ID}`);
+      map.set(c.id, c.name || c.brand_name || c.short_name || `#${c.id}`);
     }
     return map;
   }, [clientsQuery.data]);
 
   const rows = useMemo(() => {
     let items = productsQuery.data ?? [];
-    if (inStockOnly && stockTotalsQuery.data) {
-      const productById = new Map(items.map((p) => [p.ID, p]));
-      items = Array.from(stockTotalsQuery.data.entries())
-        .filter(([, t]) => t.stockLevel > 0 || t.allocated > 0 || t.onHand > 0)
-        .map(([id, t]) => ({
-          ...(productById.get(id) ?? { ID: id }),
-          SKU: productById.get(id)?.SKU ?? t.sku,
-          ClientId: productById.get(id)?.ClientId ?? t.clientId,
-          ClientID: productById.get(id)?.ClientID ?? t.clientId,
-        }));
+    if (inStockOnly) {
+      items = items.filter((p) => p.stock_level > 0 || p.allocated > 0 || p.on_hand > 0);
     }
     const q = filter.trim().toLowerCase();
     if (q) {
       items = items.filter((p) => {
-        const clientId = p.ClientId ?? p.ClientID ?? 0;
+        const clientId = p.client_id ?? 0;
         const clientName = clientId ? (clientNameById.get(clientId) ?? "") : "";
         return (
-          (p.SKU ?? "").toLowerCase().includes(q) ||
-          (p.Name ?? "").toLowerCase().includes(q) ||
-          (p.EAN ?? "").toLowerCase().includes(q) ||
-          (p.UPC ?? "").toLowerCase().includes(q) ||
+          (p.sku ?? "").toLowerCase().includes(q) ||
+          (p.name ?? "").toLowerCase().includes(q) ||
+          (p.ean ?? "").toLowerCase().includes(q) ||
+          (p.upc ?? "").toLowerCase().includes(q) ||
           clientName.toLowerCase().includes(q)
         );
       });
     }
     if (clientFilter && clientFilter !== "all") {
       const cid = Number(clientFilter);
-      items = items.filter((p) => (p.ClientId ?? p.ClientID ?? 0) === cid);
-    }
-    if (inStockOnly && stockTotalsQuery.isError) {
-      items = items.filter((p) => {
-        const stockLevel = Number(p.StockLevel ?? p["Stock Level"] ?? p.StockAvailable ?? 0);
-        const allocated = Number(p.Allocated ?? p.StockAllocated ?? p.QuantityAllocated ?? 0);
-        const onHand = Number(p.OnHand ?? p["On Hand"] ?? p.StockOnHand ?? p.QuantityOnHand ?? 0);
-        return stockLevel > 0 || allocated > 0 || onHand > 0;
-      });
+      items = items.filter((p) => (p.client_id ?? 0) === cid);
     }
     return items;
   }, [
@@ -166,20 +150,42 @@ function StockPage() {
     clientFilter,
     clientNameById,
     inStockOnly,
-    stockTotalsQuery.data,
   ]);
 
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
   const paginatedRows = rows.slice((page - 1) * pageSize, page * pageSize);
+
+  const syncState = syncStateQuery.data;
+  const lastSyncLabel = syncState?.last_success_at
+    ? new Date(syncState.last_success_at).toLocaleString()
+    : "never";
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Stock</h1>
-          <p className="text-sm text-muted-foreground">All SKUs from Mintsoft.</p>
+          <p className="text-sm text-muted-foreground">
+            Cached from Mintsoft · last sync {lastSyncLabel}
+            {syncState?.last_status === "error" && syncState.last_error ? (
+              <span className="text-destructive"> · {syncState.last_error}</span>
+            ) : null}
+          </p>
         </div>
         <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => syncMutation.mutate()}
+            disabled={syncMutation.isPending}
+          >
+            {syncMutation.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 h-4 w-4" />
+            )}
+            Refresh
+          </Button>
           <div className="flex items-center gap-2">
             <Switch id="in-stock-toggle" checked={inStockOnly} onCheckedChange={(v) => { setInStockOnly(v); setPage(1); }} />
             <Label htmlFor="in-stock-toggle" className="cursor-pointer text-sm">
@@ -193,8 +199,8 @@ function StockPage() {
             <SelectContent>
               <SelectItem value="all">All clients</SelectItem>
               {(clientsQuery.data ?? []).map((c) => (
-                <SelectItem key={c.ID} value={String(c.ID)}>
-                  {c.BrandName || c.ShortName || c.Name || `Client #${c.ID}`}
+                <SelectItem key={c.id} value={String(c.id)}>
+                  {c.brand_name || c.short_name || c.name || `Client #${c.id}`}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -215,9 +221,7 @@ function StockPage() {
               <Package className="h-4 w-4" />
               {productsQuery.isLoading
                 ? "Loading products…"
-                : inStockOnly && stockTotalsQuery.isLoading
-                  ? "Checking stock levels…"
-                  : `${rows.length} product${rows.length === 1 ? "" : "s"}`}
+                : `${rows.length} product${rows.length === 1 ? "" : "s"}`}
             </CardTitle>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>Show</span>
@@ -239,14 +243,16 @@ function StockPage() {
           {productsQuery.isLoading ? (
             <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Fetching SKUs from Mintsoft…
+              Loading cached SKUs…
             </div>
           ) : productsQuery.isError ? (
             <div className="py-8 text-sm text-destructive">
               {(productsQuery.error as Error).message}
             </div>
           ) : rows.length === 0 ? (
-            <div className="py-8 text-sm text-muted-foreground">No products found.</div>
+            <div className="py-8 text-sm text-muted-foreground">
+              No products found. {syncState?.last_success_at ? null : "Click Refresh to populate the cache."}
+            </div>
           ) : (
             <>
               <Table>
@@ -260,16 +266,16 @@ function StockPage() {
                 </TableHeader>
                 <TableBody>
                   {paginatedRows.map((p) => {
-                    const clientId = p.ClientId ?? p.ClientID ?? 0;
+                    const clientId = p.client_id ?? 0;
                     const clientName = clientId
                       ? (clientNameById.get(clientId) ?? `#${clientId}`)
                       : "—";
-                    const barcode = p.EAN || p.UPC || "";
-                    const isOpen = expandedId === p.ID;
-                    const locState = locations[p.ID];
+                    const barcode = p.ean || p.upc || "";
+                    const isOpen = expandedId === p.id;
+                    const locState = locations[p.id];
                     return (
-                      <Fragment key={p.ID}>
-                        <TableRow className="cursor-pointer" onClick={() => toggleRow(p.ID)}>
+                      <Fragment key={p.id}>
+                        <TableRow className="cursor-pointer" onClick={() => toggleRow(p.id)}>
                           <TableCell className="text-sm">{clientName}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2 font-medium">
@@ -278,19 +284,19 @@ function StockPage() {
                               ) : (
                                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
                               )}
-                              {p.SKU || "—"}
+                              {p.sku || "—"}
                             </div>
-                            {p.Name && (
+                            {p.name && (
                               <div className="ml-6 text-xs text-muted-foreground line-clamp-1">
-                                {p.Name}
+                                {p.name}
                               </div>
                             )}
                           </TableCell>
                           <TableCell>
-                            {p.ImageURL ? (
+                            {p.image_url ? (
                               <img
-                                src={p.ImageURL}
-                                alt={p.SKU || ""}
+                                src={p.image_url}
+                                alt={p.sku || ""}
                                 className="h-12 w-12 rounded border border-border object-cover"
                                 loading="lazy"
                               />
