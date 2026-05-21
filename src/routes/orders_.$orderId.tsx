@@ -2438,7 +2438,23 @@ function PackingListDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && !submitting) {
+          // Auto-save when user clicks outside / presses Esc, if there's anything to save.
+          const hasData = boxes.some(
+            (b) => b.length || b.width || b.height || b.contents.length > 0,
+          );
+          const allDimsSet = boxes.every((b) => b.length && b.width && b.height);
+          if (hasData && allDimsSet) {
+            void handleSubmit();
+            return;
+          }
+        }
+        onOpenChange(next);
+      }}
+    >
       <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
