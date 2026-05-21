@@ -2563,7 +2563,13 @@ function PackingListDialog({
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
+            <Button
+              onClick={handleSubmit}
+              disabled={
+                submitting ||
+                boxes.some((b) => !(b.length && b.width && b.height))
+              }
+            >
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save packing list
             </Button>
