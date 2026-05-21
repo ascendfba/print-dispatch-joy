@@ -863,6 +863,94 @@ async function fetchProductBookedInLocations(
   }
 }
 
+type ProductsInLocationReportRow = {
+  Warehouse?: string | null;
+  Location?: string | null;
+  LocationType?: string | null;
+  Type?: string | null;
+  ProductSKU?: string | null;
+  ProductName?: string | null;
+  Quantity?: string | number | null;
+  BatchNo?: string | null;
+  BestBefore?: string | null;
+  ProductInLocationId?: number | null;
+};
+
+let productsInLocationReportCache: { at: number; rows: ProductsInLocationReportRow[] } | undefined;
+let productsInLocationReportInflight: Promise<ProductsInLocationReportRow[]> | undefined;
+const PRODUCTS_IN_LOCATION_TTL_MS = 60_000;
+
+/**
+ * Mintsoft does not expose a per-product "where is this stock?" endpoint that
+ * actually returns bin locations — `/api/Product/{id}/Inventory` collapses to
+ * `LocationId=0` for tenants that pick from sub-locations. The
+ * `ProductsInLocationReport` is the only endpoint that returns the real
+ * Location name (e.g. "B10-S2-C3") per SKU, so we use it as the source of
+ * truth and cache it briefly.
+ */
+async function fetchProductsInLocationReport(
+  settings: Settings,
+): Promise<ProductsInLocationReportRow[]> {
+  const now = Date.now();
+  if (
+    productsInLocationReportCache &&
+    now - productsInLocationReportCache.at < PRODUCTS_IN_LOCATION_TTL_MS
+  ) {
+    return productsInLocationReportCache.rows;
+  }
+  if (productsInLocationReportInflight) return productsInLocationReportInflight;
+  productsInLocationReportInflight = (async () => {
+    try {
+      const data = await authedJson<unknown>(settings, `/api/Reports/ProductsInLocationReport`);
+      const rows = Array.isArray(data) ? (data as ProductsInLocationReportRow[]) : [];
+      productsInLocationReportCache = { at: Date.now(), rows };
+      return rows;
+    } catch {
+      productsInLocationReportCache = { at: Date.now(), rows: [] };
+      return [];
+    } finally {
+      productsInLocationReportInflight = undefined;
+    }
+  })();
+  return productsInLocationReportInflight;
+}
+
+function stockLocationsFromReport(
+  rows: ProductsInLocationReportRow[],
+  sku: string,
+): StockLocation[] {
+  const matches = rows.filter(
+    (r) => typeof r.ProductSKU === "string" && r.ProductSKU.trim() === sku,
+  );
+  const byLocation = new Map<string, StockLocation>();
+  for (const r of matches) {
+    const location = (r.Location ?? "").toString().trim();
+    if (!location) continue;
+    const qty = Number(r.Quantity ?? 0) || 0;
+    if (qty <= 0) continue;
+    const isAllocated = /alloc/i.test(r.Type ?? "");
+    const key = location;
+    const existing = byLocation.get(key);
+    if (existing) {
+      existing.quantity += qty;
+      existing.stockLevel = (existing.stockLevel ?? 0) + qty;
+      existing.onHand = (existing.onHand ?? 0) + qty;
+      if (isAllocated) existing.allocated = (existing.allocated ?? 0) + qty;
+    } else {
+      byLocation.set(key, {
+        location,
+        quantity: qty,
+        stockLevel: qty,
+        allocated: isAllocated ? qty : 0,
+        onHand: qty,
+        batchNumber: r.BatchNo?.toString().trim() || undefined,
+        bestBeforeDate: r.BestBefore?.toString().trim() || undefined,
+      });
+    }
+  }
+  return Array.from(byLocation.values());
+}
+
 async function fetchWarehouseStockLevels(
   settings: Settings,
   warehouseId: number,
@@ -912,11 +1000,15 @@ export async function fetchProductStockLocations(
         const out: StockLocation[] = [];
         const inventoryRows: StockLocation[] = [];
         const isInventoryPath = /\/Inventory\b/i.test(p);
+        let inventorySku: string | undefined;
         for (const r of rows) {
           const locationId = Number(
             r.LocationId ?? r.LocationID ?? r.Location_Id ?? r.WarehouseLocationId,
           );
           const warehouseId = Number(r.WarehouseId ?? r.WarehouseID ?? r.Warehouse_Id);
+          if (typeof r.SKU === "string" && r.SKU.trim() && !inventorySku) {
+            inventorySku = r.SKU.trim();
+          }
           const directLocationName = locationStringField(r, [
             "LocationName",
             "locationName",
@@ -998,6 +1090,14 @@ export async function fetchProductStockLocations(
           }
         }
         if (isInventoryPath) {
+          // The Inventory endpoint collapses bin locations to LocationId=0.
+          // Use the ProductsInLocationReport (cached) to recover the real
+          // location names per SKU.
+          if (inventorySku) {
+            const report = await fetchProductsInLocationReport(settings);
+            const reportLocations = stockLocationsFromReport(report, inventorySku);
+            if (reportLocations.length > 0) return reportLocations;
+          }
           const bookedInLocations = await fetchProductBookedInLocations(
             settings,
             productId,
