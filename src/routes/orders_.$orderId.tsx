@@ -2371,8 +2371,50 @@ function PackingListDialog({
                       step="0.01"
                       min={0}
                       value={b.weight}
-                      onChange={(e) => updateBox(i, { weight: e.target.value })}
+                      onChange={(e) =>
+                        setBoxes((prev) =>
+                          prev.map((bb, ii) =>
+                            ii === i
+                              ? { ...bb, weight: e.target.value, weightAuto: false }
+                              : bb,
+                          ),
+                        )
+                      }
                     />
+                    {(() => {
+                      const itemsKg = itemsWeightForBox(b);
+                      const autoTotal = b.tare + itemsKg;
+                      return (
+                        <div className="mt-1 text-[10px] text-muted-foreground">
+                          Est: box {b.tare.toFixed(2)} + items {itemsKg.toFixed(2)} ={" "}
+                          <span className="font-semibold tabular-nums">
+                            {autoTotal.toFixed(2)} kg
+                          </span>
+                          {!b.weightAuto && (
+                            <button
+                              type="button"
+                              className="ml-2 underline text-primary"
+                              onClick={() =>
+                                setBoxes((prev) =>
+                                  prev.map((bb, ii) =>
+                                    ii === i
+                                      ? {
+                                          ...bb,
+                                          weightAuto: true,
+                                          weight:
+                                            autoTotal > 0 ? autoTotal.toFixed(2) : "",
+                                        }
+                                      : bb,
+                                  ),
+                                )
+                              }
+                            >
+                              use estimate
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div>
                     <Label className="text-xs">L (cm)</Label>
