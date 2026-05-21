@@ -452,10 +452,7 @@ function BookInCard({
     items.forEach((item, i) => {
       const key = asnItemKey(item);
       const p = productQueries[i]?.data as MintsoftProduct | null | undefined;
-      map[key] = !!(
-        p?.HasExpiryDates ||
-        p?.RequiresExpiryDate
-      );
+      map[key] = productRequiresBbf(p);
     });
     return map;
   }, [items, productQueries]);
