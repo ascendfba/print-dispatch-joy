@@ -280,6 +280,7 @@ function OrderDetailPage() {
   const [labelsPrinted, setLabelsPrinted] = useState(false);
   const [despatched, setDespatched] = useState(false);
   const [overweightOpen, setOverweightOpen] = useState(false);
+  const [packingOpen, setPackingOpen] = useState(false);
 
   // Load order summary from the cached open-orders list (avoids an extra fetch).
   const ordersQuery = useQuery({
