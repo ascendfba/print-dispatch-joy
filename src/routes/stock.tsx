@@ -65,22 +65,30 @@ function ExpandedDetails({
   const rows = useMemo(() => {
     const map = new Map<
       string,
-      { label: string; onHand: number; orders: ProductOrderAllocation[] }
+      { label: string; stockLevel: number; allocated: number; onHand: number; orders: ProductOrderAllocation[] }
     >();
     for (const l of locState?.data ?? []) {
-      const key = normalize(l.location) || "unassigned";
+      const key = l.locationId ? `id:${l.locationId}` : normalize(l.location) || "unassigned";
       const existing = map.get(key);
       if (existing) {
-        existing.onHand += l.quantity || 0;
+        existing.stockLevel += l.stockLevel ?? l.quantity ?? 0;
+        existing.allocated += l.allocated ?? 0;
+        existing.onHand += l.onHand ?? l.quantity ?? l.stockLevel ?? 0;
       } else {
-        map.set(key, { label: l.location || "Unassigned", onHand: l.quantity || 0, orders: [] });
+        map.set(key, {
+          label: l.location || "Unassigned",
+          stockLevel: l.stockLevel ?? l.quantity ?? 0,
+          allocated: l.allocated ?? 0,
+          onHand: l.onHand ?? l.quantity ?? l.stockLevel ?? 0,
+          orders: [],
+        });
       }
     }
     for (const a of allocState?.data ?? []) {
-      const key = normalize(a.location) || "unassigned";
+      const key = a.locationId ? `id:${a.locationId}` : normalize(a.location) || "unassigned";
       let row = map.get(key);
       if (!row) {
-        row = { label: a.location || "Unassigned", onHand: 0, orders: [] };
+        row = { label: a.location || "Unassigned", stockLevel: 0, allocated: 0, onHand: 0, orders: [] };
         map.set(key, row);
       }
       row.orders.push(a);
@@ -108,27 +116,28 @@ function ExpandedDetails({
           <div className="text-sm text-muted-foreground">No stock locations found.</div>
         )
       ) : (
-        <ul className="space-y-2">
+        <div className="overflow-hidden rounded border border-border bg-background text-sm">
+          <div className="grid grid-cols-[minmax(160px,1fr)_110px_110px_110px] gap-3 border-b border-border bg-muted/60 px-3 py-2 text-xs font-medium text-muted-foreground">
+            <span>Location</span>
+            <span className="text-right">Stock level</span>
+            <span className="text-right">Allocated</span>
+            <span className="text-right">On hand</span>
+          </div>
           {rows.map((row, i) => {
-            const allocatedQty = row.orders.reduce((sum, o) => sum + (o.quantity || 0), 0);
+            const allocatedQty = row.allocated || row.orders.reduce((sum, o) => sum + (o.quantity || 0), 0);
             return (
-              <li
+              <div
                 key={`${row.label}-${i}`}
-                className="rounded border border-border bg-background px-3 py-2 text-sm"
+                className="border-b border-border px-3 py-2 last:border-b-0"
               >
-                <div className="flex items-center justify-between">
+                <div className="grid grid-cols-[minmax(160px,1fr)_110px_110px_110px] gap-3 items-center">
                   <span className="font-mono font-medium">{row.label}</span>
-                  <span className="flex items-center gap-4 text-xs">
-                    <span className="text-emerald-600 dark:text-emerald-400">
-                      On hand: {row.onHand}
-                    </span>
-                    <span className="text-amber-600 dark:text-amber-400">
-                      Allocated: {allocatedQty}
-                    </span>
-                  </span>
+                  <span className="text-right font-mono">{row.stockLevel}</span>
+                  <span className="text-right font-mono text-amber-600 dark:text-amber-400">{allocatedQty}</span>
+                  <span className="text-right font-mono text-emerald-600 dark:text-emerald-400">{row.onHand}</span>
                 </div>
                 {row.orders.length > 0 && (
-                  <ul className="mt-2 space-y-1 border-t border-border pt-2 text-xs">
+                  <ul className="mt-2 ml-[min(12rem,30%)] space-y-1 border-t border-border pt-2 text-xs">
                     {row.orders.map((o, j) => (
                       <li
                         key={`${o.orderId}-${j}`}
@@ -145,10 +154,10 @@ function ExpandedDetails({
                     ))}
                   </ul>
                 )}
-              </li>
+              </div>
             );
           })}
-        </ul>
+        </div>
       )}
       {loading && rows.length > 0 && (
         <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">

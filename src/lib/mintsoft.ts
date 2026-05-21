@@ -491,6 +491,8 @@ export type StockLocation = {
   stockLevel?: number;
   allocated?: number;
   onHand?: number;
+  locationId?: number;
+  warehouseId?: number;
 };
 
 function numericField(record: Record<string, unknown>, keys: string[]): number {
@@ -500,6 +502,28 @@ function numericField(record: Record<string, unknown>, keys: string[]): number {
     if (Number.isFinite(n)) return n;
   }
   return 0;
+}
+
+function optionalNumericField(record: Record<string, unknown>, keys: string[]): number | undefined {
+  for (const key of keys) {
+    if (!(key in record)) continue;
+    const value = record[key];
+    const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
+    if (Number.isFinite(n)) return n;
+  }
+  return undefined;
+}
+
+async function resolveLocationName(
+  settings: Settings,
+  locationId: number,
+  warehouseId: number,
+): Promise<string> {
+  if (Number.isFinite(locationId) && Number.isFinite(warehouseId)) {
+    const location = await fetchWarehouseLocation(settings, warehouseId, locationId);
+    if (location?.name) return location.name;
+  }
+  return Number.isFinite(locationId) ? `Location #${locationId}` : "";
 }
 
 export type ProductStockEntry = {
@@ -585,6 +609,7 @@ export async function fetchProductStockLocations(
   productId: number,
 ): Promise<StockLocation[]> {
   const paths = [
+    `/api/Product/${productId}/Inventory?breakdown=true`,
     `/api/Product/${productId}/Stock`,
     `/api/Product/${productId}/StockLocations`,
     `/api/Product/${productId}/Locations`,
@@ -592,38 +617,58 @@ export async function fetchProductStockLocations(
   for (const p of paths) {
     try {
       const data = await authedJson<unknown>(settings, p);
-      if (Array.isArray(data)) {
+      const rows = arrayPayload(data) ?? [];
+      if (rows.length > 0) {
         const out: StockLocation[] = [];
-        for (const r of data as Array<Record<string, unknown>>) {
-          const location =
+        for (const r of rows) {
+          const locationId = Number(r.LocationId ?? r.LocationID ?? r.Location_Id ?? r.WarehouseLocationId);
+          const warehouseId = Number(r.WarehouseId ?? r.WarehouseID ?? r.Warehouse_Id);
+          const directLocation =
+            (typeof r.SimpleLocationName === "string" && r.SimpleLocationName) ||
             (typeof r.Location === "string" && r.Location) ||
             (typeof r.LocationName === "string" && r.LocationName) ||
             (typeof r.WarehouseLocation === "string" && r.WarehouseLocation) ||
             (typeof r.BinLocation === "string" && r.BinLocation) ||
+            (typeof r.LocationCode === "string" && r.LocationCode) ||
+            (typeof r.Code === "string" && r.Code) ||
             (typeof r.Bin === "string" && r.Bin) ||
             "";
-          const stockLevel = numericField(r, [
+          const location = directLocation || (await resolveLocationName(settings, locationId, warehouseId));
+          const stockLevel = optionalNumericField(r, [
             "StockLevel",
             "Stock Level",
+            "TotalStockLevel",
+            "Total Stock Level",
             "Quantity",
             "Qty",
             "Available",
-          ]);
-          const allocated = numericField(r, [
+          ]) ?? 0;
+          const allocated = optionalNumericField(r, [
             "Allocated",
             "StockAllocated",
             "QuantityAllocated",
             "AllocatedQuantity",
-          ]);
-          const onHand = numericField(r, [
+          ]) ?? 0;
+          const onHand = optionalNumericField(r, [
             "OnHand",
             "On Hand",
             "StockOnHand",
             "QuantityOnHand",
             "OnHandQuantity",
+            "Level",
           ]);
-          const quantity = stockLevel || onHand;
-          if (location) out.push({ location, quantity, stockLevel, allocated, onHand });
+          const quantity = stockLevel || onHand || 0;
+          if (location) {
+            out.push({
+              location,
+              quantity,
+              stockLevel,
+              allocated,
+              onHand: onHand ?? stockLevel,
+              locationId: Number.isFinite(locationId) ? locationId : undefined,
+              warehouseId: Number.isFinite(warehouseId) ? warehouseId : undefined,
+            });
+          }
         }
         if (out.length > 0) return out;
       }
@@ -973,20 +1018,21 @@ export async function fetchOrderAllocations(
   for (const r of arr as Array<Record<string, unknown>>) {
     const locationId = Number(r.LocationId ?? r.LocationID);
     const warehouseId = Number(r.WarehouseId ?? r.WarehouseID);
+    const directLocationName =
+      (typeof r.SimpleLocationName === "string" && r.SimpleLocationName) ||
+      (typeof r.LocationName === "string" && r.LocationName) ||
+      (typeof r.Location === "string" && r.Location) ||
+      (typeof r.BinLocation === "string" && r.BinLocation) ||
+      (typeof r.LocationCode === "string" && r.LocationCode) ||
+      (typeof r.Code === "string" && r.Code) ||
+      undefined;
     out.push({
       orderItemId: Number(r.OrderItemId ?? r.OrderItemID) || undefined,
       productId: Number(r.ProductId ?? r.ProductID) || undefined,
       sku: typeof r.SKU === "string" ? r.SKU : undefined,
       quantity: Number(r.Quantity ?? 0),
       locationId: Number.isFinite(locationId) ? locationId : undefined,
-      locationName:
-        (typeof r.SimpleLocationName === "string" && r.SimpleLocationName) ||
-        (typeof r.LocationName === "string" && r.LocationName) ||
-        (typeof r.Location === "string" && r.Location) ||
-        (typeof r.BinLocation === "string" && r.BinLocation) ||
-        (typeof r.LocationCode === "string" && r.LocationCode) ||
-        (typeof r.Code === "string" && r.Code) ||
-        undefined,
+      locationName: directLocationName || (await resolveLocationName(settings, locationId, warehouseId)) || undefined,
       warehouseId: Number.isFinite(warehouseId) ? warehouseId : undefined,
       warehouseName: typeof r.WarehouseName === "string" ? r.WarehouseName : undefined,
       bestBefore: typeof r.BestBefore === "string" ? r.BestBefore : undefined,
@@ -1070,6 +1116,7 @@ export type ProductOrderAllocation = {
   orderNumber?: string;
   customerName?: string;
   location?: string;
+  locationId?: number;
   quantity: number;
 };
 
@@ -1108,6 +1155,7 @@ export async function fetchProductOpenOrderAllocations(
             orderNumber: o.OrderNumber,
             customerName: o.CustomerName,
             location: a.locationName,
+            locationId: a.locationId,
             quantity: a.quantity,
           });
         }
