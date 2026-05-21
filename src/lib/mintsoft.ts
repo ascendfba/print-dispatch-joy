@@ -1107,8 +1107,15 @@ export async function fetchOrderAllocations(
       locationName: directLocationName || resolvedLocationName || undefined,
       warehouseId: Number.isFinite(warehouseId) ? warehouseId : undefined,
       warehouseName: typeof r.WarehouseName === "string" ? r.WarehouseName : undefined,
-      bestBefore: typeof r.BestBefore === "string" ? r.BestBefore : undefined,
-      batchNo: typeof r.BatchNo === "string" ? r.BatchNo : undefined,
+      bestBefore: optionalStringField(r, [
+        "BestBeforeDate",
+        "BestBefore",
+        "ExpiryDate",
+        "ExpirationDate",
+        "Expires",
+        "BBE",
+      ]),
+      batchNo: optionalStringField(r, ["BatchNo", "BatchNumber", "Batch"]),
     });
   }
   return out;
