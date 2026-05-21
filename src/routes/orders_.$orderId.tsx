@@ -2378,14 +2378,51 @@ function PackingListDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            Enter Packing List
+            {step === "edit" ? "Enter Packing List" : "Upload Packing List PDF"}
           </DialogTitle>
           <DialogDescription>
-            Drag SKUs from the left into a box. Each drop adds qty 1 — edit the
-            qty as needed.
+            {step === "edit"
+              ? "Drag SKUs from the left into a box. Each drop adds qty 1 — edit the qty as needed."
+              : "Upload the signed packing list PDF. It will be attached to the order documents in Mintsoft as \"Packing List\"."}
           </DialogDescription>
         </DialogHeader>
 
+        {step === "upload" ? (
+          <div className="space-y-4 py-2">
+            <div className="rounded-md border border-emerald-500/40 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800">
+              Packing list saved to order ✓ — now upload the signed PDF.
+            </div>
+            <div>
+              <Label className="text-sm">Packing list PDF</Label>
+              <Input
+                type="file"
+                accept="application/pdf,.pdf"
+                onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
+                className="mt-1"
+              />
+              {uploadFile && (
+                <div className="mt-2 text-xs text-muted-foreground">
+                  Selected: <span className="font-mono">{uploadFile.name}</span> (
+                  {(uploadFile.size / 1024).toFixed(1)} KB)
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={uploading}
+              >
+                Skip
+              </Button>
+              <Button onClick={handleUpload} disabled={uploading || !uploadFile}>
+                {uploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Upload to Mintsoft
+              </Button>
+            </div>
+          </div>
+        ) : (
+        <>
         {(() => {
           const totalOrdered = orderSkus.reduce((s, x) => s + x.qty, 0);
           const totalPlaced = orderSkus.reduce(
@@ -2668,6 +2705,8 @@ function PackingListDialog({
           </div>
         </div>
         </div>
+        </>
+        )}
       </DialogContent>
     </Dialog>
   );
