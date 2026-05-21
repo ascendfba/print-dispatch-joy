@@ -30,6 +30,13 @@ import {
 import { loadSettings } from "@/lib/storage";
 import { MultiSelect } from "@/components/MultiSelect";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Pagination,
   PaginationContent,
   PaginationItem,
