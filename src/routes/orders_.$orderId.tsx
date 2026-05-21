@@ -19,6 +19,9 @@ import {
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { PdfPreview } from "@/components/PdfPreview";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -56,7 +59,7 @@ import { scanLabelPdf, buildSkuBarcodeMap } from "@/lib/labelScan";
 import { pickPrinter, printPdfBytes } from "@/lib/printing";
 import { loadSettings } from "@/lib/storage";
 import { REWORK_CATALOG, getRate, formatGBP } from "@/lib/rework";
-import { ArrowLeft, ArrowRight, Check, Eye, FileText, Flag, ImageOff, Loader2, MapPin, Minus, Printer, AlertTriangle, ListChecks, Plus, Weight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Eye, FileText, Flag, ImageOff, Loader2, MapPin, Minus, Package, Printer, AlertTriangle, ListChecks, Plus, Weight } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -278,6 +281,7 @@ function OrderDetailPage() {
   const [labelsPrinted, setLabelsPrinted] = useState(false);
   const [despatched, setDespatched] = useState(false);
   const [overweightOpen, setOverweightOpen] = useState(false);
+  const [packingOpen, setPackingOpen] = useState(false);
 
   // Load order summary from the cached open-orders list (avoids an extra fetch).
   const ordersQuery = useQuery({
@@ -905,6 +909,27 @@ function OrderDetailPage() {
             submitted={chargesSubmitted}
             attention={!chargesSubmitted}
           />
+          {(() => {
+            const courier =
+              (order as { CourierServiceName?: string } | undefined)?.CourierServiceName ?? "";
+            const required = /packing list required/i.test(courier);
+            return (
+              <Button
+                className={`w-full ${required ? "border-amber-500 bg-amber-50 text-amber-900 hover:bg-amber-100" : ""}`}
+                variant="outline"
+                onClick={() => setPackingOpen(true)}
+                disabled={!order}
+              >
+                <Package className="mr-2 h-4 w-4" />
+                Enter Packing List
+                {required && (
+                  <span className="ml-2 rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900">
+                    Required
+                  </span>
+                )}
+              </Button>
+            );
+          })()}
           <Button
             className={`w-full ${chargesSubmitted && !labelsPrinted ? "animate-attention" : ""}`}
             variant="outline"
@@ -959,6 +984,15 @@ function OrderDetailPage() {
       <OverweightDialog
         open={overweightOpen}
         onOpenChange={setOverweightOpen}
+        items={itemsQuery.data ?? []}
+        products={productsQuery.data}
+        orderId={id}
+        orderNumber={orderReference}
+      />
+
+      <PackingListDialog
+        open={packingOpen}
+        onOpenChange={setPackingOpen}
         items={itemsQuery.data ?? []}
         products={productsQuery.data}
         orderId={id}
@@ -2045,5 +2079,195 @@ function WeightEstimateFooter({
         Overweight
       </Button>
     </div>
+  );
+}
+
+type PackingBox = {
+  weight: string;
+  length: string;
+  width: string;
+  height: string;
+  contents: string;
+};
+
+function makeEmptyBox(): PackingBox {
+  return { weight: "", length: "", width: "", height: "", contents: "" };
+}
+
+function PackingListDialog({
+  open,
+  onOpenChange,
+  items,
+  products,
+  orderId,
+  orderNumber,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  items: MintsoftOrderItem[];
+  products: Map<number, MintsoftProduct | null> | undefined;
+  orderId: number;
+  orderNumber: string | null;
+}) {
+  const [boxCount, setBoxCount] = useState(1);
+  const [boxes, setBoxes] = useState<PackingBox[]>([makeEmptyBox()]);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Default contents for box 1 = full order SKU list.
+  const defaultContents = useMemo(() => {
+    return items
+      .map((it) => {
+        const sku = it.SKU ?? products?.get(it.ProductId)?.SKU ?? `#${it.ProductId}`;
+        return `${sku} x ${it.Quantity}`;
+      })
+      .join("\n");
+  }, [items, products]);
+
+  useEffect(() => {
+    if (!open) return;
+    setBoxCount(1);
+    setBoxes([{ ...makeEmptyBox(), contents: defaultContents }]);
+    setSubmitting(false);
+  }, [open, defaultContents]);
+
+  const applyBoxCount = (n: number) => {
+    const next = Math.max(1, Math.min(50, Math.floor(n || 1)));
+    setBoxCount(next);
+    setBoxes((prev) => {
+      const out = prev.slice(0, next);
+      while (out.length < next) out.push(makeEmptyBox());
+      return out;
+    });
+  };
+
+  const updateBox = (idx: number, patch: Partial<PackingBox>) => {
+    setBoxes((prev) => prev.map((b, i) => (i === idx ? { ...b, ...patch } : b)));
+  };
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      const ref = orderNumber ?? `#${orderId}`;
+      const lines: string[] = [`Packing list for ${ref} — ${boxes.length} box(es):`];
+      boxes.forEach((b, i) => {
+        const dims =
+          b.length || b.width || b.height
+            ? `${b.length || "?"}×${b.width || "?"}×${b.height || "?"} cm`
+            : "no dims";
+        lines.push(
+          `Box ${i + 1}: ${b.weight || "?"} kg, ${dims}` +
+            (b.contents.trim() ? `\n  ${b.contents.trim().replace(/\n/g, "\n  ")}` : ""),
+        );
+      });
+      const comment = lines.join("\n");
+      await addOrderComment(loadSettings(), orderId, comment, true);
+      toast.success("Packing list saved to order");
+      onOpenChange(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save packing list");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Enter Packing List
+          </DialogTitle>
+          <DialogDescription>
+            Record the number of boxes, weight, dimensions, and contents for this
+            shipment.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <Label htmlFor="box-count" className="text-sm">
+              Number of boxes
+            </Label>
+            <Input
+              id="box-count"
+              type="number"
+              min={1}
+              max={50}
+              value={boxCount}
+              onChange={(e) => applyBoxCount(Number(e.target.value))}
+              className="w-24"
+            />
+          </div>
+
+          <div className="space-y-4">
+            {boxes.map((b, i) => (
+              <div key={i} className="rounded-md border p-3 space-y-3 bg-muted/20">
+                <div className="text-sm font-semibold">Box {i + 1}</div>
+                <div className="grid grid-cols-4 gap-2">
+                  <div>
+                    <Label className="text-xs">Weight (kg)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min={0}
+                      value={b.weight}
+                      onChange={(e) => updateBox(i, { weight: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">L (cm)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={b.length}
+                      onChange={(e) => updateBox(i, { length: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">W (cm)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={b.width}
+                      onChange={(e) => updateBox(i, { width: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">H (cm)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={b.height}
+                      onChange={(e) => updateBox(i, { height: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs">Contents (one SKU × qty per line)</Label>
+                  <Textarea
+                    rows={Math.max(3, Math.min(8, b.contents.split("\n").length))}
+                    value={b.contents}
+                    onChange={(e) => updateBox(i, { contents: e.target.value })}
+                    placeholder="SKU-123 x 2"
+                    className="font-mono text-xs"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} disabled={submitting}>
+              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save packing list
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
