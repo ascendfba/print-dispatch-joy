@@ -2745,6 +2745,7 @@ function PackingListDialog({
           <div className="flex justify-between gap-2 pt-2">
             <Button
               variant="outline"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
               onClick={() => {
                 setBoxCount(1);
                 setBoxes([makeEmptyBox()]);
