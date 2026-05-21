@@ -632,14 +632,14 @@ async function resolveLocationName(
   if (Number.isFinite(warehouseId)) {
     const locations = await listWarehouseLocations(settings, warehouseId);
     const listedLocation = locations.find((location) => location.id === locationId);
-    const listedName = firstUsableLocationName(listedLocation?.code, listedLocation?.name);
+    const listedName = firstUsableLocationName(listedLocation?.name, listedLocation?.code);
     if (listedName) {
       locationNameCache.set(locationId, listedName);
       return listedName;
     }
 
     const location = await fetchWarehouseLocation(settings, warehouseId, locationId);
-    const locationName = firstUsableLocationName(location?.code, location?.name);
+    const locationName = firstUsableLocationName(location?.name, location?.code);
     if (locationName) {
       locationNameCache.set(locationId, locationName);
       return locationName;
@@ -651,14 +651,14 @@ async function resolveLocationName(
     for (const w of warehouses) {
       const locations = await listWarehouseLocations(settings, w.id);
       const listedLocation = locations.find((location) => location.id === locationId);
-      const listedName = firstUsableLocationName(listedLocation?.code, listedLocation?.name);
+      const listedName = firstUsableLocationName(listedLocation?.name, listedLocation?.code);
       if (listedName) {
         locationNameCache.set(locationId, listedName);
         return listedName;
       }
 
       const location = await fetchWarehouseLocation(settings, w.id, locationId);
-      const locationName = firstUsableLocationName(location?.code, location?.name);
+      const locationName = firstUsableLocationName(location?.name, location?.code);
       if (locationName) {
         locationNameCache.set(locationId, locationName);
         return locationName;
@@ -779,22 +779,22 @@ export async function fetchProductStockLocations(
             r.LocationId ?? r.LocationID ?? r.Location_Id ?? r.WarehouseLocationId,
           );
           const warehouseId = Number(r.WarehouseId ?? r.WarehouseID ?? r.Warehouse_Id);
-          // Prefer bin-code style fields (e.g. "A-A19-B87-S3-P01"). Avoid
-          // generic `Location` / `LocationName` which Mintsoft often uses
-          // for the warehouse name rather than the bin.
-          const directBin = locationStringField(r, [
+          const directLocationName = locationStringField(r, [
+            "LocationName",
+            "locationName",
+            "locationname",
+            "WarehouseLocationName",
+            "WarehouseLocation",
             "SimpleLocationName",
             "simpleLocationName",
             "simplelocationname",
-            "WarehouseLocationName",
-            "WarehouseLocation",
             "BinLocation",
             "LocationCode",
             "Bin",
           ]);
           const resolved = await resolveLocationName(settings, locationId, warehouseId);
-          const location = directBin || resolved || "";
-          if (!directBin && (!Number.isFinite(locationId) || locationId === 0)) continue;
+          const location = directLocationName || resolved || "";
+          if (!directLocationName && (!Number.isFinite(locationId) || locationId === 0)) continue;
           const batchNumber = optionalStringField(r, ["BatchNumber", "BatchNo", "Batch"]);
           const bestBeforeDate = optionalStringField(r, [
             "BestBeforeDate",
@@ -1112,8 +1112,8 @@ export async function listWarehouseLocations(
         const id = Number(r.ID ?? r.Id ?? r.LocationId ?? r.LocationID ?? r.WarehouseLocationId);
         const name =
           firstUsableLocationName(
-            typeof r.SimpleLocationName === "string" ? r.SimpleLocationName : undefined,
             typeof r.LocationName === "string" ? r.LocationName : undefined,
+            typeof r.SimpleLocationName === "string" ? r.SimpleLocationName : undefined,
             typeof r.Name === "string" ? r.Name : undefined,
             typeof r.Location === "string" ? r.Location : undefined,
             typeof r.BinLocation === "string" ? r.BinLocation : undefined,
@@ -1147,8 +1147,8 @@ export async function fetchWarehouseLocation(
     const id = Number(r.ID ?? r.Id ?? r.LocationId ?? r.LocationID ?? r.WarehouseLocationId);
     const name =
       firstUsableLocationName(
-        typeof r.SimpleLocationName === "string" ? r.SimpleLocationName : undefined,
         typeof r.LocationName === "string" ? r.LocationName : undefined,
+        typeof r.SimpleLocationName === "string" ? r.SimpleLocationName : undefined,
         typeof r.Name === "string" ? r.Name : undefined,
         typeof r.Location === "string" ? r.Location : undefined,
         typeof r.BinLocation === "string" ? r.BinLocation : undefined,
