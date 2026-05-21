@@ -65,7 +65,14 @@ function ExpandedDetails({
   const rows = useMemo(() => {
     const map = new Map<
       string,
-      { label: string; stockLevel: number; allocated: number; onHand: number; orders: ProductOrderAllocation[] }
+      {
+        label: string;
+        stockLevel: number;
+        allocated: number;
+        onHand: number;
+        batches: Array<{ batchNumber?: string; bestBeforeDate?: string; quantity: number }>;
+        orders: ProductOrderAllocation[];
+      }
     >();
     for (const l of locState?.data ?? []) {
       const key = l.locationId ? `id:${l.locationId}` : normalize(l.location) || "unassigned";
@@ -80,7 +87,16 @@ function ExpandedDetails({
           stockLevel: l.stockLevel ?? l.quantity ?? 0,
           allocated: l.allocated ?? 0,
           onHand: l.onHand ?? l.quantity ?? l.stockLevel ?? 0,
+          batches: [],
           orders: [],
+        });
+      }
+      const row = map.get(key);
+      if (row && (l.batchNumber || l.bestBeforeDate)) {
+        row.batches.push({
+          batchNumber: l.batchNumber,
+          bestBeforeDate: l.bestBeforeDate,
+          quantity: l.quantity ?? l.stockLevel ?? l.onHand ?? 0,
         });
       }
     }
@@ -88,7 +104,7 @@ function ExpandedDetails({
       const key = a.locationId ? `id:${a.locationId}` : normalize(a.location) || "unassigned";
       let row = map.get(key);
       if (!row) {
-        row = { label: a.location || "Unassigned", stockLevel: 0, allocated: 0, onHand: 0, orders: [] };
+        row = { label: a.location || "Unassigned", stockLevel: 0, allocated: 0, onHand: 0, batches: [], orders: [] };
         map.set(key, row);
       }
       row.orders.push(a);
