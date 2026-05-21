@@ -71,11 +71,15 @@ export const Route = createFileRoute("/stock")({
 });
 
 function ExpandedDetails({
+  productId,
   locState,
   allocState,
+  onTransferred,
 }: {
+  productId: number;
   locState?: { loading: boolean; data?: StockLocation[]; error?: string };
   allocState?: { loading: boolean; data?: ProductOrderAllocation[]; error?: string };
+  onTransferred?: () => void;
 }) {
   const normalize = (s?: string) => (s || "").trim().toLowerCase();
 
@@ -84,6 +88,7 @@ function ExpandedDetails({
       string,
       {
         label: string;
+        warehouseName?: string;
         stockLevel: number;
         allocated: number;
         onHand: number;
@@ -98,10 +103,12 @@ function ExpandedDetails({
         existing.stockLevel += l.stockLevel ?? l.quantity ?? 0;
         existing.allocated += l.allocated ?? 0;
         existing.onHand += l.onHand ?? l.quantity ?? l.stockLevel ?? 0;
+        if (!existing.warehouseName && l.warehouseName) existing.warehouseName = l.warehouseName;
       } else {
         map.set(key, {
           label:
             l.location || (l.locationId ? `Location #${l.locationId}` : "Location unavailable"),
+          warehouseName: l.warehouseName,
           stockLevel: l.stockLevel ?? l.quantity ?? 0,
           allocated: l.allocated ?? 0,
           onHand: l.onHand ?? l.quantity ?? l.stockLevel ?? 0,
@@ -140,6 +147,49 @@ function ExpandedDetails({
 
   const loading = locState?.loading || allocState?.loading;
 
+  const [transfer, setTransfer] = useState<{
+    fromLocation: string;
+    warehouseName?: string;
+    maxQty: number;
+    toLocation: string;
+    quantity: string;
+    submitting: boolean;
+  } | null>(null);
+
+  const submitTransfer = async () => {
+    if (!transfer) return;
+    const qty = Number(transfer.quantity);
+    const dest = transfer.toLocation.trim();
+    if (!dest) {
+      toast.error("Enter a destination location");
+      return;
+    }
+    if (!Number.isFinite(qty) || qty <= 0) {
+      toast.error("Enter a valid quantity");
+      return;
+    }
+    if (qty > transfer.maxQty) {
+      toast.error(`Only ${transfer.maxQty} units available at ${transfer.fromLocation}`);
+      return;
+    }
+    setTransfer({ ...transfer, submitting: true });
+    try {
+      await transferStockLocation(loadSettings(), {
+        productId,
+        warehouseName: transfer.warehouseName,
+        fromLocationName: transfer.fromLocation,
+        toLocationName: dest,
+        quantity: qty,
+      });
+      toast.success(`Moved ${qty} × from ${transfer.fromLocation} to ${dest}`);
+      setTransfer(null);
+      onTransferred?.();
+    } catch (e) {
+      toast.error((e as Error).message);
+      setTransfer((t) => (t ? { ...t, submitting: false } : t));
+    }
+  };
+
   return (
     <div className="py-2">
       {locState?.error ? (
@@ -174,7 +224,24 @@ function ExpandedDetails({
                 className="border-b border-border px-3 py-2 last:border-b-0"
               >
                 <div className="grid grid-cols-[minmax(160px,1fr)_110px_110px_110px] gap-3 items-center">
-                  <span className="font-mono font-medium">{row.label}</span>
+                  <button
+                    type="button"
+                    className="group inline-flex items-center gap-1.5 text-left font-mono font-medium hover:text-primary"
+                    onClick={() =>
+                      setTransfer({
+                        fromLocation: row.label,
+                        warehouseName: row.warehouseName,
+                        maxQty: row.onHand || row.stockLevel || 0,
+                        toLocation: "",
+                        quantity: String(row.onHand || row.stockLevel || 0),
+                        submitting: false,
+                      })
+                    }
+                    title="Move stock to another location"
+                  >
+                    {row.label}
+                    <Pencil className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-60" />
+                  </button>
                   <span className="text-right font-mono">{row.stockLevel}</span>
                   <span className="text-right font-mono text-amber-600 dark:text-amber-400">
                     {allocatedQty}
@@ -225,6 +292,60 @@ function ExpandedDetails({
           Still loading…
         </div>
       )}
+      <Dialog open={transfer !== null} onOpenChange={(o) => !o && setTransfer(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Move stock</DialogTitle>
+            <DialogDescription>
+              Transfer inventory from{" "}
+              <span className="font-mono font-medium">{transfer?.fromLocation}</span> to another
+              location in Mintsoft.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1">
+              <Label htmlFor="dest-location">New location</Label>
+              <Input
+                id="dest-location"
+                value={transfer?.toLocation ?? ""}
+                onChange={(e) =>
+                  setTransfer((t) => (t ? { ...t, toLocation: e.target.value } : t))
+                }
+                placeholder="e.g. B11-S2-PB6"
+                autoFocus
+                disabled={transfer?.submitting}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="dest-qty">Quantity (max {transfer?.maxQty ?? 0})</Label>
+              <Input
+                id="dest-qty"
+                type="number"
+                min={1}
+                max={transfer?.maxQty ?? 1}
+                value={transfer?.quantity ?? ""}
+                onChange={(e) =>
+                  setTransfer((t) => (t ? { ...t, quantity: e.target.value } : t))
+                }
+                disabled={transfer?.submitting}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setTransfer(null)}
+              disabled={transfer?.submitting}
+            >
+              Cancel
+            </Button>
+            <Button onClick={submitTransfer} disabled={transfer?.submitting}>
+              {transfer?.submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Move stock
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
