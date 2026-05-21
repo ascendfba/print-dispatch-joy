@@ -602,7 +602,10 @@ export async function fetchProductStock(
             (typeof r.BinLocation === "string" && r.BinLocation) ||
             (typeof r.Bin === "string" && r.Bin) ||
             "";
-          const quantity = Number(r.Quantity ?? r.Qty ?? r.StockLevel ?? r.Available ?? 0);
+          const stockLevel = numericField(r, ["StockLevel", "Stock Level", "Quantity", "Qty", "Available"]);
+          const allocated = numericField(r, ["Allocated", "StockAllocated", "QuantityAllocated", "AllocatedQuantity"]);
+          const onHand = numericField(r, ["OnHand", "On Hand", "StockOnHand", "QuantityOnHand", "OnHandQuantity"]);
+          const quantity = stockLevel || onHand;
           const warehouseId = Number(r.WarehouseId ?? r.WarehouseID ?? r.Warehouse_Id);
           const locationId = Number(r.LocationId ?? r.LocationID ?? r.Location_Id);
           const warehouseName =
@@ -620,7 +623,10 @@ export async function fetchProductStock(
             undefined;
           out.push({
             location,
-            quantity: Number.isFinite(quantity) ? quantity : 0,
+            quantity,
+            stockLevel,
+            allocated,
+            onHand,
             warehouseId: Number.isFinite(warehouseId) ? warehouseId : undefined,
             locationId: Number.isFinite(locationId) ? locationId : undefined,
             warehouseName,
