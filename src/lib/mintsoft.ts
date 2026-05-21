@@ -754,8 +754,7 @@ async function fetchProductBookedInLocations(
       for (const detail of sources) {
         const source = { ...row, ...detail };
         const rawQty =
-          optionalNumericField(source, ["Quantity", "Qty", "BookedInQuantity", "ReceivedQty"]) ??
-          0;
+          optionalNumericField(source, ["Quantity", "Qty", "BookedInQuantity", "ReceivedQty"]) ?? 0;
         const movementText = [
           source.Type,
           source.Action,
@@ -843,7 +842,9 @@ async function fetchProductBookedInLocations(
     const byLocation = new Map<string, StockLocation>();
     for (const candidate of candidates) {
       if (remaining <= 0) break;
-      const qty = Number.isFinite(limit) ? Math.min(candidate.quantity, remaining) : candidate.quantity;
+      const qty = Number.isFinite(limit)
+        ? Math.min(candidate.quantity, remaining)
+        : candidate.quantity;
       if (qty <= 0) continue;
       remaining -= qty;
       const key = candidate.locationId ? `id:${candidate.locationId}` : candidate.location;
