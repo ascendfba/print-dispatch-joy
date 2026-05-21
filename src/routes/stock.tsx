@@ -665,7 +665,28 @@ function StockPage() {
                         {isOpen && (
                           <TableRow className="bg-muted/30 hover:bg-muted/30">
                             <TableCell colSpan={6}>
-                              <ExpandedDetails locState={locState} allocState={orderAllocs[p.id]} />
+                              <ExpandedDetails
+                                productId={p.id}
+                                locState={locState}
+                                allocState={orderAllocs[p.id]}
+                                onTransferred={() => {
+                                  // Refetch this product's locations after a transfer.
+                                  setLocations((s) => ({ ...s, [p.id]: { loading: true } }));
+                                  fetchProductStockLocations(loadSettings(), p.id)
+                                    .then((data) =>
+                                      setLocations((s) => ({
+                                        ...s,
+                                        [p.id]: { loading: false, data },
+                                      })),
+                                    )
+                                    .catch((e) =>
+                                      setLocations((s) => ({
+                                        ...s,
+                                        [p.id]: { loading: false, error: (e as Error).message },
+                                      })),
+                                    );
+                                }}
+                              />
                             </TableCell>
                           </TableRow>
                         )}
