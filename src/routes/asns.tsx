@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { MultiSelect } from "@/components/MultiSelect";
 import {
   Select,
   SelectContent,
