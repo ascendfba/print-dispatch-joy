@@ -20,7 +20,9 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChevronDown, ChevronRight, Loader2, Package, RefreshCw } from "lucide-react";
 import {
   fetchProductStockLocations,
+  fetchProductOpenOrderAllocations,
   type StockLocation,
+  type ProductOrderAllocation,
 } from "@/lib/mintsoft";
 import {
   getCachedClients,
@@ -67,6 +69,9 @@ function StockPage() {
   const [locations, setLocations] = useState<
     Record<number, { loading: boolean; data?: StockLocation[]; error?: string }>
   >({});
+  const [orderAllocs, setOrderAllocs] = useState<
+    Record<number, { loading: boolean; data?: ProductOrderAllocation[]; error?: string }>
+  >({});
 
   const toggleRow = async (productId: number) => {
     if (expandedId === productId) {
@@ -74,17 +79,32 @@ function StockPage() {
       return;
     }
     setExpandedId(productId);
-    if (locations[productId]?.data || locations[productId]?.loading) return;
-    setLocations((s) => ({ ...s, [productId]: { loading: true } }));
-    try {
-      const settings = loadSettings();
-      const data = await fetchProductStockLocations(settings, productId);
-      setLocations((s) => ({ ...s, [productId]: { loading: false, data } }));
-    } catch (e) {
-      setLocations((s) => ({
-        ...s,
-        [productId]: { loading: false, error: (e as Error).message },
-      }));
+    const settings = loadSettings();
+    if (!locations[productId]?.data && !locations[productId]?.loading) {
+      setLocations((s) => ({ ...s, [productId]: { loading: true } }));
+      fetchProductStockLocations(settings, productId)
+        .then((data) =>
+          setLocations((s) => ({ ...s, [productId]: { loading: false, data } })),
+        )
+        .catch((e) =>
+          setLocations((s) => ({
+            ...s,
+            [productId]: { loading: false, error: (e as Error).message },
+          })),
+        );
+    }
+    if (!orderAllocs[productId]?.data && !orderAllocs[productId]?.loading) {
+      setOrderAllocs((s) => ({ ...s, [productId]: { loading: true } }));
+      fetchProductOpenOrderAllocations(settings, productId)
+        .then((data) =>
+          setOrderAllocs((s) => ({ ...s, [productId]: { loading: false, data } })),
+        )
+        .catch((e) =>
+          setOrderAllocs((s) => ({
+            ...s,
+            [productId]: { loading: false, error: (e as Error).message },
+          })),
+        );
     }
   };
 
