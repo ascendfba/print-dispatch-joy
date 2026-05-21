@@ -60,101 +60,102 @@ function ExpandedDetails({
   locState?: { loading: boolean; data?: StockLocation[]; error?: string };
   allocState?: { loading: boolean; data?: ProductOrderAllocation[]; error?: string };
 }) {
-  const allocsByLocation = useMemo(() => {
-    const map = new Map<string, ProductOrderAllocation[]>();
-    for (const a of allocState?.data ?? []) {
-      const key = a.location || "Unassigned";
-      const arr = map.get(key) ?? [];
-      arr.push(a);
-      map.set(key, arr);
+  const normalize = (s?: string) => (s || "").trim().toLowerCase();
+
+  const rows = useMemo(() => {
+    const map = new Map<
+      string,
+      { label: string; onHand: number; orders: ProductOrderAllocation[] }
+    >();
+    for (const l of locState?.data ?? []) {
+      const key = normalize(l.location) || "unassigned";
+      const existing = map.get(key);
+      if (existing) {
+        existing.onHand += l.quantity || 0;
+      } else {
+        map.set(key, { label: l.location || "Unassigned", onHand: l.quantity || 0, orders: [] });
+      }
     }
-    return map;
-  }, [allocState?.data]);
+    for (const a of allocState?.data ?? []) {
+      const key = normalize(a.location) || "unassigned";
+      let row = map.get(key);
+      if (!row) {
+        row = { label: a.location || "Unassigned", onHand: 0, orders: [] };
+        map.set(key, row);
+      }
+      row.orders.push(a);
+    }
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }, [locState?.data, allocState?.data]);
+
+  const loading = locState?.loading || allocState?.loading;
 
   return (
-    <div className="grid gap-6 py-2 md:grid-cols-2">
-      <div>
-        <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Stock locations
-        </div>
-        {locState?.loading ? (
+    <div className="py-2">
+      {locState?.error ? (
+        <div className="mb-2 text-sm text-destructive">{locState.error}</div>
+      ) : null}
+      {allocState?.error ? (
+        <div className="mb-2 text-sm text-destructive">{allocState.error}</div>
+      ) : null}
+      {rows.length === 0 ? (
+        loading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Loading…
+            Loading locations and allocations…
           </div>
-        ) : locState?.error ? (
-          <div className="text-sm text-destructive">{locState.error}</div>
-        ) : !locState?.data || locState.data.length === 0 ? (
+        ) : (
           <div className="text-sm text-muted-foreground">No stock locations found.</div>
-        ) : (
-          <ul className="space-y-2">
-            {locState.data.map((l, i) => {
-              const orders = allocsByLocation.get(l.location) ?? [];
-              return (
-                <li
-                  key={`${l.location}-${i}`}
-                  className="rounded border border-border bg-background px-3 py-2 text-sm"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono">{l.location}</span>
-                    <span className="text-muted-foreground">Qty: {l.quantity}</span>
-                  </div>
-                  {orders.length > 0 && (
-                    <ul className="mt-2 space-y-1 border-t border-border pt-2 text-xs">
-                      {orders.map((o, j) => (
-                        <li key={`${o.orderId}-${j}`} className="flex items-center justify-between">
-                          <span className="font-mono text-muted-foreground">
-                            {o.orderNumber || `#${o.orderId}`}
-                            {o.customerName ? ` · ${o.customerName}` : ""}
-                          </span>
-                          <span className="text-amber-600 dark:text-amber-400">×{o.quantity}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
-      <div>
-        <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Allocated to orders
-        </div>
-        {allocState?.loading ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Scanning open orders…
-          </div>
-        ) : allocState?.error ? (
-          <div className="text-sm text-destructive">{allocState.error}</div>
-        ) : !allocState?.data || allocState.data.length === 0 ? (
-          <div className="text-sm text-muted-foreground">
-            No open orders have this product allocated.
-          </div>
-        ) : (
-          <ul className="space-y-1">
-            {allocState.data.map((a, i) => (
+        )
+      ) : (
+        <ul className="space-y-2">
+          {rows.map((row, i) => {
+            const allocatedQty = row.orders.reduce((sum, o) => sum + (o.quantity || 0), 0);
+            return (
               <li
-                key={`${a.orderId}-${a.location}-${i}`}
-                className="flex items-center justify-between rounded border border-border bg-background px-3 py-1.5 text-sm"
+                key={`${row.label}-${i}`}
+                className="rounded border border-border bg-background px-3 py-2 text-sm"
               >
-                <span className="font-mono">
-                  {a.orderNumber || `#${a.orderId}`}
-                  {a.customerName ? (
-                    <span className="ml-2 text-muted-foreground">{a.customerName}</span>
-                  ) : null}
-                </span>
-                <span className="text-muted-foreground">
-                  {a.location ? <span className="mr-3 font-mono">{a.location}</span> : null}
-                  <span className="text-amber-600 dark:text-amber-400">×{a.quantity}</span>
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="font-mono font-medium">{row.label}</span>
+                  <span className="flex items-center gap-4 text-xs">
+                    <span className="text-emerald-600 dark:text-emerald-400">
+                      On hand: {row.onHand}
+                    </span>
+                    <span className="text-amber-600 dark:text-amber-400">
+                      Allocated: {allocatedQty}
+                    </span>
+                  </span>
+                </div>
+                {row.orders.length > 0 && (
+                  <ul className="mt-2 space-y-1 border-t border-border pt-2 text-xs">
+                    {row.orders.map((o, j) => (
+                      <li
+                        key={`${o.orderId}-${j}`}
+                        className="flex items-center justify-between"
+                      >
+                        <span className="font-mono text-muted-foreground">
+                          {o.orderNumber || `#${o.orderId}`}
+                          {o.customerName ? ` · ${o.customerName}` : ""}
+                        </span>
+                        <span className="text-amber-600 dark:text-amber-400">
+                          ×{o.quantity}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </li>
-            ))}
-          </ul>
-        )}
-      </div>
+            );
+          })}
+        </ul>
+      )}
+      {loading && rows.length > 0 && (
+        <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Still loading…
+        </div>
+      )}
     </div>
   );
 }
