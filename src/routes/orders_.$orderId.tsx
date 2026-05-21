@@ -2147,6 +2147,7 @@ function PackingListDialog({
   products,
   orderId,
   orderNumber,
+  onSaved,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -2154,6 +2155,7 @@ function PackingListDialog({
   products: Map<number, MintsoftProduct | null> | undefined;
   orderId: number;
   orderNumber: string | null;
+  onSaved?: (boxCount: number) => void;
 }) {
   const [boxCount, setBoxCount] = useState(1);
   const [boxes, setBoxes] = useState<PackingBox[]>([makeEmptyBox()]);
@@ -2333,6 +2335,7 @@ function PackingListDialog({
       const comment = lines.join("\n");
       await addOrderComment(loadSettings(), orderId, comment, true);
       toast.success("Packing list saved to order");
+      onSaved?.(boxes.length);
       onOpenChange(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save packing list");
