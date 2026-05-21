@@ -714,15 +714,19 @@ export async function fetchProductStockLocations(
           // Prefer bin-code style fields (e.g. "A-A19-B87-S3-P01"). Avoid
           // generic `Location` / `LocationName` which Mintsoft often uses
           // for the warehouse name rather than the bin.
-          const directBin = optionalStringField(r, [
-            "SimpleLocationName",
-            "simpleLocationName",
-            "simplelocationname",
-            "BinLocation",
-            "LocationCode",
-            "Bin",
-            "Code",
-          ]);
+          const directBin = notSkuValue(
+            optionalStringField(r, [
+              "SimpleLocationName",
+              "simpleLocationName",
+              "simplelocationname",
+              "WarehouseLocationName",
+              "WarehouseLocation",
+              "BinLocation",
+              "LocationCode",
+              "Bin",
+            ]),
+            r,
+          );
           const resolved = await resolveLocationName(settings, locationId, warehouseId);
           const location = directBin || resolved || "";
           const batchNumber = optionalStringField(r, ["BatchNumber", "BatchNo", "Batch"]);
