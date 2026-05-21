@@ -1038,14 +1038,24 @@ function BookInCard({
                     {showBbfColumn ? (
                       <TableCell>
                         {requiresBbf ? (
-                          <Input
-                            type="date"
-                            required
-                            value={state.bbf}
-                            onChange={(e) =>
-                              updateRow(key, { bbf: e.target.value })
-                            }
-                          />
+                          <div className="flex flex-col gap-1">
+                            <Input
+                              type="text"
+                              inputMode="numeric"
+                              required
+                              placeholder="DDMMYY"
+                              maxLength={10}
+                              value={state.bbf}
+                              onChange={(e) =>
+                                updateRow(key, { bbf: e.target.value })
+                              }
+                            />
+                            {state.bbf ? (
+                              <span className="text-[10px] text-muted-foreground">
+                                {normaliseBbf(state.bbf) || "Invalid date"}
+                              </span>
+                            ) : null}
+                          </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">
                             —
