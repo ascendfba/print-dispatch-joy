@@ -165,9 +165,8 @@ function AsnsPage() {
           .some((v) => String(v).toLowerCase().includes(q)),
       );
     }
-    if (clientFilter && clientFilter !== "all") {
-      const cid = Number(clientFilter);
-      list = list.filter((a) => a.ClientId === cid);
+    if (clientFilter.length > 0) {
+      list = list.filter((a) => clientFilter.includes(String(a.ClientId ?? 0)));
     }
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
