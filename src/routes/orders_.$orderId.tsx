@@ -2415,7 +2415,7 @@ function PackingListDialog({
         contentType: "application/pdf",
         bytes: pdfBytes,
         label: "Packing List",
-        documentTypeName: "Box Packing List",
+        documentTypeName: "boxpackinglist",
       });
       const blob = new Blob([pdfBytes as BlobPart], { type: "application/pdf" });
       setPdfPreview((prev) => {
