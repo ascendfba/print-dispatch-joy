@@ -112,6 +112,17 @@ function StockPage() {
 
   const rows = useMemo(() => {
     let items = productsQuery.data ?? [];
+    if (inStockOnly && stockTotalsQuery.data) {
+      const productById = new Map(items.map((p) => [p.ID, p]));
+      items = Array.from(stockTotalsQuery.data.entries())
+        .filter(([, t]) => t.stockLevel > 0 || t.allocated > 0 || t.onHand > 0)
+        .map(([id, t]) => ({
+          ...(productById.get(id) ?? { ID: id }),
+          SKU: productById.get(id)?.SKU ?? t.sku,
+          ClientId: productById.get(id)?.ClientId ?? t.clientId,
+          ClientID: productById.get(id)?.ClientID ?? t.clientId,
+        }));
+    }
     const q = filter.trim().toLowerCase();
     if (q) {
       items = items.filter((p) => {
@@ -130,7 +141,7 @@ function StockPage() {
       const cid = Number(clientFilter);
       items = items.filter((p) => (p.ClientId ?? p.ClientID ?? 0) === cid);
     }
-    if (inStockOnly) {
+    if (inStockOnly && !stockTotalsQuery.data) {
       const totals = stockTotalsQuery.data;
       if (totals) {
         items = items.filter((p) => {
