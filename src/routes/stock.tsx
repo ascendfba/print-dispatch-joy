@@ -136,14 +136,11 @@ function StockPage() {
         items = items.filter((p) => {
           const t = totals.get(p.ID);
           const stockLevel =
-            t?.stockLevel ??
-            Number(p.StockLevel ?? p["Stock Level"] ?? p.StockAvailable ?? 0);
+            t?.stockLevel ?? Number(p.StockLevel ?? p["Stock Level"] ?? p.StockAvailable ?? 0);
           const allocated =
-            t?.allocated ??
-            Number(p.Allocated ?? p.StockAllocated ?? p.QuantityAllocated ?? 0);
+            t?.allocated ?? Number(p.Allocated ?? p.StockAllocated ?? p.QuantityAllocated ?? 0);
           const onHand =
-            t?.onHand ??
-            Number(p.OnHand ?? p["On Hand"] ?? p.StockOnHand ?? p.QuantityOnHand ?? 0);
+            t?.onHand ?? Number(p.OnHand ?? p["On Hand"] ?? p.StockOnHand ?? p.QuantityOnHand ?? 0);
           return stockLevel > 0 || allocated > 0 || onHand > 0;
         });
       }
@@ -163,17 +160,11 @@ function StockPage() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Stock</h1>
-          <p className="text-sm text-muted-foreground">
-            All SKUs from Mintsoft.
-          </p>
+          <p className="text-sm text-muted-foreground">All SKUs from Mintsoft.</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <Switch
-              id="in-stock-toggle"
-              checked={inStockOnly}
-              onCheckedChange={setInStockOnly}
-            />
+            <Switch id="in-stock-toggle" checked={inStockOnly} onCheckedChange={setInStockOnly} />
             <Label htmlFor="in-stock-toggle" className="cursor-pointer text-sm">
               In stock
             </Label>
@@ -222,9 +213,7 @@ function StockPage() {
               {(productsQuery.error as Error).message}
             </div>
           ) : rows.length === 0 ? (
-            <div className="py-8 text-sm text-muted-foreground">
-              No products found.
-            </div>
+            <div className="py-8 text-sm text-muted-foreground">No products found.</div>
           ) : (
             <Table>
               <TableHeader>
@@ -246,85 +235,78 @@ function StockPage() {
                   const locState = locations[p.ID];
                   return (
                     <Fragment key={p.ID}>
-                    <TableRow
-                      className="cursor-pointer"
-                      onClick={() => toggleRow(p.ID)}
-                    >
-                      <TableCell className="text-sm">{clientName}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2 font-medium">
-                          {isOpen ? (
-                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                          )}
-                          {p.SKU || "—"}
-                        </div>
-                        {p.Name && (
-                          <div className="ml-6 text-xs text-muted-foreground line-clamp-1">
-                            {p.Name}
+                      <TableRow className="cursor-pointer" onClick={() => toggleRow(p.ID)}>
+                        <TableCell className="text-sm">{clientName}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2 font-medium">
+                            {isOpen ? (
+                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            )}
+                            {p.SKU || "—"}
                           </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {p.ImageURL ? (
-                          <img
-                            src={p.ImageURL}
-                            alt={p.SKU || ""}
-                            className="h-12 w-12 rounded border border-border object-cover"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="flex h-12 w-12 items-center justify-center rounded border border-dashed border-border text-muted-foreground">
-                            <Package className="h-4 w-4" />
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {barcode || (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                    {isOpen && (
-                      <TableRow className="bg-muted/30 hover:bg-muted/30">
-                        <TableCell colSpan={4}>
-                          {locState?.loading ? (
-                            <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              Loading stock locations…
-                            </div>
-                          ) : locState?.error ? (
-                            <div className="py-2 text-sm text-destructive">
-                              {locState.error}
-                            </div>
-                          ) : !locState?.data || locState.data.length === 0 ? (
-                            <div className="py-2 text-sm text-muted-foreground">
-                              No stock locations found.
-                            </div>
-                          ) : (
-                            <div className="py-2">
-                              <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                Stock locations
-                              </div>
-                              <ul className="space-y-1">
-                                {locState.data.map((l, i) => (
-                                  <li
-                                    key={`${l.location}-${i}`}
-                                    className="flex items-center justify-between rounded border border-border bg-background px-3 py-1.5 text-sm"
-                                  >
-                                    <span className="font-mono">{l.location}</span>
-                                    <span className="text-muted-foreground">
-                                      Qty: {l.quantity}
-                                    </span>
-                                  </li>
-                                ))}
-                              </ul>
+                          {p.Name && (
+                            <div className="ml-6 text-xs text-muted-foreground line-clamp-1">
+                              {p.Name}
                             </div>
                           )}
                         </TableCell>
+                        <TableCell>
+                          {p.ImageURL ? (
+                            <img
+                              src={p.ImageURL}
+                              alt={p.SKU || ""}
+                              className="h-12 w-12 rounded border border-border object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="flex h-12 w-12 items-center justify-center rounded border border-dashed border-border text-muted-foreground">
+                              <Package className="h-4 w-4" />
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {barcode || <span className="text-muted-foreground">—</span>}
+                        </TableCell>
                       </TableRow>
-                    )}
+                      {isOpen && (
+                        <TableRow className="bg-muted/30 hover:bg-muted/30">
+                          <TableCell colSpan={4}>
+                            {locState?.loading ? (
+                              <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Loading stock locations…
+                              </div>
+                            ) : locState?.error ? (
+                              <div className="py-2 text-sm text-destructive">{locState.error}</div>
+                            ) : !locState?.data || locState.data.length === 0 ? (
+                              <div className="py-2 text-sm text-muted-foreground">
+                                No stock locations found.
+                              </div>
+                            ) : (
+                              <div className="py-2">
+                                <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                  Stock locations
+                                </div>
+                                <ul className="space-y-1">
+                                  {locState.data.map((l, i) => (
+                                    <li
+                                      key={`${l.location}-${i}`}
+                                      className="flex items-center justify-between rounded border border-border bg-background px-3 py-1.5 text-sm"
+                                    >
+                                      <span className="font-mono">{l.location}</span>
+                                      <span className="text-muted-foreground">
+                                        Qty: {l.quantity}
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      )}
                     </Fragment>
                   );
                 })}
