@@ -2232,6 +2232,7 @@ function PackingListDialog({
   const [boxCount, setBoxCount] = useState(1);
   const [boxes, setBoxes] = useState<PackingBox[]>([makeEmptyBox()]);
   const [submitting, setSubmitting] = useState(false);
+  const [pdfPreview, setPdfPreview] = useState<{ url: string; bytes: Uint8Array; fileName: string } | null>(null);
   const submitInFlightRef = useRef(false);
 
   // Available SKUs from the order (sku + total ordered qty).
@@ -2281,6 +2282,20 @@ function PackingListDialog({
     setBoxes([makeEmptyBox()]);
     setSubmitting(false);
   }, [open]);
+
+  useEffect(() => {
+    return () => {
+      if (pdfPreview) URL.revokeObjectURL(pdfPreview.url);
+    };
+  }, [pdfPreview]);
+
+  // Invalidate generated PDF whenever entries change.
+  useEffect(() => {
+    setPdfPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev.url);
+      return null;
+    });
+  }, [boxes]);
 
   const applyBoxCount = (n: number) => {
     const next = Math.max(1, Math.min(50, Math.floor(n || 1)));
@@ -2392,47 +2407,23 @@ function PackingListDialog({
     setSubmitting(true);
     try {
       const ref = orderNumber ?? `#${orderId}`;
-      const lines: string[] = [`Packing list for ${ref} — ${boxes.length} box(es):`];
-      boxes.forEach((b, i) => {
-        const dims =
-          b.length || b.width || b.height
-            ? `${b.length || "?"}×${b.width || "?"}×${b.height || "?"} cm`
-            : "no dims";
-        const contentsText = b.contents
-          .filter((c) => c.qty > 0)
-          .map((c) => `  ${c.sku} x ${c.qty}`)
-          .join("\n");
-        lines.push(
-          `Box ${i + 1}: ${b.weight || "?"} kg, ${dims}` +
-            (contentsText ? `\n${contentsText}` : ""),
-        );
+      // Generate the PDF from the entered packing list and upload to Mintsoft.
+      const pdfBytes = await buildPackingListPdf({ orderRef: ref, boxes });
+      const fileName = `Packing List ${ref}.pdf`;
+      await uploadOrderDocument(loadSettings(), orderId, {
+        fileName,
+        contentType: "application/pdf",
+        bytes: pdfBytes,
+        label: "Packing List",
+        documentTypeName: "Box Packing List",
       });
-      const comment = lines.join("\n");
-      await addOrderComment(loadSettings(), orderId, comment, true);
-      toast.success("Packing list saved to order");
+      const blob = new Blob([pdfBytes as BlobPart], { type: "application/pdf" });
+      setPdfPreview((prev) => {
+        if (prev) URL.revokeObjectURL(prev.url);
+        return { url: URL.createObjectURL(blob), bytes: pdfBytes, fileName };
+      });
+      toast.success("Packing list PDF generated and uploaded");
       onSaved?.(boxes.length);
-
-      // Generate a PDF from the entered packing list and upload to Mintsoft.
-      try {
-        const pdfBytes = await buildPackingListPdf({
-          orderRef: ref,
-          boxes,
-        });
-        await uploadOrderDocument(loadSettings(), orderId, {
-          fileName: `Packing List ${ref}.pdf`,
-          contentType: "application/pdf",
-          bytes: pdfBytes,
-          label: "Packing List",
-          documentTypeName: "Box Packing List",
-        });
-        toast.success("Packing list PDF uploaded to Mintsoft");
-      } catch (e) {
-        toast.error(
-          e instanceof Error
-            ? `PDF upload failed: ${e.message}`
-            : "Failed to upload packing list PDF",
-        );
-      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save packing list");
     } finally {
@@ -2734,21 +2725,35 @@ function PackingListDialog({
               onClick={() => {
                 setBoxCount(1);
                 setBoxes([makeEmptyBox()]);
+                setPdfPreview((prev) => {
+                  if (prev) URL.revokeObjectURL(prev.url);
+                  return null;
+                });
               }}
               disabled={submitting}
             >
               Reset
             </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={
-                submitting ||
-                boxes.some((b) => !(b.length && b.width && b.height))
-              }
-            >
-              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save packing list
-            </Button>
+            <div className="flex gap-2">
+              {pdfPreview && (
+                <Button
+                  variant="outline"
+                  onClick={() => window.open(pdfPreview.url, "_blank", "noopener,noreferrer")}
+                >
+                  View PDF
+                </Button>
+              )}
+              <Button
+                onClick={handleSubmit}
+                disabled={
+                  submitting ||
+                  boxes.some((b) => !(b.length && b.width && b.height))
+                }
+              >
+                {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {pdfPreview ? "Regenerate" : "Generate packing list"}
+              </Button>
+            </div>
           </div>
         </div>
         </div>
