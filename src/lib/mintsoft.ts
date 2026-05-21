@@ -2001,7 +2001,7 @@ export async function uploadOrderDocument(
     Comments: doc.label ?? doc.fileName,
   };
   await authedJson(settings, `/api/Order/${orderId}/Documents`, {
-    method: "POST",
+    method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
