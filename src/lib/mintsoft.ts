@@ -347,6 +347,7 @@ export async function listProducts(
   const skip = opts.skip ?? 0;
   const pageNumber = Math.floor(skip / take) + 1;
   const paths = [
+    `/api/Product/List?PageNo=${pageNumber}&Limit=${take}`,
     `/api/Product/List?PageNumber=${pageNumber}&PageSize=${take}`,
     `/api/Product/List?pageNumber=${pageNumber}&pageSize=${take}`,
     `/api/Product?PageNumber=${pageNumber}&PageSize=${take}`,
@@ -370,8 +371,8 @@ export async function listProducts(
 }
 
 export async function listAllProducts(settings: Settings): Promise<MintsoftProduct[]> {
-  // Mintsoft Product/List caps responses at 100 even when a larger PageSize is requested.
-  // Keep requests aligned to that cap so subsequent PageNumber calls don't stop early.
+  // Mintsoft Product/List uses PageNo + Limit and caps responses at 100.
+  // Keep requests aligned to that cap so pagination doesn't stop early.
   const pageSize = 100;
   const all: MintsoftProduct[] = [];
   let skip = 0;
