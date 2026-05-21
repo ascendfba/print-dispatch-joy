@@ -2186,6 +2186,22 @@ function PackingListDialog({
 
   const addSkuToBox = (idx: number, sku: string) => {
     setBoxes((prev) =>
+      (() => {
+        const ordered =
+          orderSkus.find((s) => s.sku === sku)?.qty ?? Infinity;
+        const placed = prev.reduce(
+          (sum, b) =>
+            sum +
+            b.contents
+              .filter((c) => c.sku === sku)
+              .reduce((s, c) => s + (Number(c.qty) || 0), 0),
+          0,
+        );
+        if (placed >= ordered) {
+          toast.error(`All ${ordered} of ${sku} are already assigned`);
+          return prev;
+        }
+        return
       prev.map((b, i) => {
         if (i !== idx) return b;
         let next: PackingBox;
@@ -2201,7 +2217,8 @@ function PackingListDialog({
           next = { ...b, contents: [...b.contents, { sku, qty: 1 }] };
         }
         return recomputeWeight(next);
-      }),
+      });
+      })(),
     );
   };
 
