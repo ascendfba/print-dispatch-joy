@@ -925,31 +925,82 @@ function OrderDetailPage() {
             const required = /packing list required/i.test(courier);
             const saved = packingBoxCount !== null;
             return (
-              <Button
-                className={`w-full ${
-                  required && !saved
-                    ? "border-amber-500 bg-amber-50 text-amber-900 hover:bg-amber-100"
-                    : saved
-                      ? "border-emerald-500 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
-                      : ""
-                }`}
-                variant="outline"
-                onClick={() => setPackingOpen(true)}
-                disabled={!order}
-              >
-                <Package className="mr-2 h-4 w-4" />
-                {saved ? "View Packing List" : "Enter Packing List"}
-                {required && !saved && (
-                  <span className="ml-2 rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900">
-                    Required
-                  </span>
-                )}
+              <div className="flex items-center gap-2">
+                <Button
+                  className={`flex-1 ${
+                    required && !saved
+                      ? "border-amber-500 bg-amber-50 text-amber-900 hover:bg-amber-100"
+                      : saved
+                        ? "border-emerald-500 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
+                        : ""
+                  }`}
+                  variant="outline"
+                  onClick={() => setPackingOpen(true)}
+                  disabled={!order}
+                >
+                  <Package className="mr-2 h-4 w-4" />
+                  {saved ? "View Packing List" : "Enter Packing List"}
+                  {required && !saved && (
+                    <span className="ml-2 rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900">
+                      Required
+                    </span>
+                  )}
+                  {saved && (
+                    <span className="ml-2 rounded bg-emerald-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-900">
+                      {packingBoxCount} box{packingBoxCount === 1 ? "" : "es"}
+                    </span>
+                  )}
+                </Button>
                 {saved && (
-                  <span className="ml-2 rounded bg-emerald-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-900">
-                    {packingBoxCount} box{packingBoxCount === 1 ? "" : "es"}
-                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    title="Delete packing list"
+                    aria-label="Delete packing list"
+                    disabled={deletingPacking || !order}
+                    onClick={async () => {
+                      if (!order) return;
+                      if (!window.confirm("Delete the packing list from this order?")) return;
+                      setDeletingPacking(true);
+                      try {
+                        const settings = loadSettings();
+                        const docs = await fetchOrderDocuments(settings, id);
+                        const matches = docs.filter((d) => {
+                          const name = (d.fileName ?? d.label ?? "").toLowerCase();
+                          return d.documentId != null && /packing\s*list/.test(name);
+                        });
+                        if (matches.length === 0) {
+                          toast.message("No packing list document found on this order");
+                        }
+                        for (const d of matches) {
+                          if (d.documentId != null) {
+                            await deleteOrderDocument(settings, id, d.documentId);
+                          }
+                        }
+                        setPackingBoxCount(null);
+                        setPackingResetKey((k) => k + 1);
+                        await qc.invalidateQueries({ queryKey: ["order-docs", id] });
+                        await qc.invalidateQueries({ queryKey: ["shipping-pages", id] });
+                        toast.success("Packing list deleted");
+                      } catch (e) {
+                        toast.error(
+                          e instanceof Error ? e.message : "Failed to delete packing list",
+                        );
+                      } finally {
+                        setDeletingPacking(false);
+                      }
+                    }}
+                  >
+                    {deletingPacking ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </Button>
                 )}
-              </Button>
+              </div>
             );
           })()}
           {(() => {
