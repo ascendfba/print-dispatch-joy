@@ -727,6 +727,141 @@ function stockTotalFromRecord(r: Record<string, unknown>): ProductStockTotal {
   };
 }
 
+async function fetchProductBookedInLocations(
+  settings: Settings,
+  productId: number,
+  inventoryRows: StockLocation[] = [],
+): Promise<StockLocation[]> {
+  try {
+    const data = await authedJson<unknown>(
+      settings,
+      `/api/Product/${productId}/StockFlow?IncludeDetails=true`,
+    );
+    const rows = arrayPayload(data) ?? [];
+    const inventoryQty = inventoryRows.reduce(
+      (sum, row) => sum + (Number(row.onHand ?? row.quantity ?? row.stockLevel) || 0),
+      0,
+    );
+    const fallbackBatch = inventoryRows.find((row) => row.batchNumber)?.batchNumber;
+    const fallbackBbe = inventoryRows.find((row) => row.bestBeforeDate)?.bestBeforeDate;
+    const candidates: Array<StockLocation & { lastUpdated: number }> = [];
+
+    for (const row of rows) {
+      const details = Array.isArray(row.StockFlowDetails)
+        ? (row.StockFlowDetails as Array<Record<string, unknown>>)
+        : [];
+      const sources = details.length > 0 ? details : [row];
+      for (const detail of sources) {
+        const source = { ...row, ...detail };
+        const rawQty =
+          optionalNumericField(source, ["Quantity", "Qty", "BookedInQuantity", "ReceivedQty"]) ??
+          0;
+        const movementText = [
+          source.Type,
+          source.Action,
+          source.StockFlowType,
+          source.Reason,
+          source.Comment,
+          source.Reference,
+          source.Details,
+        ]
+          .filter((value) => typeof value === "string")
+          .join(" ")
+          .toLowerCase();
+        const looksOutbound = /despatch|dispatch|order|pick|allocat|sale|outbound|stock\s*out/.test(
+          movementText,
+        );
+        const looksInbound = /book|receive|asn|inbound|put\s*away|stock\s*in|adjustment/.test(
+          movementText,
+        );
+        if (rawQty < 0 || (looksOutbound && !looksInbound)) continue;
+
+        const locationId = Number(
+          source.LocationId ??
+            source.LocationID ??
+            source.WarehouseLocationId ??
+            source.ToLocationId ??
+            source.ToLocationID,
+        );
+        const warehouseId = Number(source.WarehouseId ?? source.WarehouseID ?? source.Warehouse_Id);
+        const directLocationName = locationStringField(source, [
+          "LocationName",
+          "locationName",
+          "WarehouseLocationName",
+          "WarehouseLocation",
+          "Location",
+          "ToLocationName",
+          "ToLocation",
+          "SimpleLocationName",
+          "BinLocation",
+          "LocationCode",
+          "Bin",
+        ]);
+        if (!directLocationName && (!Number.isFinite(locationId) || locationId === 0)) continue;
+
+        const resolved =
+          directLocationName ||
+          (Number.isFinite(locationId) && locationId !== 0
+            ? await resolveLocationName(settings, locationId, warehouseId)
+            : "");
+        const location = firstUsableLocationName(resolved);
+        if (!location) continue;
+
+        const lastUpdatedRaw = optionalStringField(source, [
+          "LastUpdated",
+          "CreatedDate",
+          "Date",
+          "TransactionDate",
+        ]);
+        candidates.push({
+          location,
+          quantity: Math.abs(rawQty) || inventoryQty || 0,
+          stockLevel: Math.abs(rawQty) || inventoryQty || 0,
+          allocated: 0,
+          onHand: Math.abs(rawQty) || inventoryQty || 0,
+          locationId: Number.isFinite(locationId) ? locationId : undefined,
+          warehouseId: Number.isFinite(warehouseId) ? warehouseId : undefined,
+          batchNumber:
+            optionalStringField(source, ["BatchNumber", "BatchNo", "Batch"]) ?? fallbackBatch,
+          bestBeforeDate:
+            optionalStringField(source, [
+              "BestBeforeDate",
+              "BestBefore",
+              "ExpiryDate",
+              "ExpirationDate",
+              "Expires",
+              "BBE",
+            ]) ?? fallbackBbe,
+          lastUpdated: lastUpdatedRaw ? Date.parse(lastUpdatedRaw) || 0 : 0,
+        });
+      }
+    }
+
+    candidates.sort((a, b) => b.lastUpdated - a.lastUpdated);
+    const limit = inventoryQty > 0 ? inventoryQty : Number.POSITIVE_INFINITY;
+    let remaining = limit;
+    const byLocation = new Map<string, StockLocation>();
+    for (const candidate of candidates) {
+      if (remaining <= 0) break;
+      const qty = Number.isFinite(limit) ? Math.min(candidate.quantity, remaining) : candidate.quantity;
+      if (qty <= 0) continue;
+      remaining -= qty;
+      const key = candidate.locationId ? `id:${candidate.locationId}` : candidate.location;
+      const existing = byLocation.get(key);
+      if (existing) {
+        existing.quantity += qty;
+        existing.stockLevel = (existing.stockLevel ?? 0) + qty;
+        existing.onHand = (existing.onHand ?? 0) + qty;
+      } else {
+        byLocation.set(key, { ...candidate, quantity: qty, stockLevel: qty, onHand: qty });
+      }
+    }
+    return Array.from(byLocation.values()).map(({ ...row }) => row);
+  } catch {
+    return [];
+  }
+}
+
 async function fetchWarehouseStockLevels(
   settings: Settings,
   warehouseId: number,
