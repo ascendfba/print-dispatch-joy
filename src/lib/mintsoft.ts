@@ -345,7 +345,11 @@ export async function listProducts(
 ): Promise<MintsoftProduct[]> {
   const take = opts.take ?? 500;
   const skip = opts.skip ?? 0;
+  const pageNumber = Math.floor(skip / take) + 1;
   const paths = [
+    `/api/Product/List?PageNumber=${pageNumber}&PageSize=${take}`,
+    `/api/Product/List?pageNumber=${pageNumber}&pageSize=${take}`,
+    `/api/Product?PageNumber=${pageNumber}&PageSize=${take}`,
     `/api/Product/List?Take=${take}&Skip=${skip}`,
     `/api/Product?Take=${take}&Skip=${skip}`,
     `/api/Product/Search?Take=${take}&Skip=${skip}`,
