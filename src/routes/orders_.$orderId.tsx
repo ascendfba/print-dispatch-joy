@@ -2423,6 +2423,7 @@ function PackingListDialog({
           contentType: "application/pdf",
           bytes: pdfBytes,
           label: "Packing List",
+          documentTypeName: "Box Packing List",
         });
         toast.success("Packing list PDF uploaded to Mintsoft");
       } catch (e) {
