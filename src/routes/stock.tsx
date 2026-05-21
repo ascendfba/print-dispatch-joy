@@ -17,10 +17,18 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronDown, ChevronRight, Loader2, Package, RefreshCw } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  Package,
+  Pencil,
+  RefreshCw,
+} from "lucide-react";
 import {
   fetchProductStockLocations,
   fetchProductOpenOrderAllocations,
+  transferStockLocation,
   type StockLocation,
   type ProductOrderAllocation,
 } from "@/lib/mintsoft";
@@ -47,6 +55,15 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { toast } from "@/hooks/use-toast";
 
 export const Route = createFileRoute("/stock")({
   beforeLoad: ({ location }) => requireAuth(location),
