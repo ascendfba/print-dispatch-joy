@@ -12,6 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { ChevronDown, ChevronRight, Loader2, Package } from "lucide-react";
 import {
   listAllProducts,
@@ -36,6 +38,7 @@ export const Route = createFileRoute("/stock")({
 function StockPage() {
   const [filter, setFilter] = useState("");
   const [clientFilter, setClientFilter] = useState("");
+  const [inStockOnly, setInStockOnly] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [locations, setLocations] = useState<
     Record<number, { loading: boolean; data?: StockLocation[]; error?: string }>
@@ -110,8 +113,17 @@ function StockPage() {
       const cid = Number(clientFilter);
       items = items.filter((p) => (p.ClientId ?? p.ClientID ?? 0) === cid);
     }
+    if (inStockOnly) {
+      items = items.filter((p) => {
+        const onHand =
+          Number(p.StockOnHand ?? p.QuantityOnHand ?? 0) || 0;
+        const allocated =
+          Number(p.StockAllocated ?? p.QuantityAllocated ?? 0) || 0;
+        return onHand > 0 || allocated > 0;
+      });
+    }
     return items;
-  }, [productsQuery.data, filter, clientFilter, clientNameById]);
+  }, [productsQuery.data, filter, clientFilter, clientNameById, inStockOnly]);
 
   return (
     <div className="space-y-4">
@@ -122,7 +134,17 @@ function StockPage() {
             All SKUs from Mintsoft.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="in-stock-toggle"
+              checked={inStockOnly}
+              onCheckedChange={setInStockOnly}
+            />
+            <Label htmlFor="in-stock-toggle" className="cursor-pointer text-sm">
+              In stock
+            </Label>
+          </div>
           <Select value={clientFilter} onValueChange={setClientFilter}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="All clients" />

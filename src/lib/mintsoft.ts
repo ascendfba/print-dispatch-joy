@@ -327,6 +327,11 @@ export type MintsoftProduct = {
   HasSerialNumbers?: boolean | null;
   RequiresExpiryDate?: boolean | null;
   RequiresBatchNumber?: boolean | null;
+  StockOnHand?: number | null;
+  StockAllocated?: number | null;
+  StockAvailable?: number | null;
+  QuantityOnHand?: number | null;
+  QuantityAllocated?: number | null;
 };
 
 export async function listProducts(
