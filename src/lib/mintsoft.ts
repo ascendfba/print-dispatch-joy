@@ -498,12 +498,7 @@ export type StockLocation = {
 function numericField(record: Record<string, unknown>, keys: string[]): number {
   for (const key of keys) {
     const value = record[key];
-    const n =
-      typeof value === "number"
-        ? value
-        : typeof value === "string"
-          ? Number(value)
-          : Number.NaN;
+    const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
     if (Number.isFinite(n)) return n;
   }
   return 0;
@@ -513,12 +508,7 @@ function optionalNumericField(record: Record<string, unknown>, keys: string[]): 
   for (const key of keys) {
     if (!(key in record)) continue;
     const value = record[key];
-    const n =
-      typeof value === "number"
-        ? value
-        : typeof value === "string"
-          ? Number(value)
-          : Number.NaN;
+    const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
     if (Number.isFinite(n)) return n;
   }
   return undefined;
@@ -698,21 +688,23 @@ export async function fetchProductStockLocations(
           const location = isUnassignedLocationName(directBin)
             ? resolved || directBin
             : directBin || resolved || "Unassigned";
-          const stockLevel = optionalNumericField(r, [
-            "StockLevel",
-            "Stock Level",
-            "TotalStockLevel",
-            "Total Stock Level",
-            "Quantity",
-            "Qty",
-            "Available",
-          ]) ?? 0;
-          const allocated = optionalNumericField(r, [
-            "Allocated",
-            "StockAllocated",
-            "QuantityAllocated",
-            "AllocatedQuantity",
-          ]) ?? 0;
+          const stockLevel =
+            optionalNumericField(r, [
+              "StockLevel",
+              "Stock Level",
+              "TotalStockLevel",
+              "Total Stock Level",
+              "Quantity",
+              "Qty",
+              "Available",
+            ]) ?? 0;
+          const allocated =
+            optionalNumericField(r, [
+              "Allocated",
+              "StockAllocated",
+              "QuantityAllocated",
+              "AllocatedQuantity",
+            ]) ?? 0;
           const onHand = optionalNumericField(r, [
             "OnHand",
             "On Hand",
