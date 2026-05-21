@@ -898,6 +898,8 @@ function OrderDetailPage() {
         </Card>
 
         <div className="space-y-3">
+          {(() => null)()}
+          {/* compute packing-required block flag inline below */}
           <ReworkChargesCard
             items={itemsQuery.data ?? []}
             fnskuLabelCount={scanQuery.data?.length ?? 0}
@@ -908,33 +910,59 @@ function OrderDetailPage() {
             onSubmitted={() => setChargesSubmitted(true)}
             submitted={chargesSubmitted}
             attention={!chargesSubmitted}
+            packingBoxCount={packingBoxCount}
+            disabled={
+              /packing list required/i.test(
+                (order as { CourierServiceName?: string } | undefined)?.CourierServiceName ?? "",
+              ) && packingBoxCount === null
+            }
           />
           {(() => {
             const courier =
               (order as { CourierServiceName?: string } | undefined)?.CourierServiceName ?? "";
             const required = /packing list required/i.test(courier);
+            const saved = packingBoxCount !== null;
             return (
               <Button
-                className={`w-full ${required ? "border-amber-500 bg-amber-50 text-amber-900 hover:bg-amber-100" : ""}`}
+                className={`w-full ${
+                  required && !saved
+                    ? "border-amber-500 bg-amber-50 text-amber-900 hover:bg-amber-100"
+                    : saved
+                      ? "border-emerald-500 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
+                      : ""
+                }`}
                 variant="outline"
                 onClick={() => setPackingOpen(true)}
                 disabled={!order}
               >
                 <Package className="mr-2 h-4 w-4" />
                 Enter Packing List
-                {required && (
+                {required && !saved && (
                   <span className="ml-2 rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900">
                     Required
+                  </span>
+                )}
+                {saved && (
+                  <span className="ml-2 rounded bg-emerald-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-900">
+                    {packingBoxCount} box{packingBoxCount === 1 ? "" : "es"}
                   </span>
                 )}
               </Button>
             );
           })()}
+          {(() => {
+            const courier =
+              (order as { CourierServiceName?: string } | undefined)?.CourierServiceName ?? "";
+            const packingBlock =
+              /packing list required/i.test(courier) && packingBoxCount === null;
+            return (
+              <>
           <Button
             className={`w-full ${chargesSubmitted && !labelsPrinted ? "animate-attention" : ""}`}
             variant="outline"
             onClick={() => printLabels.mutate()}
-            disabled={printing || !order}
+            disabled={printing || !order || packingBlock}
+            title={packingBlock ? "Save the packing list first" : undefined}
           >
             {printing ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -949,11 +977,15 @@ function OrderDetailPage() {
             className={`w-full ${chargesSubmitted && labelsPrinted ? "animate-attention" : ""}`}
             size="lg"
             onClick={handleDespatchClick}
-            disabled={despatch.isPending || !order}
+            disabled={despatch.isPending || !order || packingBlock}
+            title={packingBlock ? "Save the packing list first" : undefined}
           >
             {despatch.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Despatch
           </Button>
+              </>
+            );
+          })()}
           {despatched && (
             <Button
               className="w-full"
