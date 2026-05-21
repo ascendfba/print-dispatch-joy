@@ -1026,6 +1026,7 @@ function OrderDetailPage() {
 
       <PackingListDialog
         open={packingOpen}
+        key={packingResetKey}
         onOpenChange={setPackingOpen}
         items={itemsQuery.data ?? []}
         products={productsQuery.data}
