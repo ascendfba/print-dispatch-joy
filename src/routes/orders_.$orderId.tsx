@@ -1,6 +1,6 @@
 import { requireAuth } from "@/lib/require-auth";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -2232,6 +2232,7 @@ function PackingListDialog({
   const [boxCount, setBoxCount] = useState(1);
   const [boxes, setBoxes] = useState<PackingBox[]>([makeEmptyBox()]);
   const [submitting, setSubmitting] = useState(false);
+  const submitInFlightRef = useRef(false);
 
   // Available SKUs from the order (sku + total ordered qty).
   const orderSkus = useMemo(() => {
@@ -2376,6 +2377,7 @@ function PackingListDialog({
   };
 
   const handleSubmit = async () => {
+    if (submitInFlightRef.current) return;
     const missing = boxes
       .map((b, i) => ({ i, hasDims: !!(b.length && b.width && b.height) }))
       .filter((x) => !x.hasDims)
@@ -2386,6 +2388,7 @@ function PackingListDialog({
       );
       return;
     }
+    submitInFlightRef.current = true;
     setSubmitting(true);
     try {
       const ref = orderNumber ?? `#${orderId}`;
@@ -2433,29 +2436,38 @@ function PackingListDialog({
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save packing list");
     } finally {
+      submitInFlightRef.current = false;
       setSubmitting(false);
     }
+  };
+
+  const saveAndClose = () => {
+    if (submitting || submitInFlightRef.current) return;
+    void handleSubmit();
   };
 
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next && !submitting) {
-          // Auto-save when user clicks outside / presses Esc, if there's anything to save.
-          const hasData = boxes.some(
-            (b) => b.length || b.width || b.height || b.contents.length > 0,
-          );
-          const allDimsSet = boxes.every((b) => b.length && b.width && b.height);
-          if (hasData && allDimsSet) {
-            void handleSubmit();
-            return;
-          }
+        if (!next) {
+          saveAndClose();
+          return;
         }
         onOpenChange(next);
       }}
     >
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+      <DialogContent
+        className="max-w-4xl max-h-[85vh] overflow-y-auto"
+        onInteractOutside={(event) => {
+          event.preventDefault();
+          saveAndClose();
+        }}
+        onEscapeKeyDown={(event) => {
+          event.preventDefault();
+          saveAndClose();
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
