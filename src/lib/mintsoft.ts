@@ -524,7 +524,6 @@ export async function fetchProductStockLocations(
  * Like fetchProductStockLocations but also returns the underlying
  * WarehouseId / LocationId fields needed for stock movement calls.
  */
-export async function fetchProductStock(
 /**
  * Fetch the total on-hand and allocated quantities for many products in
  * parallel (concurrency-limited). Returns a Map keyed by productId.
