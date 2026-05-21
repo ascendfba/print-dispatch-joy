@@ -1979,6 +1979,34 @@ export async function addOrderComment(
   });
 }
 
+/**
+ * Upload a document (e.g. a signed packing list PDF) and link it to an
+ * order in Mintsoft. Mintsoft accepts the document payload via
+ * `POST /api/Order/{id}/Documents` with a Base64-encoded body.
+ */
+export async function uploadOrderDocument(
+  settings: Settings,
+  orderId: number,
+  doc: {
+    fileName: string;
+    contentType: string;
+    bytes: Uint8Array;
+    label?: string;
+  },
+): Promise<void> {
+  const body = {
+    FileName: doc.fileName,
+    ContentType: doc.contentType,
+    Base64Data: bytesToBase64(doc.bytes),
+    Comments: doc.label ?? doc.fileName,
+  };
+  await authedJson(settings, `/api/Order/${orderId}/Documents`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
 export type MintsoftOrderComment = {
   Comment?: string | null;
   CreatedDate?: string | null;
