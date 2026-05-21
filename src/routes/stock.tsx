@@ -134,7 +134,17 @@ function StockPage() {
             All SKUs from Mintsoft.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="in-stock-toggle"
+              checked={inStockOnly}
+              onCheckedChange={setInStockOnly}
+            />
+            <Label htmlFor="in-stock-toggle" className="cursor-pointer text-sm">
+              In stock
+            </Label>
+          </div>
           <Select value={clientFilter} onValueChange={setClientFilter}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="All clients" />
