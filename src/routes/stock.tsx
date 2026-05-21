@@ -272,7 +272,7 @@ function StockPage() {
                     <TableHead>SKU</TableHead>
                     <TableHead className="w-[80px]">Image</TableHead>
                     <TableHead>Barcode</TableHead>
-                    <TableHead className="w-[110px] text-right">Stock</TableHead>
+                    <TableHead className="w-[110px] text-right">Available</TableHead>
                     <TableHead className="w-[110px] text-right">Allocated</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -322,7 +322,7 @@ function StockPage() {
                             {barcode || <span className="text-muted-foreground">—</span>}
                           </TableCell>
                           <TableCell className="text-right font-mono text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                            {p.stock_level ?? 0}
+                            {p.on_hand ?? 0}
                           </TableCell>
                           <TableCell className="text-right font-mono text-sm text-amber-600 dark:text-amber-400">
                             {p.allocated ?? 0}
