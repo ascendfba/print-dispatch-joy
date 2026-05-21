@@ -573,9 +573,40 @@ function notSkuValue(
   record: Record<string, unknown>,
 ): string | undefined {
   const sku = skuLikeField(record);
-  return value && (!sku || value.trim().toLowerCase() !== sku.trim().toLowerCase())
+  const normalized = value?.trim().toLowerCase();
+  return value &&
+    normalized &&
+    normalized !== "unassigned" &&
+    (!sku || normalized !== sku.trim().toLowerCase())
     ? value
     : undefined;
+}
+
+function locationStringField(record: Record<string, unknown>, keys: string[]): string | undefined {
+  const sku = skuLikeField(record);
+  const read = (source: Record<string, unknown>): string | undefined => {
+    const lowerKeyMap = new Map(Object.keys(source).map((key) => [key.toLowerCase(), key]));
+    for (const key of keys) {
+      const actualKey = key in source ? key : lowerKeyMap.get(key.toLowerCase());
+      const value = actualKey ? source[actualKey] : undefined;
+      if (typeof value === "string") {
+        const cleaned = notSkuValue(value, sku ? { ...source, SKU: sku } : source);
+        if (cleaned) return cleaned;
+      }
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        const nested = read(value as Record<string, unknown>);
+        if (nested) return nested;
+      }
+    }
+    for (const value of Object.values(source)) {
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        const nested = read(value as Record<string, unknown>);
+        if (nested) return nested;
+      }
+    }
+    return undefined;
+  };
+  return read(record);
 }
 
 const locationNameCache = new Map<number, string>();
