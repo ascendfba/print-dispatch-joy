@@ -2476,7 +2476,12 @@ function PackingListDialog({
           );
         })()}
 
-        <div className="grid gap-4 md:grid-cols-[220px_1fr]">
+        <div
+          className={`grid gap-4 md:grid-cols-[220px_1fr] ${
+            pdfPreview ? "pointer-events-none opacity-60 select-none" : ""
+          }`}
+          aria-disabled={!!pdfPreview}
+        >
           <div className="rounded-md border p-3 space-y-2 bg-muted/20 md:sticky md:top-0 md:self-start md:max-h-[70vh] md:overflow-y-auto">
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Order SKUs
