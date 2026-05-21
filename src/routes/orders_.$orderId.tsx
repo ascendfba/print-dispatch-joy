@@ -1029,6 +1029,7 @@ function OrderDetailPage() {
         products={productsQuery.data}
         orderId={id}
         orderNumber={orderReference}
+        onSaved={(count) => setPackingBoxCount(count)}
       />
 
       <AlertDialog open={confirmDespatch} onOpenChange={setConfirmDespatch}>
