@@ -514,17 +514,12 @@ function optionalNumericField(record: Record<string, unknown>, keys: string[]): 
   return undefined;
 }
 
-function optionalStringField(
-  record: Record<string, unknown>,
-  keys: string[],
-): string | undefined {
+function optionalStringField(record: Record<string, unknown>, keys: string[]): string | undefined {
   for (const key of keys) {
     const value = record[key];
     if (typeof value === "string" && value.trim()) return value.trim();
   }
-  const lowerKeyMap = new Map(
-    Object.keys(record).map((key) => [key.toLowerCase(), key]),
-  );
+  const lowerKeyMap = new Map(Object.keys(record).map((key) => [key.toLowerCase(), key]));
   for (const key of keys) {
     const actualKey = lowerKeyMap.get(key.toLowerCase());
     const value = actualKey ? record[actualKey] : undefined;
@@ -661,7 +656,9 @@ export async function fetchProductStockLocations(
       if (rows.length > 0) {
         const out: StockLocation[] = [];
         for (const r of rows) {
-          const locationId = Number(r.LocationId ?? r.LocationID ?? r.Location_Id ?? r.WarehouseLocationId);
+          const locationId = Number(
+            r.LocationId ?? r.LocationID ?? r.Location_Id ?? r.WarehouseLocationId,
+          );
           const warehouseId = Number(r.WarehouseId ?? r.WarehouseID ?? r.Warehouse_Id);
           // Prefer bin-code style fields (e.g. "A-A19-B87-S3-P01"). Avoid
           // generic `Location` / `LocationName` which Mintsoft often uses
