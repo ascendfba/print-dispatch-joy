@@ -628,6 +628,29 @@ export async function fetchProductStockTotals(
   productIds: number[],
   opts: { concurrency?: number } = {},
 ): Promise<Map<number, { stockLevel: number; allocated: number; onHand: number }>> {
+  try {
+    const warehouses = await listWarehouses(settings);
+    const allWarehouseTotals = new Map<number, ProductStockTotal>();
+    for (const warehouse of warehouses) {
+      const warehouseTotals = await fetchWarehouseStockLevels(settings, warehouse.id);
+      for (const [productId, totals] of warehouseTotals) {
+        const existing = allWarehouseTotals.get(productId) ?? {
+          stockLevel: 0,
+          allocated: 0,
+          onHand: 0,
+        };
+        allWarehouseTotals.set(productId, {
+          stockLevel: existing.stockLevel + totals.stockLevel,
+          allocated: existing.allocated + totals.allocated,
+          onHand: existing.onHand + totals.onHand,
+        });
+      }
+    }
+    if (allWarehouseTotals.size > 0) return allWarehouseTotals;
+  } catch {
+    /* fall back to product-level stock paths */
+  }
+
   const concurrency = Math.max(1, opts.concurrency ?? 8);
   const result = new Map<number, { stockLevel: number; allocated: number; onHand: number }>();
   let idx = 0;
