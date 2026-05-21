@@ -763,10 +763,10 @@ export async function fetchProductStockLocations(
   productId: number,
 ): Promise<StockLocation[]> {
   const paths = [
-    `/api/Product/${productId}/Inventory?breakdown=true`,
     `/api/Product/${productId}/Stock`,
     `/api/Product/${productId}/StockLocations`,
     `/api/Product/${productId}/Locations`,
+    `/api/Product/${productId}/Inventory?breakdown=true`,
   ];
   for (const p of paths) {
     try {
@@ -794,6 +794,7 @@ export async function fetchProductStockLocations(
           ]);
           const resolved = await resolveLocationName(settings, locationId, warehouseId);
           const location = directBin || resolved || "";
+          if (!directBin && (!Number.isFinite(locationId) || locationId === 0)) continue;
           const batchNumber = optionalStringField(r, ["BatchNumber", "BatchNo", "Batch"]);
           const bestBeforeDate = optionalStringField(r, [
             "BestBeforeDate",
