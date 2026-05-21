@@ -31,14 +31,14 @@ function num(r: Record<string, unknown>, keys: string[]): number {
 type Totals = { stockLevel: number; allocated: number; onHand: number };
 
 async function listAllProductsServer() {
-  const pageSize = 100; // Mintsoft caps PageSize at 100
+  const pageSize = 100; // Mintsoft caps Limit at 100
   const all: Array<Record<string, unknown>> = [];
   const seenIds = new Set<number>();
   let lastFirstId: unknown;
   let lastBatchLen = -1;
   for (let page = 1; page < 2000; page++) {
     const data = await msFetch<Record<string, unknown>[] | { Results?: Record<string, unknown>[] }>(
-      `/api/Product/List?PageNumber=${page}&PageSize=${pageSize}`,
+      `/api/Product/List?PageNo=${page}&Limit=${pageSize}`,
     );
     const batch = Array.isArray(data) ? data : ((data as { Results?: Record<string, unknown>[] })?.Results ?? []);
     console.log(`[mintsoft-sync] page=${page} batchLen=${batch.length} firstId=${batch[0]?.ID} lastId=${batch[batch.length - 1]?.ID} totalSoFar=${all.length}`);
