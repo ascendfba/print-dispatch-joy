@@ -514,16 +514,37 @@ function optionalNumericField(record: Record<string, unknown>, keys: string[]): 
   return undefined;
 }
 
+const locationNameCache = new Map<number, string>();
+
 async function resolveLocationName(
   settings: Settings,
   locationId: number,
   warehouseId: number,
 ): Promise<string> {
-  if (Number.isFinite(locationId) && Number.isFinite(warehouseId)) {
+  if (!Number.isFinite(locationId)) return "";
+  const cached = locationNameCache.get(locationId);
+  if (cached) return cached;
+  if (Number.isFinite(warehouseId)) {
     const location = await fetchWarehouseLocation(settings, warehouseId, locationId);
-    if (location?.name) return location.name;
+    if (location?.name) {
+      locationNameCache.set(locationId, location.name);
+      return location.name;
+    }
   }
-  return Number.isFinite(locationId) ? `Location #${locationId}` : "";
+  // Warehouse unknown — search all warehouses for this location.
+  try {
+    const warehouses = await listWarehouses(settings);
+    for (const w of warehouses) {
+      const location = await fetchWarehouseLocation(settings, w.id, locationId);
+      if (location?.name) {
+        locationNameCache.set(locationId, location.name);
+        return location.name;
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return `Location #${locationId}`;
 }
 
 export type ProductStockEntry = {
