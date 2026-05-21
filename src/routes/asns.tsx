@@ -64,7 +64,7 @@ function AsnsPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [filter, setFilter] = useState("");
-  const [clientFilter, setClientFilter] = useState("");
+  const [clientFilter, setClientFilter] = useState<string[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [statusTab, setStatusTab] = useState<
     "new" | "partial" | "completed"
