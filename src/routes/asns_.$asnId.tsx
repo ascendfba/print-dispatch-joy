@@ -303,6 +303,14 @@ function normaliseBbf(raw: string): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+// Convert ISO YYYY-MM-DD → DDMMYYYY for the Mintsoft API.
+function isoToDdmmyyyy(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return iso;
+  const [, y, mo, d] = m;
+  return `${d}${mo}${y}`;
+}
+
 function BookInCard({
   asnId,
   warehouseId,
