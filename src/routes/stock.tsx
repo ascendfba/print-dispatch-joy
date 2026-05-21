@@ -30,6 +30,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 export const Route = createFileRoute("/stock")({
   beforeLoad: ({ location }) => requireAuth(location),
@@ -39,7 +47,9 @@ export const Route = createFileRoute("/stock")({
 function StockPage() {
   const [filter, setFilter] = useState("");
   const [clientFilter, setClientFilter] = useState("");
-  const [inStockOnly, setInStockOnly] = useState(false);
+  const [inStockOnly, setInStockOnly] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [locations, setLocations] = useState<
     Record<number, { loading: boolean; data?: StockLocation[]; error?: string }>
@@ -159,6 +169,9 @@ function StockPage() {
     stockTotalsQuery.data,
   ]);
 
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const paginatedRows = rows.slice((page - 1) * pageSize, page * pageSize);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
@@ -168,12 +181,12 @@ function StockPage() {
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <Switch id="in-stock-toggle" checked={inStockOnly} onCheckedChange={setInStockOnly} />
+            <Switch id="in-stock-toggle" checked={inStockOnly} onCheckedChange={(v) => { setInStockOnly(v); setPage(1); }} />
             <Label htmlFor="in-stock-toggle" className="cursor-pointer text-sm">
               In stock
             </Label>
           </div>
-          <Select value={clientFilter} onValueChange={setClientFilter}>
+          <Select value={clientFilter} onValueChange={(v) => { setClientFilter(v); setPage(1); }}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="All clients" />
             </SelectTrigger>
@@ -188,7 +201,7 @@ function StockPage() {
           </Select>
           <Input
             value={filter}
-            onChange={(e) => setFilter(e.target.value)}
+            onChange={(e) => { setFilter(e.target.value); setPage(1); }}
             placeholder="Search SKU, name, barcode or client…"
             className="max-w-sm"
           />
@@ -197,14 +210,30 @@ function StockPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Package className="h-4 w-4" />
-            {productsQuery.isLoading
-              ? "Loading products…"
-              : inStockOnly && stockTotalsQuery.isLoading
-                ? "Checking stock levels…"
-                : `${rows.length} product${rows.length === 1 ? "" : "s"}`}
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Package className="h-4 w-4" />
+              {productsQuery.isLoading
+                ? "Loading products…"
+                : inStockOnly && stockTotalsQuery.isLoading
+                  ? "Checking stock levels…"
+                  : `${rows.length} product${rows.length === 1 ? "" : "s"}`}
+            </CardTitle>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Show</span>
+              <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+                <SelectTrigger className="h-8 w-[80px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[10, 25, 50, 100, 250].map((n) => (
+                    <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span>per page</span>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {productsQuery.isLoading ? (
@@ -219,103 +248,141 @@ function StockPage() {
           ) : rows.length === 0 ? (
             <div className="py-8 text-sm text-muted-foreground">No products found.</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[200px]">Client</TableHead>
-                  <TableHead>SKU</TableHead>
-                  <TableHead className="w-[80px]">Image</TableHead>
-                  <TableHead>Barcode</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((p) => {
-                  const clientId = p.ClientId ?? p.ClientID ?? 0;
-                  const clientName = clientId
-                    ? (clientNameById.get(clientId) ?? `#${clientId}`)
-                    : "—";
-                  const barcode = p.EAN || p.UPC || "";
-                  const isOpen = expandedId === p.ID;
-                  const locState = locations[p.ID];
-                  return (
-                    <Fragment key={p.ID}>
-                      <TableRow className="cursor-pointer" onClick={() => toggleRow(p.ID)}>
-                        <TableCell className="text-sm">{clientName}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2 font-medium">
-                            {isOpen ? (
-                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                            )}
-                            {p.SKU || "—"}
-                          </div>
-                          {p.Name && (
-                            <div className="ml-6 text-xs text-muted-foreground line-clamp-1">
-                              {p.Name}
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[200px]">Client</TableHead>
+                    <TableHead>SKU</TableHead>
+                    <TableHead className="w-[80px]">Image</TableHead>
+                    <TableHead>Barcode</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedRows.map((p) => {
+                    const clientId = p.ClientId ?? p.ClientID ?? 0;
+                    const clientName = clientId
+                      ? (clientNameById.get(clientId) ?? `#${clientId}`)
+                      : "—";
+                    const barcode = p.EAN || p.UPC || "";
+                    const isOpen = expandedId === p.ID;
+                    const locState = locations[p.ID];
+                    return (
+                      <Fragment key={p.ID}>
+                        <TableRow className="cursor-pointer" onClick={() => toggleRow(p.ID)}>
+                          <TableCell className="text-sm">{clientName}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2 font-medium">
+                              {isOpen ? (
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                              )}
+                              {p.SKU || "—"}
                             </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {p.ImageURL ? (
-                            <img
-                              src={p.ImageURL}
-                              alt={p.SKU || ""}
-                              className="h-12 w-12 rounded border border-border object-cover"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="flex h-12 w-12 items-center justify-center rounded border border-dashed border-border text-muted-foreground">
-                              <Package className="h-4 w-4" />
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {barcode || <span className="text-muted-foreground">—</span>}
-                        </TableCell>
-                      </TableRow>
-                      {isOpen && (
-                        <TableRow className="bg-muted/30 hover:bg-muted/30">
-                          <TableCell colSpan={4}>
-                            {locState?.loading ? (
-                              <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Loading stock locations…
-                              </div>
-                            ) : locState?.error ? (
-                              <div className="py-2 text-sm text-destructive">{locState.error}</div>
-                            ) : !locState?.data || locState.data.length === 0 ? (
-                              <div className="py-2 text-sm text-muted-foreground">
-                                No stock locations found.
-                              </div>
-                            ) : (
-                              <div className="py-2">
-                                <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                  Stock locations
-                                </div>
-                                <ul className="space-y-1">
-                                  {locState.data.map((l, i) => (
-                                    <li
-                                      key={`${l.location}-${i}`}
-                                      className="flex items-center justify-between rounded border border-border bg-background px-3 py-1.5 text-sm"
-                                    >
-                                      <span className="font-mono">{l.location}</span>
-                                      <span className="text-muted-foreground">
-                                        Qty: {l.quantity}
-                                      </span>
-                                    </li>
-                                  ))}
-                                </ul>
+                            {p.Name && (
+                              <div className="ml-6 text-xs text-muted-foreground line-clamp-1">
+                                {p.Name}
                               </div>
                             )}
                           </TableCell>
+                          <TableCell>
+                            {p.ImageURL ? (
+                              <img
+                                src={p.ImageURL}
+                                alt={p.SKU || ""}
+                                className="h-12 w-12 rounded border border-border object-cover"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="flex h-12 w-12 items-center justify-center rounded border border-dashed border-border text-muted-foreground">
+                                <Package className="h-4 w-4" />
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">
+                            {barcode || <span className="text-muted-foreground">—</span>}
+                          </TableCell>
                         </TableRow>
-                      )}
-                    </Fragment>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                        {isOpen && (
+                          <TableRow className="bg-muted/30 hover:bg-muted/30">
+                            <TableCell colSpan={4}>
+                              {locState?.loading ? (
+                                <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  Loading stock locations…
+                                </div>
+                              ) : locState?.error ? (
+                                <div className="py-2 text-sm text-destructive">{locState.error}</div>
+                              ) : !locState?.data || locState.data.length === 0 ? (
+                                <div className="py-2 text-sm text-muted-foreground">
+                                  No stock locations found.
+                                </div>
+                              ) : (
+                                <div className="py-2">
+                                  <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                    Stock locations
+                                  </div>
+                                  <ul className="space-y-1">
+                                    {locState.data.map((l, i) => (
+                                      <li
+                                        key={`${l.location}-${i}`}
+                                        className="flex items-center justify-between rounded border border-border bg-background px-3 py-1.5 text-sm"
+                                      >
+                                        <span className="font-mono">{l.location}</span>
+                                        <span className="text-muted-foreground">
+                                          Qty: {l.quantity}
+                                        </span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+              {totalPages > 1 && (
+                <div className="mt-4 flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Page {page} of {totalPages}
+                  </span>
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          href="#"
+                          onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)); }}
+                          className={page <= 1 ? "pointer-events-none opacity-50" : ""}
+                        />
+                      </PaginationItem>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                        <PaginationItem key={p}>
+                          <PaginationLink
+                            href="#"
+                            isActive={p === page}
+                            onClick={(e) => { e.preventDefault(); setPage(p); }}
+                          >
+                            {p}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ))}
+                      <PaginationItem>
+                        <PaginationNext
+                          href="#"
+                          onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(totalPages, p + 1)); }}
+                          className={page >= totalPages ? "pointer-events-none opacity-50" : ""}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
