@@ -12,8 +12,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Package } from "lucide-react";
-import { listAllProducts, listClients } from "@/lib/mintsoft";
+import { ChevronDown, ChevronRight, Loader2, Package } from "lucide-react";
+import {
+  listAllProducts,
+  listClients,
+  fetchProductStockLocations,
+  type StockLocation,
+} from "@/lib/mintsoft";
 import { loadSettings } from "@/lib/storage";
 import {
   Select,
@@ -31,6 +36,30 @@ export const Route = createFileRoute("/stock")({
 function StockPage() {
   const [filter, setFilter] = useState("");
   const [clientFilter, setClientFilter] = useState("");
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [locations, setLocations] = useState<
+    Record<number, { loading: boolean; data?: StockLocation[]; error?: string }>
+  >({});
+
+  const toggleRow = async (productId: number) => {
+    if (expandedId === productId) {
+      setExpandedId(null);
+      return;
+    }
+    setExpandedId(productId);
+    if (locations[productId]?.data || locations[productId]?.loading) return;
+    setLocations((s) => ({ ...s, [productId]: { loading: true } }));
+    try {
+      const settings = loadSettings();
+      const data = await fetchProductStockLocations(settings, productId);
+      setLocations((s) => ({ ...s, [productId]: { loading: false, data } }));
+    } catch (e) {
+      setLocations((s) => ({
+        ...s,
+        [productId]: { loading: false, error: (e as Error).message },
+      }));
+    }
+  };
 
   const productsQuery = useQuery({
     queryKey: ["stock-products"],
@@ -156,13 +185,27 @@ function StockPage() {
                     ? (clientNameById.get(clientId) ?? `#${clientId}`)
                     : "—";
                   const barcode = p.EAN || p.UPC || "";
+                  const isOpen = expandedId === p.ID;
+                  const locState = locations[p.ID];
                   return (
-                    <TableRow key={p.ID}>
+                    <>
+                    <TableRow
+                      key={p.ID}
+                      className="cursor-pointer"
+                      onClick={() => toggleRow(p.ID)}
+                    >
                       <TableCell className="text-sm">{clientName}</TableCell>
                       <TableCell>
-                        <div className="font-medium">{p.SKU || "—"}</div>
+                        <div className="flex items-center gap-2 font-medium">
+                          {isOpen ? (
+                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          )}
+                          {p.SKU || "—"}
+                        </div>
                         {p.Name && (
-                          <div className="text-xs text-muted-foreground line-clamp-1">
+                          <div className="ml-6 text-xs text-muted-foreground line-clamp-1">
                             {p.Name}
                           </div>
                         )}
@@ -187,6 +230,46 @@ function StockPage() {
                         )}
                       </TableCell>
                     </TableRow>
+                    {isOpen && (
+                      <TableRow key={`${p.ID}-locs`} className="bg-muted/30 hover:bg-muted/30">
+                        <TableCell colSpan={4}>
+                          {locState?.loading ? (
+                            <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Loading stock locations…
+                            </div>
+                          ) : locState?.error ? (
+                            <div className="py-2 text-sm text-destructive">
+                              {locState.error}
+                            </div>
+                          ) : !locState?.data || locState.data.length === 0 ? (
+                            <div className="py-2 text-sm text-muted-foreground">
+                              No stock locations found.
+                            </div>
+                          ) : (
+                            <div className="py-2">
+                              <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                Stock locations
+                              </div>
+                              <ul className="space-y-1">
+                                {locState.data.map((l, i) => (
+                                  <li
+                                    key={`${l.location}-${i}`}
+                                    className="flex items-center justify-between rounded border border-border bg-background px-3 py-1.5 text-sm"
+                                  >
+                                    <span className="font-mono">{l.location}</span>
+                                    <span className="text-muted-foreground">
+                                      Qty: {l.quantity}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    </>
                   );
                 })}
               </TableBody>
