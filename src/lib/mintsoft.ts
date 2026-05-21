@@ -524,6 +524,37 @@ export async function fetchProductStockLocations(
  * Like fetchProductStockLocations but also returns the underlying
  * WarehouseId / LocationId fields needed for stock movement calls.
  */
+/**
+ * Fetch the total on-hand and allocated quantities for many products in
+ * parallel (concurrency-limited). Returns a Map keyed by productId.
+ */
+export async function fetchProductStockTotals(
+  settings: Settings,
+  productIds: number[],
+  opts: { concurrency?: number } = {},
+): Promise<Map<number, { onHand: number; allocated: number }>> {
+  const concurrency = Math.max(1, opts.concurrency ?? 8);
+  const result = new Map<number, { onHand: number; allocated: number }>();
+  let idx = 0;
+  const workers: Promise<void>[] = [];
+  const next = async (): Promise<void> => {
+    while (idx < productIds.length) {
+      const i = idx++;
+      const pid = productIds[i];
+      try {
+        const locs = await fetchProductStockLocations(settings, pid);
+        const onHand = locs.reduce((s, l) => s + (Number(l.quantity) || 0), 0);
+        result.set(pid, { onHand, allocated: 0 });
+      } catch {
+        result.set(pid, { onHand: 0, allocated: 0 });
+      }
+    }
+  };
+  for (let i = 0; i < concurrency; i++) workers.push(next());
+  await Promise.all(workers);
+  return result;
+}
+
 export async function fetchProductStock(
   settings: Settings,
   productId: number,
