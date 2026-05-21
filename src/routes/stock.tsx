@@ -170,6 +170,19 @@ function ExpandedDetails({
                     ))}
                   </ul>
                 )}
+                {row.batches.length > 0 && (
+                  <ul className="mt-2 ml-[min(12rem,30%)] space-y-1 border-t border-border pt-2 text-xs text-muted-foreground">
+                    {row.batches.map((batch, j) => (
+                      <li key={`${batch.batchNumber ?? "bbe"}-${batch.bestBeforeDate ?? "none"}-${j}`} className="flex items-center justify-between">
+                        <span>
+                          {batch.batchNumber ? `Batch ${batch.batchNumber}` : "Batch"}
+                          {batch.bestBeforeDate ? ` · BBE ${new Date(batch.bestBeforeDate).toLocaleDateString()}` : ""}
+                        </span>
+                        <span className="font-mono">×{batch.quantity}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             );
           })}
