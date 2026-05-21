@@ -928,7 +928,9 @@ function stockLocationsFromReport(
     if (!location) continue;
     const qty = Number(r.Quantity ?? 0) || 0;
     if (qty <= 0) continue;
-    const isAllocated = /alloc/i.test(r.Type ?? "");
+    const isAllocated =
+      typeof (r as { AllocatedOrder?: unknown }).AllocatedOrder === "string" &&
+      ((r as { AllocatedOrder?: string }).AllocatedOrder ?? "").trim().length > 0;
     const key = location;
     const existing = byLocation.get(key);
     if (existing) {
