@@ -215,8 +215,15 @@ export async function listOpenOrders(settings: Settings): Promise<MintsoftOrder[
   return Array.isArray(data) ? data : (data.Results ?? []);
 }
 
-export async function fetchOrder(settings: Settings, orderId: number): Promise<MintsoftOrder | null> {
-  const detailPaths = [`/api/Order/${orderId}`, `/api/Order/${orderId}/Details`, `/api/Order/Details/${orderId}`];
+export async function fetchOrder(
+  settings: Settings,
+  orderId: number,
+): Promise<MintsoftOrder | null> {
+  const detailPaths = [
+    `/api/Order/${orderId}`,
+    `/api/Order/${orderId}/Details`,
+    `/api/Order/Details/${orderId}`,
+  ];
   for (const path of detailPaths) {
     try {
       const data = await authedJson<MintsoftOrder>(settings, path);
@@ -253,13 +260,8 @@ export type MintsoftOrderStatus = {
   ExternalName?: string;
 };
 
-export async function listOrderStatuses(
-  settings: Settings,
-): Promise<MintsoftOrderStatus[]> {
-  const data = await authedJson<MintsoftOrderStatus[]>(
-    settings,
-    "/api/Order/Statuses",
-  );
+export async function listOrderStatuses(settings: Settings): Promise<MintsoftOrderStatus[]> {
+  const data = await authedJson<MintsoftOrderStatus[]>(settings, "/api/Order/Statuses");
   return Array.isArray(data) ? data : [];
 }
 
@@ -396,10 +398,7 @@ export async function fetchProduct(
   productId: number,
 ): Promise<MintsoftProduct | null> {
   try {
-    const raw = await authedJson<Record<string, unknown>>(
-      settings,
-      `/api/Product/${productId}`,
-    );
+    const raw = await authedJson<Record<string, unknown>>(settings, `/api/Product/${productId}`);
     if (!raw || typeof raw !== "object") return null;
     const pickStr = (...keys: string[]): string | null => {
       for (const k of keys) {
@@ -500,7 +499,8 @@ export type StockLocation = {
 function numericField(record: Record<string, unknown>, keys: string[]): number {
   for (const key of keys) {
     const value = record[key];
-    const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
+    const n =
+      typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
     if (Number.isFinite(n)) return n;
   }
   return 0;
@@ -510,7 +510,8 @@ function optionalNumericField(record: Record<string, unknown>, keys: string[]): 
   for (const key of keys) {
     if (!(key in record)) continue;
     const value = record[key];
-    const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
+    const n =
+      typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
     if (Number.isFinite(n)) return n;
   }
   return undefined;
@@ -616,11 +617,21 @@ function stockTotalFromRecord(r: Record<string, unknown>): ProductStockTotal {
     return type.includes("allocation") ? sum + numericField(entry, ["Quantity", "Qty"]) : sum;
   }, 0);
   return {
-    stockLevel: numericField(r, ["StockLevel", "Stock Level", "TotalStockLevel", "Total Stock Level", "Level"]),
-    allocated: numericField(r, ["Allocated", "StockAllocated", "QuantityAllocated"]) || allocatedFromBreakdown,
+    stockLevel: numericField(r, [
+      "StockLevel",
+      "Stock Level",
+      "TotalStockLevel",
+      "Total Stock Level",
+      "Level",
+    ]),
+    allocated:
+      numericField(r, ["Allocated", "StockAllocated", "QuantityAllocated"]) ||
+      allocatedFromBreakdown,
     onHand: numericField(r, ["OnHand", "On Hand", "StockOnHand", "QuantityOnHand", "Level"]),
     sku: typeof r.SKU === "string" ? r.SKU : undefined,
-    clientId: Number.isFinite(Number(r.ClientId ?? r.ClientID)) ? Number(r.ClientId ?? r.ClientID) : undefined,
+    clientId: Number.isFinite(Number(r.ClientId ?? r.ClientID))
+      ? Number(r.ClientId ?? r.ClientID)
+      : undefined,
   };
 }
 
@@ -914,15 +925,19 @@ export async function stockMovementIn(
   },
 ): Promise<void> {
   const { BatchNumber, BestBeforeDate, ...rest } = params;
-  const result = await authedJson<MintsoftToolkitResult>(settings, `/api/Warehouse/StockMovement?Action=0`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      ...rest,
-      ...(BatchNumber ? { BatchNo: BatchNumber } : {}),
-      ...(BestBeforeDate ? { ExpiryDate: BestBeforeDate } : {}),
-    }),
-  });
+  const result = await authedJson<MintsoftToolkitResult>(
+    settings,
+    `/api/Warehouse/StockMovement?Action=0`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...rest,
+        ...(BatchNumber ? { BatchNo: BatchNumber } : {}),
+        ...(BestBeforeDate ? { ExpiryDate: BestBeforeDate } : {}),
+      }),
+    },
+  );
   if (result.Success === false) {
     throw new Error(result.Message || result.WarningMessage || "Mintsoft stock movement failed");
   }
@@ -952,7 +967,7 @@ export async function listWarehouses(settings: Settings): Promise<MintsoftWareho
       const arr = Array.isArray(data)
         ? data
         : Array.isArray((data as { Results?: unknown })?.Results)
-          ? ((data as { Results: unknown[] }).Results)
+          ? (data as { Results: unknown[] }).Results
           : null;
       if (!arr) continue;
       const out: MintsoftWarehouse[] = [];
@@ -995,7 +1010,7 @@ export async function listWarehouseLocations(
       const arr = Array.isArray(data)
         ? data
         : Array.isArray((data as { Results?: unknown })?.Results)
-          ? ((data as { Results: unknown[] }).Results)
+          ? (data as { Results: unknown[] }).Results
           : null;
       if (!arr) continue;
       const out: MintsoftWarehouseLocation[] = [];
@@ -1081,7 +1096,7 @@ export async function fetchOrderAllocations(
   const arr = Array.isArray(data)
     ? data
     : Array.isArray((data as { Results?: unknown })?.Results)
-      ? ((data as { Results: unknown[] }).Results)
+      ? (data as { Results: unknown[] }).Results
       : [];
   const out: OrderAllocation[] = [];
   for (const r of arr as Array<Record<string, unknown>>) {
@@ -1139,7 +1154,7 @@ export async function fetchProductOrderAllocations(
   const arr = Array.isArray(data)
     ? data
     : Array.isArray((data as { Results?: unknown })?.Results)
-      ? ((data as { Results: unknown[] }).Results)
+      ? (data as { Results: unknown[] }).Results
       : [];
   const out: OrderAllocation[] = [];
   for (const r of arr as Array<Record<string, unknown>>) {
@@ -1246,7 +1261,6 @@ export async function fetchProductOpenOrderAllocations(
   await Promise.all(Array.from({ length: Math.min(concurrency, orders.length) }, worker));
   return out;
 }
-
 
 type MintsoftApiOrderDocument = {
   ID?: number;
@@ -1426,9 +1440,7 @@ export async function despatchOrder(
   trackingNumber?: string,
 ): Promise<void> {
   // Mintsoft public API: GET /api/Order/{id}/MarkDespatched?TrackingNumber=...
-  const qs = trackingNumber
-    ? `?TrackingNumber=${encodeURIComponent(trackingNumber)}`
-    : "";
+  const qs = trackingNumber ? `?TrackingNumber=${encodeURIComponent(trackingNumber)}` : "";
   await authedJson(settings, `/api/Order/${orderId}/MarkDespatched${qs}`, {
     method: "GET",
   });
@@ -1565,15 +1577,13 @@ export async function listInvoices(
   qs.set("PageNo", "1");
   qs.set("Limit", String(take));
   if (opts.from) qs.set("SinceDate", opts.from);
-  const paths = [
-    `/api/Accounting/Invoice/List?${qs.toString()}`,
-    `/api/Accounting/Invoice/All`,
-  ];
+  const paths = [`/api/Accounting/Invoice/List?${qs.toString()}`, `/api/Accounting/Invoice/All`];
   for (const p of paths) {
     try {
-      const data = await authedJson<
-        MintsoftInvoice[] | { Results?: MintsoftInvoice[] }
-      >(settings, p);
+      const data = await authedJson<MintsoftInvoice[] | { Results?: MintsoftInvoice[] }>(
+        settings,
+        p,
+      );
       const arr = Array.isArray(data) ? data : (data?.Results ?? []);
       if (Array.isArray(arr)) {
         return arr.map((r) => normaliseInvoice(r as Record<string, unknown>));
@@ -1616,19 +1626,14 @@ export async function fetchInvoiceItems(
   return [];
 }
 
-function normaliseInvoiceItem(
-  r: Record<string, unknown>,
-  invoiceId: number,
-): MintsoftInvoiceItem {
+function normaliseInvoiceItem(r: Record<string, unknown>, invoiceId: number): MintsoftInvoiceItem {
   const num = (v: unknown): number | null =>
     typeof v === "number" && Number.isFinite(v) ? v : null;
-  const str = (v: unknown): string | null =>
-    typeof v === "string" && v ? v : null;
+  const str = (v: unknown): string | null => (typeof v === "string" && v ? v : null);
   return {
     ...r,
     ID: typeof r.ID === "number" ? r.ID : undefined,
-    InvoiceId:
-      num(r.InvoiceSummaryId) ?? num(r.InvoiceId) ?? invoiceId,
+    InvoiceId: num(r.InvoiceSummaryId) ?? num(r.InvoiceId) ?? invoiceId,
     OrderId: num(r.OrderId),
     OrderNumber: str(r.OrderNumber) ?? str(r.OrderRef),
     Description: str(r.Description) ?? str(r.Comments),
@@ -1705,11 +1710,10 @@ function normaliseAsn(r: Record<string, unknown>): MintsoftASN {
       (typeof r.Status === "string" && r.Status) ||
       (typeof r.StatusName === "string" && r.StatusName) ||
       (r.ASNStatus && typeof (r.ASNStatus as { Name?: unknown }).Name === "string"
-        ? ((r.ASNStatus as { Name: string }).Name)
+        ? (r.ASNStatus as { Name: string }).Name
         : null) ||
       null,
-    StatusId:
-      Number(r.StatusId ?? r.StatusID ?? r.ASNStatusId ?? r.ASNStatusID) || null,
+    StatusId: Number(r.StatusId ?? r.StatusID ?? r.ASNStatusId ?? r.ASNStatusID) || null,
     ExpectedDate:
       (typeof r.ExpectedDate === "string" && r.ExpectedDate) ||
       (typeof r.ExpectedArrivalDate === "string" && r.ExpectedArrivalDate) ||
@@ -1729,8 +1733,7 @@ function normaliseAsn(r: Record<string, unknown>): MintsoftASN {
       (typeof r.ReceivedDate === "string" && r.ReceivedDate) ||
       (typeof r.DateReceived === "string" && r.DateReceived) ||
       null,
-    TotalQuantity:
-      Number(r.TotalQuantity ?? r.TotalQty ?? r.Quantity ?? r.NumberOfItems) || null,
+    TotalQuantity: Number(r.TotalQuantity ?? r.TotalQty ?? r.Quantity ?? r.NumberOfItems) || null,
     ClientId: Number(r.ClientId ?? r.ClientID) || null,
     Notes:
       (typeof r.Notes === "string" && r.Notes) ||
@@ -1758,10 +1761,10 @@ function normaliseAsn(r: Record<string, unknown>): MintsoftASN {
       (typeof r.PackageType === "string" && r.PackageType) ||
       (typeof r.DeliveryType === "string" && r.DeliveryType) ||
       (r.GoodsInType && typeof (r.GoodsInType as { Name?: unknown }).Name === "string"
-        ? ((r.GoodsInType as { Name: string }).Name)
+        ? (r.GoodsInType as { Name: string }).Name
         : null) ||
       (r.InboundType && typeof (r.InboundType as { Name?: unknown }).Name === "string"
-        ? ((r.InboundType as { Name: string }).Name)
+        ? (r.InboundType as { Name: string }).Name
         : null) ||
       null,
     ...r,
@@ -1769,19 +1772,14 @@ function normaliseAsn(r: Record<string, unknown>): MintsoftASN {
 }
 
 export async function listASNs(settings: Settings): Promise<MintsoftASN[]> {
-  const paths = [
-    "/api/ASN/List?Take=200",
-    "/api/ASN?Take=200",
-    "/api/ASN/List",
-    "/api/ASN",
-  ];
+  const paths = ["/api/ASN/List?Take=200", "/api/ASN?Take=200", "/api/ASN/List", "/api/ASN"];
   for (const p of paths) {
     try {
       const data = await authedJson<unknown>(settings, p);
       const arr = Array.isArray(data)
         ? data
         : Array.isArray((data as { Results?: unknown })?.Results)
-          ? ((data as { Results: unknown[] }).Results)
+          ? (data as { Results: unknown[] }).Results
           : null;
       if (!arr) continue;
       return (arr as Array<Record<string, unknown>>).map(normaliseAsn);
@@ -1792,10 +1790,7 @@ export async function listASNs(settings: Settings): Promise<MintsoftASN[]> {
   return [];
 }
 
-export async function fetchASN(
-  settings: Settings,
-  asnId: number,
-): Promise<MintsoftASN | null> {
+export async function fetchASN(settings: Settings, asnId: number): Promise<MintsoftASN | null> {
   const paths = [`/api/ASN/${asnId}`, `/api/ASN/${asnId}/Details`];
   for (const p of paths) {
     try {
@@ -1822,7 +1817,16 @@ export type MintsoftASNItem = {
 };
 
 function normaliseAsnItem(r: Record<string, unknown>): MintsoftASNItem {
-  const id = Number(r.ID ?? r.Id ?? r.ASNItemId ?? r.ASNItemID ?? r.ASNDetailId ?? r.ASNDetailID ?? r.ItemId ?? r.ItemID);
+  const id = Number(
+    r.ID ??
+      r.Id ??
+      r.ASNItemId ??
+      r.ASNItemID ??
+      r.ASNDetailId ??
+      r.ASNDetailID ??
+      r.ItemId ??
+      r.ItemID,
+  );
   const productId = Number(r.ProductId ?? r.ProductID);
   return {
     ID: Number.isFinite(id) ? id : null,
@@ -1852,22 +1856,12 @@ function normaliseAsnItem(r: Record<string, unknown>): MintsoftASNItem {
     EAN: (typeof r.EAN === "string" && r.EAN) || null,
     UPC: (typeof r.UPC === "string" && r.UPC) || null,
     ExpectedQuantity:
-      Number(
-        r.ExpectedQuantity ??
-          r.Expected ??
-          r.Qty ??
-          r.Quantity ??
-          r.QuantityExpected,
-      ) || 0,
-    ReceivedQuantity:
-      Number(r.ReceivedQuantity ?? r.QuantityReceived ?? r.Received) || 0,
+      Number(r.ExpectedQuantity ?? r.Expected ?? r.Qty ?? r.Quantity ?? r.QuantityExpected) || 0,
+    ReceivedQuantity: Number(r.ReceivedQuantity ?? r.QuantityReceived ?? r.Received) || 0,
   };
 }
 
-export async function fetchASNItems(
-  settings: Settings,
-  asnId: number,
-): Promise<MintsoftASNItem[]> {
+export async function fetchASNItems(settings: Settings, asnId: number): Promise<MintsoftASNItem[]> {
   const paths = [
     `/api/ASN/${asnId}/Items`,
     `/api/ASN/${asnId}/Details`,
@@ -1880,16 +1874,16 @@ export async function fetchASNItems(
       const arr = Array.isArray(data)
         ? data
         : Array.isArray((data as { Results?: unknown })?.Results)
-          ? ((data as { Results: unknown[] }).Results)
+          ? (data as { Results: unknown[] }).Results
           : Array.isArray((data as { Products?: unknown })?.Products)
-            ? ((data as { Products: unknown[] }).Products)
+            ? (data as { Products: unknown[] }).Products
             : Array.isArray((data as { ASNDetails?: unknown })?.ASNDetails)
-              ? ((data as { ASNDetails: unknown[] }).ASNDetails)
+              ? (data as { ASNDetails: unknown[] }).ASNDetails
               : Array.isArray((data as { ASNItems?: unknown })?.ASNItems)
-                ? ((data as { ASNItems: unknown[] }).ASNItems)
-              : Array.isArray((data as { Items?: unknown })?.Items)
-                ? ((data as { Items: unknown[] }).Items)
-                : null;
+                ? (data as { ASNItems: unknown[] }).ASNItems
+                : Array.isArray((data as { Items?: unknown })?.Items)
+                  ? (data as { Items: unknown[] }).Items
+                  : null;
       if (!arr) continue;
       const out = (arr as Array<Record<string, unknown>>).map(normaliseAsnItem);
       if (out.length > 0) return out;
@@ -1982,10 +1976,7 @@ export async function receiveASNItem(
  * Mark an ASN as complete in Mintsoft. Tries a few known endpoint shapes
  * since Mintsoft tenants vary slightly.
  */
-export async function completeASN(
-  settings: Settings,
-  asnId: number,
-): Promise<void> {
+export async function completeASN(settings: Settings, asnId: number): Promise<void> {
   // Mintsoft's receiving UI runs two stages: "Assign locations and book in"
   // (the BookIn endpoint) and then "Complete book in ASN". Mirror that order
   // here — BookIn first (best effort, since it may already have been called),
@@ -1998,25 +1989,22 @@ export async function completeASN(
     { path: `/api/ASN/${asnId}/BookIn`, method: "POST" },
     { path: `/api/ASN/BookIn?ASNId=${asnId}`, method: "POST" },
   ];
-  const completeAttempts: Array<{ path: string; method: "POST" | "PUT" | "GET"; body?: unknown }> = [
-    { path: `/api/ASN/${asnId}/MarkPutAwayComplete`, method: "GET" },
-    { path: `/api/ASN/${asnId}/Complete`, method: "POST" },
-    { path: `/api/ASN/${asnId}/MarkComplete`, method: "POST" },
-    { path: `/api/ASN/${asnId}/Close`, method: "POST" },
-    { path: `/api/ASN/Complete?ASNId=${asnId}`, method: "POST" },
-    { path: `/api/ASN/${asnId}/Status`, method: "PUT", body: { Status: "Complete" } },
-  ];
+  const completeAttempts: Array<{ path: string; method: "POST" | "PUT" | "GET"; body?: unknown }> =
+    [
+      { path: `/api/ASN/${asnId}/MarkPutAwayComplete`, method: "GET" },
+      { path: `/api/ASN/${asnId}/Complete`, method: "POST" },
+      { path: `/api/ASN/${asnId}/MarkComplete`, method: "POST" },
+      { path: `/api/ASN/${asnId}/Close`, method: "POST" },
+      { path: `/api/ASN/Complete?ASNId=${asnId}`, method: "POST" },
+      { path: `/api/ASN/${asnId}/Status`, method: "PUT", body: { Status: "Complete" } },
+    ];
 
   const tryOne = async (a: { path: string; method: "POST" | "PUT" | "GET"; body?: unknown }) => {
-    const result = await authedJson<MintsoftToolkitResult | unknown>(
-      settings,
-      a.path,
-      {
-        method: a.method,
-        headers: a.body ? { "Content-Type": "application/json" } : undefined,
-        body: a.body ? JSON.stringify(a.body) : undefined,
-      },
-    );
+    const result = await authedJson<MintsoftToolkitResult | unknown>(settings, a.path, {
+      method: a.method,
+      headers: a.body ? { "Content-Type": "application/json" } : undefined,
+      body: a.body ? JSON.stringify(a.body) : undefined,
+    });
     const r = result as MintsoftToolkitResult;
     if (r && r.Success === false) {
       throw new Error(r.Message || r.WarningMessage || "Mintsoft ASN call failed");
@@ -2066,10 +2054,7 @@ export async function completeASN(
  * Mark an ASN as partially booked-in / closed-partial on Mintsoft. Tries the
  * known partial endpoints and falls back to a Status update.
  */
-export async function partialCompleteASN(
-  settings: Settings,
-  asnId: number,
-): Promise<void> {
+export async function partialCompleteASN(settings: Settings, asnId: number): Promise<void> {
   const attempts: Array<{ path: string; method: "POST" | "PUT" | "GET"; body?: unknown }> = [
     { path: `/api/ASN/${asnId}/BookInPartial`, method: "GET" },
     { path: `/api/ASN/${asnId}/BookInPartial`, method: "POST" },
@@ -2082,15 +2067,11 @@ export async function partialCompleteASN(
   ];
 
   const tryOne = async (a: { path: string; method: "POST" | "PUT" | "GET"; body?: unknown }) => {
-    const result = await authedJson<MintsoftToolkitResult | unknown>(
-      settings,
-      a.path,
-      {
-        method: a.method,
-        headers: a.body ? { "Content-Type": "application/json" } : undefined,
-        body: a.body ? JSON.stringify(a.body) : undefined,
-      },
-    );
+    const result = await authedJson<MintsoftToolkitResult | unknown>(settings, a.path, {
+      method: a.method,
+      headers: a.body ? { "Content-Type": "application/json" } : undefined,
+      body: a.body ? JSON.stringify(a.body) : undefined,
+    });
     const r = result as MintsoftToolkitResult;
     if (r && r.Success === false) {
       throw new Error(r.Message || r.WarningMessage || "Mintsoft ASN call failed");
@@ -2115,10 +2096,7 @@ export async function partialCompleteASN(
   throw lastErr instanceof Error ? lastErr : new Error("Failed to mark ASN as partial");
 }
 
-export async function createASN(
-  settings: Settings,
-  input: CreateASNInput,
-): Promise<MintsoftASN> {
+export async function createASN(settings: Settings, input: CreateASNInput): Promise<MintsoftASN> {
   const body = JSON.stringify(input);
   const paths = ["/api/ASN", "/api/ASN/Create"];
   let lastErr: unknown;
