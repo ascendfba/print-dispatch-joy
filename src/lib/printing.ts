@@ -24,7 +24,10 @@ export type PrintMeta = {
 };
 
 type ElectronPrintResult = { ok: boolean; error?: string; logPath?: string };
-type ElectronPrintApi = NonNullable<Window["dispatchAPI"]> & {
+type ElectronPrintApi = Omit<
+  NonNullable<Window["dispatchAPI"]>,
+  "printPdf" | "printRasterPages" | "debugPrintLog"
+> & {
   debugPrintLog?: (args: Record<string, unknown>) => Promise<{ ok: boolean; logPath?: string }>;
   printPdf: (args: {
     base64: string;
