@@ -1258,8 +1258,14 @@ export async function fetchProductStock(
             undefined;
           const bestBeforeDate =
             (typeof r.BestBeforeDate === "string" && r.BestBeforeDate) ||
+            (typeof r.BestBefore === "string" && r.BestBefore) ||
             (typeof r.BBE === "string" && r.BBE) ||
             (typeof r.ExpiryDate === "string" && r.ExpiryDate) ||
+            undefined;
+          const serialNumber =
+            (typeof r.SerialNumber === "string" && r.SerialNumber) ||
+            (typeof r.SerialNo === "string" && r.SerialNo) ||
+            (typeof r.Serial === "string" && r.Serial) ||
             undefined;
           out.push({
             location,
@@ -1272,6 +1278,7 @@ export async function fetchProductStock(
             warehouseName,
             batchNumber,
             bestBeforeDate,
+            serialNumber,
           });
         }
         if (out.length > 0) return out;
