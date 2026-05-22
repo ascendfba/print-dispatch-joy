@@ -55,10 +55,28 @@ async function addOpaqueWhiteBackground(bytes: Uint8Array): Promise<Uint8Array> 
 
     for (const srcPage of src.getPages()) {
       const { width, height } = srcPage.getSize();
+      const rotation = srcPage.getRotation().angle % 360;
+      // For rotated pages, the visible canvas swaps width/height at 90/270.
+      const rotated = rotation === 90 || rotation === 270;
+      const pageW = rotated ? height : width;
+      const pageH = rotated ? width : height;
       const embedded = await out.embedPage(srcPage);
-      const page = out.addPage([width, height]);
-      page.drawRectangle({ x: 0, y: 0, width, height, color: rgb(1, 1, 1) });
-      page.drawPage(embedded, { x: 0, y: 0, width, height });
+      const page = out.addPage([pageW, pageH]);
+      page.drawRectangle({ x: 0, y: 0, width: pageW, height: pageH, color: rgb(1, 1, 1) });
+
+      // Honour the source page's /Rotate flag so content lands inside the page.
+      let x = 0;
+      let y = 0;
+      if (rotation === 90) { x = pageW; y = 0; }
+      else if (rotation === 180) { x = pageW; y = pageH; }
+      else if (rotation === 270) { x = 0; y = pageH; }
+      page.drawPage(embedded, {
+        x,
+        y,
+        width,
+        height,
+        rotate: { type: "degrees", angle: rotation } as never,
+      });
     }
 
     return await out.save({ useObjectStreams: false });
