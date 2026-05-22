@@ -10,6 +10,30 @@ const os = require("os");
 // Override at runtime with:  DISPATCH_URL=https://your-domain.com  DispatchConsole.exe
 const APP_URL = process.env.DISPATCH_URL || "https://start.ascendfba.co.uk";
 
+function getPrintLogPath() {
+  try {
+    return path.join(app.getPath("userData"), "print-debug.log");
+  } catch {
+    return path.join(os.tmpdir(), "dispatch-print-debug.log");
+  }
+}
+
+function writePrintLog(event, details = {}) {
+  const entry = {
+    ts: new Date().toISOString(),
+    event,
+    ...details,
+  };
+  const line = `${JSON.stringify(entry)}\n`;
+  try {
+    fs.mkdirSync(path.dirname(getPrintLogPath()), { recursive: true });
+    fs.appendFileSync(getPrintLogPath(), line, "utf8");
+  } catch (e) {
+    console.error("write print log failed", e);
+  }
+  console.log("print-debug", entry);
+}
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1400,
@@ -46,11 +70,20 @@ ipcMain.handle("printers:list", async (event) => {
   const wc = event.sender;
   try {
     const list = await wc.getPrintersAsync();
+    writePrintLog("printers:list", { printers: list.map((p) => p.name) });
     return list.map((p) => p.name);
   } catch (e) {
+    writePrintLog("printers:list:error", { error: String(e) });
     console.error("list printers failed", e);
     return [];
   }
+});
+
+ipcMain.handle("printers:getPrintLogPath", async () => getPrintLogPath());
+
+ipcMain.handle("printers:debugLog", async (_evt, payload) => {
+  writePrintLog("renderer", payload && typeof payload === "object" ? payload : { payload });
+  return { ok: true, logPath: getPrintLogPath() };
 });
 
 // ---- IPC: silent print a PDF buffer to a named printer ----
