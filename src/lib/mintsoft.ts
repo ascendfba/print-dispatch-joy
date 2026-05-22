@@ -1450,14 +1450,12 @@ export async function transferStockLocation(
     ...(expiryDate ? { ExpiryDate: expiryDate, BestBeforeDate: expiryDate, BestBefore: expiryDate } : {}),
     ...(serialNumber ? { SerialNo: serialNumber, SerialNumber: serialNumber } : {}),
   };
-  // Mintsoft's Action=17 (TransferLocation) moves the FULL contents of a
-  // location regardless of the Quantity field, so it can't be used for
-  // partial moves. Instead, perform a Stock Out at the source followed by a
-  // Stock In at the destination — this works for both full and partial
-  // quantities.
-  const outResult = await authedJson<MintsoftToolkitResult>(
+  // Use Mintsoft's real TransferLocation action. StockOut/StockIn updates
+  // inventory and fails for rows that already have stored BBE/batch/serial
+  // attributes; TransferLocation moves the existing stock row instead.
+  const result = await authedJson<MintsoftToolkitResult>(
     settings,
-    `/api/Warehouse/StockMovement?Action=1`,
+    `/api/Warehouse/StockMovement?Action=17`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1466,61 +1464,24 @@ export async function transferStockLocation(
         WarehouseId: warehouseId,
         LocationId: sourceMatch.id,
         Quantity: params.quantity,
+        Qty: params.quantity,
+        DestinationWarehouseId: destWarehouseId,
+        DestinationLocationId: destMatch.id,
+        DestinationWarehouseID: destWarehouseId,
+        DestinationLocationID: destMatch.id,
+        ToWarehouseId: destWarehouseId,
+        ToLocationId: destMatch.id,
+        ToWarehouseID: destWarehouseId,
+        ToLocationID: destMatch.id,
         Comment: comment,
         ...batchFields,
       }),
     },
   );
-  if (outResult.Success === false) {
+  if (result.Success === false) {
     throw new Error(
-      outResult.Message || outResult.WarningMessage || "Mintsoft stock-out failed",
+      result.Message || result.WarningMessage || "Mintsoft transfer failed",
     );
-  }
-  try {
-    const inResult = await authedJson<MintsoftToolkitResult>(
-      settings,
-      `/api/Warehouse/StockMovement?Action=0`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ProductId: params.productId,
-          WarehouseId: destWarehouseId,
-          LocationId: destMatch.id,
-          Quantity: params.quantity,
-          Comment: comment,
-          ...batchFields,
-        }),
-      },
-    );
-    if (inResult.Success === false) {
-      throw new Error(
-        inResult.Message || inResult.WarningMessage || "Mintsoft stock-in failed",
-      );
-    }
-  } catch (err) {
-    // Roll back the stock-out so inventory isn't lost on a partial failure.
-    try {
-      await authedJson<MintsoftToolkitResult>(
-        settings,
-        `/api/Warehouse/StockMovement?Action=0`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ProductId: params.productId,
-            WarehouseId: warehouseId,
-            LocationId: sourceMatch.id,
-            Quantity: params.quantity,
-            Comment: `Rollback failed transfer ${params.fromLocationName} → ${params.toLocationName}`,
-            ...batchFields,
-          }),
-        },
-      );
-    } catch {
-      /* best effort */
-    }
-    throw err;
   }
   // Invalidate the report cache so the UI shows the new location after refetch.
   productsInLocationReportCache = undefined;
