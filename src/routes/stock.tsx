@@ -168,6 +168,7 @@ function ExpandedDetails({
     toLocation: string;
     quantity: string;
     submitting: boolean;
+    batches: Array<{ batchNumber?: string; bestBeforeDate?: string; quantity: number }>;
   } | null>(null);
 
   const locationsQuery = useQuery({
@@ -225,12 +226,29 @@ function ExpandedDetails({
     }
     setTransfer({ ...transfer, submitting: true });
     try {
+      // If the location has batch/expiry-tracked stock, Mintsoft requires
+      // those values on the stock movement. We currently support transferring
+      // a single batch at a time — if multiple distinct batches sit at the
+      // source location, ask the user to split the move.
+      const distinctBatches = transfer.batches.filter(
+        (b) => b.batchNumber || b.bestBeforeDate,
+      );
+      if (distinctBatches.length > 1) {
+        toast.error(
+          "This location holds multiple batches. Transfer one batch at a time from Mintsoft.",
+        );
+        setTransfer((t) => (t ? { ...t, submitting: false } : t));
+        return;
+      }
+      const batch = distinctBatches[0];
       await transferStockLocation(loadSettings(), {
         productId,
         warehouseName: transfer.warehouseName,
         fromLocationName: transfer.fromLocation,
         toLocationName: dest,
         quantity: qty,
+        batchNumber: batch?.batchNumber,
+        bestBeforeDate: batch?.bestBeforeDate,
       });
       toast.success(`Moved ${qty} × from ${transfer.fromLocation} to ${dest}`);
       setTransfer(null);
@@ -286,6 +304,7 @@ function ExpandedDetails({
                         toLocation: "",
                         quantity: String(row.onHand || row.stockLevel || 0),
                         submitting: false,
+                        batches: row.batches,
                       })
                     }
                     title="Move stock to another location"

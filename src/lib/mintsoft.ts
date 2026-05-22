@@ -1323,6 +1323,8 @@ export async function transferStockLocation(
     toWarehouseName?: string;
     quantity: number;
     comment?: string;
+    batchNumber?: string;
+    bestBeforeDate?: string;
   },
 ): Promise<void> {
   const normalize = (s: string) => s.trim().toLowerCase();
@@ -1376,6 +1378,10 @@ export async function transferStockLocation(
   }
   const comment =
     params.comment ?? `Transfer ${params.fromLocationName} → ${params.toLocationName}`;
+  const batchFields = {
+    ...(params.batchNumber ? { BatchNo: params.batchNumber } : {}),
+    ...(params.bestBeforeDate ? { ExpiryDate: params.bestBeforeDate } : {}),
+  };
   // Mintsoft's Action=17 (TransferLocation) moves the FULL contents of a
   // location regardless of the Quantity field, so it can't be used for
   // partial moves. Instead, perform a Stock Out at the source followed by a
@@ -1393,6 +1399,7 @@ export async function transferStockLocation(
         LocationId: sourceMatch.id,
         Quantity: params.quantity,
         Comment: comment,
+        ...batchFields,
       }),
     },
   );
@@ -1414,6 +1421,7 @@ export async function transferStockLocation(
           LocationId: destMatch.id,
           Quantity: params.quantity,
           Comment: comment,
+          ...batchFields,
         }),
       },
     );
@@ -1437,6 +1445,7 @@ export async function transferStockLocation(
             LocationId: sourceMatch.id,
             Quantity: params.quantity,
             Comment: `Rollback failed transfer ${params.fromLocationName} → ${params.toLocationName}`,
+            ...batchFields,
           }),
         },
       );
