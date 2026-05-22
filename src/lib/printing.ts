@@ -141,6 +141,52 @@ async function rasterizePdfForPrint(bytes: Uint8Array): Promise<Uint8Array> {
   }
 }
 
+type RasterPrintPage = {
+  pngBase64: string;
+  widthPt: number;
+  heightPt: number;
+};
+
+async function rasterizePdfToPrintPages(bytes: Uint8Array): Promise<RasterPrintPage[]> {
+  const pdfjs = await loadPdfjs();
+  const loadingTask = pdfjs.getDocument({ data: bytes.slice().buffer });
+  const src = await loadingTask.promise;
+  const pages: RasterPrintPage[] = [];
+
+  try {
+    for (let pageIndex = 1; pageIndex <= src.numPages; pageIndex++) {
+      const srcPage = await src.getPage(pageIndex);
+      const baseViewport = srcPage.getViewport({ scale: 1 });
+      const maxEdge = Math.max(baseViewport.width, baseViewport.height);
+      const scale = Math.min(8, Math.max(2, 1800 / maxEdge));
+      const viewport = srcPage.getViewport({ scale });
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      const ctx = canvas.getContext("2d", { alpha: false });
+      if (!ctx) throw new Error("Could not create PDF print canvas");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await srcPage.render({
+        canvas,
+        canvasContext: ctx,
+        viewport,
+        background: "#ffffff",
+      }).promise;
+
+      pages.push({
+        pngBase64: bytesToBase64(await canvasToPngBytes(canvas)),
+        widthPt: baseViewport.width,
+        heightPt: baseViewport.height,
+      });
+    }
+  } finally {
+    await src.destroy();
+  }
+
+  return pages;
+}
+
 async function makePrintablePdf(bytes: Uint8Array): Promise<Uint8Array> {
   try {
     return await rasterizePdfForPrint(bytes);
@@ -157,23 +203,46 @@ export async function printPdfBytes(
 ): Promise<void> {
   if (!printerName) throw new Error("No printer configured");
   if (isElectron()) {
-    const printableBytes = await makePrintablePdf(bytes);
-    const res = await window.dispatchAPI!.printPdf({
-      base64: bytesToBase64(printableBytes),
-      printerName,
-      silent,
-    });
+    const desktopApi = window.dispatchAPI! as typeof window.dispatchAPI & {
+      printRasterPages?: (args: {
+        pages: RasterPrintPage[];
+        printerName: string;
+        silent: boolean;
+      }) => Promise<{ ok: boolean; error?: string }>;
+    };
+    let printableByteSize = bytes.byteLength;
+    let res: { ok: boolean; error?: string };
+
+    try {
+      if (!desktopApi.printRasterPages) throw new Error("Desktop app needs update");
+      const pages = await rasterizePdfToPrintPages(bytes);
+      printableByteSize = pages.reduce((total, page) => total + page.pngBase64.length, 0);
+      res = await desktopApi.printRasterPages({
+        pages,
+        printerName,
+        silent,
+      });
+    } catch {
+      const printableBytes = await makePrintablePdf(bytes);
+      printableByteSize = printableBytes.byteLength;
+      res = await window.dispatchAPI!.printPdf({
+        base64: bytesToBase64(printableBytes),
+        printerName,
+        silent,
+      });
+    }
+
     if (!res.ok) {
       fireLog({
         printer: printerName,
         meta,
-        byteSize: printableBytes.byteLength,
+        byteSize: printableByteSize,
         status: "error",
         error: res.error || "Print failed",
       });
       throw new Error(res.error || "Print failed");
     }
-    fireLog({ printer: printerName, meta, byteSize: printableBytes.byteLength, status: "success" });
+    fireLog({ printer: printerName, meta, byteSize: printableByteSize, status: "success" });
     return;
   }
   // Browser fallback: open the PDF in a new tab — user prints manually.
