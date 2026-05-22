@@ -498,6 +498,7 @@ export type StockLocation = {
   warehouseName?: string;
   batchNumber?: string;
   bestBeforeDate?: string;
+  serialNumber?: string;
 };
 
 function numericField(record: Record<string, unknown>, keys: string[]): number {
@@ -685,6 +686,7 @@ export type ProductStockEntry = {
   warehouseName?: string;
   batchNumber?: string;
   bestBeforeDate?: string;
+  serialNumber?: string;
 };
 
 type ProductStockTotal = {
@@ -876,7 +878,15 @@ type ProductsInLocationReportRow = {
   ProductName?: string | null;
   Quantity?: string | number | null;
   BatchNo?: string | null;
+  BatchNumber?: string | null;
+  Batch?: string | null;
   BestBefore?: string | null;
+  BestBeforeDate?: string | null;
+  ExpiryDate?: string | null;
+  BBE?: string | null;
+  SerialNumber?: string | null;
+  SerialNo?: string | null;
+  Serial?: string | null;
   ProductInLocationId?: number | null;
 };
 
@@ -948,8 +958,19 @@ function stockLocationsFromReport(
       allocated: isAllocated ? qty : 0,
       onHand: qty,
       warehouseName,
-      batchNumber: r.BatchNo?.toString().trim() || undefined,
-      bestBeforeDate: r.BestBefore?.toString().trim() || undefined,
+      batchNumber: optionalStringField(r as Record<string, unknown>, ["BatchNo", "BatchNumber", "Batch"]),
+      bestBeforeDate: optionalStringField(r as Record<string, unknown>, [
+        "BestBefore",
+        "BestBeforeDate",
+        "ExpiryDate",
+        "ExpirationDate",
+        "BBE",
+      ]),
+      serialNumber: optionalStringField(r as Record<string, unknown>, [
+        "SerialNumber",
+        "SerialNo",
+        "Serial",
+      ]),
     });
   }
   return out;
@@ -1035,6 +1056,7 @@ export async function fetchProductStockLocations(
             "Expires",
             "BBE",
           ]);
+          const serialNumber = optionalStringField(r, ["SerialNumber", "SerialNo", "Serial"]);
           const stockLevel =
             optionalNumericField(r, [
               "StockLevel",
@@ -1072,6 +1094,7 @@ export async function fetchProductStockLocations(
               warehouseId: Number.isFinite(warehouseId) ? warehouseId : undefined,
               batchNumber,
               bestBeforeDate,
+              serialNumber,
             });
           }
           if (!directLocationName && (!Number.isFinite(locationId) || locationId === 0)) continue;
@@ -1090,6 +1113,7 @@ export async function fetchProductStockLocations(
               warehouseId: Number.isFinite(warehouseId) ? warehouseId : undefined,
               batchNumber,
               bestBeforeDate,
+              serialNumber,
             });
           }
         }
@@ -1235,8 +1259,14 @@ export async function fetchProductStock(
             undefined;
           const bestBeforeDate =
             (typeof r.BestBeforeDate === "string" && r.BestBeforeDate) ||
+            (typeof r.BestBefore === "string" && r.BestBefore) ||
             (typeof r.BBE === "string" && r.BBE) ||
             (typeof r.ExpiryDate === "string" && r.ExpiryDate) ||
+            undefined;
+          const serialNumber =
+            (typeof r.SerialNumber === "string" && r.SerialNumber) ||
+            (typeof r.SerialNo === "string" && r.SerialNo) ||
+            (typeof r.Serial === "string" && r.Serial) ||
             undefined;
           out.push({
             location,
@@ -1249,6 +1279,7 @@ export async function fetchProductStock(
             warehouseName,
             batchNumber,
             bestBeforeDate,
+            serialNumber,
           });
         }
         if (out.length > 0) return out;
@@ -1321,6 +1352,7 @@ export async function transferStockLocation(
     comment?: string;
     batchNumber?: string;
     bestBeforeDate?: string;
+    serialNumber?: string;
   },
 ): Promise<void> {
   const normalize = (s: string) => s.trim().toLowerCase();
@@ -1377,6 +1409,7 @@ export async function transferStockLocation(
   const batchFields = {
     ...(params.batchNumber ? { BatchNo: params.batchNumber } : {}),
     ...(params.bestBeforeDate ? { ExpiryDate: params.bestBeforeDate } : {}),
+    ...(params.serialNumber ? { SerialNo: params.serialNumber, SerialNumber: params.serialNumber } : {}),
   };
   // Mintsoft's Action=17 (TransferLocation) moves the FULL contents of a
   // location regardless of the Quantity field, so it can't be used for

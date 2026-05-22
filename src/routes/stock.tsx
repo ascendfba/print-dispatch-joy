@@ -106,7 +106,12 @@ function ExpandedDetails({
         stockLevel: number;
         allocated: number;
         onHand: number;
-        batches: Array<{ batchNumber?: string; bestBeforeDate?: string; quantity: number }>;
+        batches: Array<{
+          batchNumber?: string;
+          bestBeforeDate?: string;
+          serialNumber?: string;
+          quantity: number;
+        }>;
         orders: ProductOrderAllocation[];
       }
     >();
@@ -131,10 +136,11 @@ function ExpandedDetails({
         });
       }
       const row = map.get(key);
-      if (row && (l.batchNumber || l.bestBeforeDate)) {
+      if (row && (l.batchNumber || l.bestBeforeDate || l.serialNumber)) {
         row.batches.push({
           batchNumber: l.batchNumber,
           bestBeforeDate: l.bestBeforeDate,
+          serialNumber: l.serialNumber,
           quantity: l.quantity ?? l.stockLevel ?? l.onHand ?? 0,
         });
       }
@@ -168,7 +174,12 @@ function ExpandedDetails({
     toLocation: string;
     quantity: string;
     submitting: boolean;
-    batches: Array<{ batchNumber?: string; bestBeforeDate?: string; quantity: number }>;
+    batches: Array<{
+      batchNumber?: string;
+      bestBeforeDate?: string;
+      serialNumber?: string;
+      quantity: number;
+    }>;
   } | null>(null);
 
   const locationsQuery = useQuery({
@@ -230,7 +241,7 @@ function ExpandedDetails({
       // BatchNo + ExpiryDate on every stock movement. Transfer FIFO by
       // best-before date across batches until the requested quantity is met.
       const tracked = transfer.batches.filter(
-        (b) => (b.batchNumber || b.bestBeforeDate) && b.quantity > 0,
+        (b) => (b.batchNumber || b.bestBeforeDate || b.serialNumber) && b.quantity > 0,
       );
       if (tracked.length === 0) {
         await transferStockLocation(loadSettings(), {
@@ -260,6 +271,7 @@ function ExpandedDetails({
             quantity: take,
             batchNumber: b.batchNumber,
             bestBeforeDate: b.bestBeforeDate,
+            serialNumber: b.serialNumber,
           });
           remaining -= take;
         }
@@ -364,6 +376,7 @@ function ExpandedDetails({
                           {batch.bestBeforeDate
                             ? ` · BBE ${formatBbe(batch.bestBeforeDate)}`
                             : ""}
+                          {batch.serialNumber ? ` · Serial ${batch.serialNumber}` : ""}
                         </span>
                         <span className="font-mono">×{batch.quantity}</span>
                       </li>
