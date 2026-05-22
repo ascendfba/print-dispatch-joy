@@ -1,4 +1,3 @@
-import { PDFDocument, rgb } from "pdf-lib";
 import { bytesToBase64 } from "./mintsoft";
 import type { Settings } from "./storage";
 import type { LabelKind } from "./pdfSize";
