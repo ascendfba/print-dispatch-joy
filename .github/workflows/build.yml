@@ -3,6 +3,8 @@ on:
   workflow_dispatch:
   push:
     tags: ['v*']
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: windows-latest
@@ -22,9 +24,12 @@ jobs:
         run: npx @electron/packager . AscendFBA --platform=win32 --arch=x64 --app-version=1.0.0 --out=electron-release --overwrite --ignore='^/src' --ignore='^/public' --ignore='^/electron-release'
       - name: Zip
         run: Compress-Archive -Path electron-release/AscendFBA-win32-x64 -DestinationPath AscendFBA-win32-x64.zip
-      - uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Upload browser download
+        uses: softprops/action-gh-release@v2
         with:
+          tag_name: desktop-latest
+          name: Latest Windows Build
+          make_latest: true
           files: AscendFBA-win32-x64.zip
       - uses: actions/upload-artifact@v4
         with:
