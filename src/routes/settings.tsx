@@ -493,7 +493,6 @@ function SettingsPage() {
                   <Button asChild variant="default" disabled={!desktopUrl}>
                     <a
                       href={desktopUrl || "#"}
-                      download
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => {
