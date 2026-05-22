@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import ascendLogo from "@/assets/ascend-fba-logo.png";
+import ascendLogo from "@/assets/ascend-fba-logo-full.png";
 import { deviceTrust, type TrustedDevice } from "@/lib/device-trust";
 import { PinSetupDialog } from "@/components/PinSetupDialog";
 import { KeyRound, Mail } from "lucide-react";
@@ -138,7 +138,7 @@ function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 flex justify-center">
-          <img src={ascendLogo} alt="Ascend FBA" className="h-12 w-auto" />
+          <img src={ascendLogo} alt="Ascend FBA" className="h-14 w-auto" />
         </div>
         <Card>
           <CardHeader>
