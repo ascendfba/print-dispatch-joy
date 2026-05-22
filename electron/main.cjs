@@ -82,6 +82,85 @@ ipcMain.handle("printers:printPdf", async (_evt, payload) => {
   });
 });
 
+// ---- IPC: silent print already-rasterized label pages ----
+ipcMain.handle("printers:printRasterPages", async (_evt, payload) => {
+  const { pages, printerName, silent } = payload || {};
+  if (!Array.isArray(pages) || pages.length === 0 || !printerName) {
+    return { ok: false, error: "Missing pages or printerName" };
+  }
+
+  const safePages = pages
+    .filter((page) => page && page.pngBase64 && page.widthPt > 0 && page.heightPt > 0)
+    .map((page) => ({
+      pngBase64: String(page.pngBase64),
+      widthPt: Number(page.widthPt),
+      heightPt: Number(page.heightPt),
+    }));
+
+  if (safePages.length === 0) {
+    return { ok: false, error: "No printable pages" };
+  }
+
+  const pageCss = safePages
+    .map(
+      (page, index) => `
+        <section class="label-page" style="width:${page.widthPt}pt;height:${page.heightPt}pt;${index === safePages.length - 1 ? "" : "break-after: page;"}">
+          <img src="data:image/png;base64,${page.pngBase64}" />
+        </section>`,
+    )
+    .join("");
+
+  const first = safePages[0];
+  const html = `<!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          @page { size: ${first.widthPt}pt ${first.heightPt}pt; margin: 0; }
+          html, body { margin: 0; padding: 0; background: #fff; }
+          .label-page { margin: 0; padding: 0; background: #fff; overflow: hidden; page-break-inside: avoid; }
+          .label-page img { display: block; width: 100%; height: 100%; object-fit: contain; background: #fff; }
+        </style>
+      </head>
+      <body>${pageCss}</body>
+    </html>`;
+
+  return await new Promise((resolve) => {
+    const w = new BrowserWindow({
+      show: false,
+      webPreferences: { sandbox: true, plugins: false },
+    });
+    let settled = false;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      try { w.close(); } catch {}
+      resolve(result);
+    };
+
+    w.webContents.on("did-finish-load", () => {
+      w.webContents.print(
+        {
+          silent: !!silent,
+          deviceName: printerName,
+          color: false,
+          printBackground: true,
+          margins: { marginType: "none" },
+          scaleFactor: 100,
+        },
+        (success, failureReason) => {
+          if (success) finish({ ok: true });
+          else finish({ ok: false, error: failureReason || "Print failed" });
+        },
+      );
+    });
+
+    w.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`).catch((e) => {
+      finish({ ok: false, error: String(e) });
+    });
+  });
+});
+
 // ---- IPC: Mintsoft fetch (no CORS) ----
 ipcMain.handle("mintsoft:fetch", async (_evt, payload) => {
   const { baseUrl, path: urlPath, method = "GET", headers = {}, body } = payload || {};
