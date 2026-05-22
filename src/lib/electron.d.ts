@@ -12,12 +12,12 @@ declare global {
         printerName: string;
         silent: boolean;
         pageSize?: { widthPt: number; heightPt: number };
-      }) => Promise<{ ok: boolean; error?: string }>;
+      }) => Promise<{ ok: boolean; error?: string; logPath?: string }>;
       printRasterPages: (args: {
         pages: Array<{ pngBase64: string; widthPt: number; heightPt: number }>;
         printerName: string;
         silent: boolean;
-      }) => Promise<{ ok: boolean; error?: string }>;
+      }) => Promise<{ ok: boolean; error?: string; logPath?: string }>;
       mintsoftFetch: (args: {
         baseUrl: string;
         path: string;
