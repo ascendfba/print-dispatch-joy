@@ -19,7 +19,7 @@ jobs:
       - run: npm run build
       - name: Package Electron app
         shell: pwsh
-        run: npx @electron/packager . AscendFBA --platform=win32 --arch=x64 --out=electron-release --overwrite --ignore='^/src' --ignore='^/public' --ignore='^/electron-release'
+        run: npx @electron/packager . AscendFBA --platform=win32 --arch=x64 --app-version=1.0.0 --out=electron-release --overwrite --ignore='^/src' --ignore='^/public' --ignore='^/electron-release'
       - name: Zip
         run: Compress-Archive -Path electron-release/AscendFBA-win32-x64 -DestinationPath AscendFBA-win32-x64.zip
       - uses: softprops/action-gh-release@v2
