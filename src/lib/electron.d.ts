@@ -5,6 +5,8 @@ declare global {
     dispatchAPI?: {
       isElectron: true;
       listPrinters: () => Promise<string[]>;
+      getPrintLogPath?: () => Promise<string>;
+      debugPrintLog?: (args: Record<string, unknown>) => Promise<{ ok: boolean; logPath?: string }>;
       printPdf: (args: {
         base64: string;
         printerName: string;
