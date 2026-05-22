@@ -9,6 +9,7 @@ declare global {
         base64: string;
         printerName: string;
         silent: boolean;
+        pageSize?: { widthPt: number; heightPt: number };
       }) => Promise<{ ok: boolean; error?: string }>;
       printRasterPages: (args: {
         pages: Array<{ pngBase64: string; widthPt: number; heightPt: number }>;
