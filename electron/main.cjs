@@ -172,6 +172,13 @@ ipcMain.handle("printers:printRasterPages", async (_evt, payload) => {
     return { ok: false, error: "No printable pages" };
   }
 
+  writePrintLog("printRasterPages:start", {
+    printerName,
+    silent: !!silent,
+    pageCount: safePages.length,
+    firstPageSize: { widthPt: safePages[0].widthPt, heightPt: safePages[0].heightPt },
+  });
+
   const pageCss = safePages
     .map(
       (page, index) => `
@@ -232,14 +239,20 @@ ipcMain.handle("printers:printRasterPages", async (_evt, payload) => {
           scaleFactor: 100,
         },
         (success, failureReason) => {
-          if (success) finish({ ok: true });
-          else finish({ ok: false, error: failureReason || "Print failed" });
+          writePrintLog("printRasterPages:finish", {
+            printerName,
+            success,
+            failureReason: failureReason || null,
+          });
+          if (success) finish({ ok: true, logPath: getPrintLogPath() });
+          else finish({ ok: false, error: failureReason || "Print failed", logPath: getPrintLogPath() });
         },
       );
     });
 
     w.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`).catch((e) => {
-      finish({ ok: false, error: String(e) });
+      writePrintLog("printRasterPages:load-error", { printerName, error: String(e) });
+      finish({ ok: false, error: String(e), logPath: getPrintLogPath() });
     });
   });
 });
