@@ -240,6 +240,7 @@ ipcMain.handle("printers:printRasterPages", async (_evt, payload) => {
           printBackground: true,
           margins: { marginType: "none" },
           scaleFactor: 100,
+          pageSize: { width: ptToMicrons(first.widthPt), height: ptToMicrons(first.heightPt) },
         },
         (success, failureReason) => {
           writePrintLog("printRasterPages:finish", {
