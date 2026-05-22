@@ -236,7 +236,7 @@ ipcMain.handle("printers:printRasterPages", async (_evt, payload) => {
         {
           silent: !!silent,
           deviceName: printerName,
-          color: false,
+          color: true,
           printBackground: true,
           margins: { marginType: "none" },
           scaleFactor: 100,
