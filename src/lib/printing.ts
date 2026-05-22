@@ -190,14 +190,15 @@ export async function printPdfBytes(
     });
 
     if (!res.ok) {
+      const logHint = res.logPath ? ` Print log: ${res.logPath}` : "";
       fireLog({
         printer: printerName,
         meta,
         byteSize: printableByteSize,
         status: "error",
-        error: res.error || "Print failed",
+        error: `${res.error || "Print failed"}${logHint}`,
       });
-      throw new Error(res.error || "Print failed");
+      throw new Error(`${res.error || "Print failed"}${logHint}`);
     }
     fireLog({ printer: printerName, meta, byteSize: printableByteSize, status: "success" });
     return;
