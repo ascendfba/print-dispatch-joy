@@ -2,4 +2,4 @@
 // Hosted as a GitHub release asset on ascendfba/dispatch-console-desktop.
 // Bump the tag here when you publish a new release.
 export const DESKTOP_APP_DOWNLOAD_URL =
-  "https://github.com/ascendfba/dispatch-console-desktop/releases/download/v1.0.2/AscendFBA-win32-x64.zip";
+  "https://github.com/ascendfba/dispatch-console-desktop/releases/download/v1.0.3/AscendFBA-win32-x64.zip";
