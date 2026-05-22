@@ -1,4 +1,3 @@
-import { PDFDocument, rgb } from "pdf-lib";
 import { bytesToBase64 } from "./mintsoft";
 import type { Settings } from "./storage";
 import type { LabelKind } from "./pdfSize";
@@ -48,27 +47,14 @@ function fireLog(args: {
   });
 }
 
-async function addOpaqueWhiteBackground(bytes: Uint8Array): Promise<Uint8Array> {
-  try {
-    const src = await PDFDocument.load(bytes, { ignoreEncryption: true });
-    const out = await PDFDocument.create();
-
-    for (const srcPage of src.getPages()) {
-      const { width, height } = srcPage.getSize();
-      const embedded = await out.embedPage(srcPage);
-      const page = out.addPage([width, height]);
-      page.drawRectangle({ x: 0, y: 0, width, height, color: rgb(1, 1, 1) });
-      page.drawPage(embedded, { x: 0, y: 0, width, height });
-    }
-
-    return await out.save({ useObjectStreams: false });
-  } catch {
-    return bytes;
-  }
-}
-
 async function makePrintablePdf(bytes: Uint8Array): Promise<Uint8Array> {
-  return addOpaqueWhiteBackground(bytes);
+  // Previously this rebuilt every PDF via pdf-lib `embedPage` to ensure an
+  // opaque white background. That transformation lost rotation, cropbox
+  // offsets and form XObjects on real-world Mintsoft documents (invoices,
+  // picking lists, courier labels) — Chrome's PDF viewer then printed a
+  // blank page. Trust the source PDF as-is; it's already a valid PDF from
+  // Mintsoft / pdf-lib.
+  return bytes;
 }
 
 export async function printPdfBytes(
