@@ -1,0 +1,21 @@
+name: Build Windows App
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: npm install
+      - run: npm run build
+      - run: npx @electron/packager . AscendFBA --platform=win32 --arch=x64 --out=electron-release --overwrite --ignore="^/src" --ignore="^/public"
+      - name: Zip
+        run: Compress-Archive -Path electron-release/AscendFBA-win32-x64 -DestinationPath AscendFBA-win32-x64.zip
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: AscendFBA-win32-x64.zip
