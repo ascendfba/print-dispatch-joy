@@ -498,6 +498,7 @@ export type StockLocation = {
   warehouseName?: string;
   batchNumber?: string;
   bestBeforeDate?: string;
+  serialNumber?: string;
 };
 
 function numericField(record: Record<string, unknown>, keys: string[]): number {
@@ -876,7 +877,15 @@ type ProductsInLocationReportRow = {
   ProductName?: string | null;
   Quantity?: string | number | null;
   BatchNo?: string | null;
+  BatchNumber?: string | null;
+  Batch?: string | null;
   BestBefore?: string | null;
+  BestBeforeDate?: string | null;
+  ExpiryDate?: string | null;
+  BBE?: string | null;
+  SerialNumber?: string | null;
+  SerialNo?: string | null;
+  Serial?: string | null;
   ProductInLocationId?: number | null;
 };
 
@@ -948,8 +957,19 @@ function stockLocationsFromReport(
       allocated: isAllocated ? qty : 0,
       onHand: qty,
       warehouseName,
-      batchNumber: r.BatchNo?.toString().trim() || undefined,
-      bestBeforeDate: r.BestBefore?.toString().trim() || undefined,
+      batchNumber: optionalStringField(r as Record<string, unknown>, ["BatchNo", "BatchNumber", "Batch"]),
+      bestBeforeDate: optionalStringField(r as Record<string, unknown>, [
+        "BestBefore",
+        "BestBeforeDate",
+        "ExpiryDate",
+        "ExpirationDate",
+        "BBE",
+      ]),
+      serialNumber: optionalStringField(r as Record<string, unknown>, [
+        "SerialNumber",
+        "SerialNo",
+        "Serial",
+      ]),
     });
   }
   return out;
