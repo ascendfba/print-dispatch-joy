@@ -1450,9 +1450,101 @@ export async function transferStockLocation(
     ...(expiryDate ? { ExpiryDate: expiryDate, BestBeforeDate: expiryDate, BestBefore: expiryDate } : {}),
     ...(serialNumber ? { SerialNo: serialNumber, SerialNumber: serialNumber } : {}),
   };
-  // Use Mintsoft's real TransferLocation action. StockOut/StockIn updates
-  // inventory and fails for rows that already have stored BBE/batch/serial
-  // attributes; TransferLocation moves the existing stock row instead.
+  // Determine source row quantity to decide between a full transfer
+  // (Action=17 TransferLocation, moves the entire stock row) and a partial
+  // transfer (StockOut from source + StockIn to destination with batch
+  // fields preserved).
+  const sourceStockForQty = await fetchProductStockLocations(settings, params.productId);
+  const sourceRow = sourceStockForQty.find(
+    (location) =>
+      (location.locationId === sourceMatch.id ||
+        normalize(location.location) === normalize(params.fromLocationName) ||
+        normalize(location.location) === normalize(sourceMatch.name) ||
+        normalize(location.location) === normalize(sourceMatch.code ?? "")) &&
+      (batchNumber ? location.batchNumber === batchNumber : true) &&
+      (serialNumber ? location.serialNumber === serialNumber : true),
+  );
+  const sourceQty = sourceRow?.quantity ?? 0;
+  const isPartial = sourceQty > 0 && params.quantity < sourceQty;
+
+  if (isPartial) {
+    // StockOut from source
+    const outResult = await authedJson<MintsoftToolkitResult>(
+      settings,
+      `/api/Warehouse/StockMovement?Action=1`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ProductId: params.productId,
+          WarehouseId: warehouseId,
+          LocationId: sourceMatch.id,
+          Quantity: params.quantity,
+          Qty: params.quantity,
+          Comment: comment,
+          ...batchFields,
+        }),
+      },
+    );
+    if (outResult.Success === false) {
+      throw new Error(
+        outResult.Message || outResult.WarningMessage || "Mintsoft stock-out failed",
+      );
+    }
+    // StockIn to destination
+    try {
+      const inResult = await authedJson<MintsoftToolkitResult>(
+        settings,
+        `/api/Warehouse/StockMovement?Action=0`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ProductId: params.productId,
+            WarehouseId: destWarehouseId,
+            LocationId: destMatch.id,
+            Quantity: params.quantity,
+            Qty: params.quantity,
+            Comment: comment,
+            ...batchFields,
+          }),
+        },
+      );
+      if (inResult.Success === false) {
+        throw new Error(
+          inResult.Message || inResult.WarningMessage || "Mintsoft stock-in failed",
+        );
+      }
+    } catch (err) {
+      // Roll back the stock-out so source quantity is preserved.
+      try {
+        await authedJson<MintsoftToolkitResult>(
+          settings,
+          `/api/Warehouse/StockMovement?Action=0`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ProductId: params.productId,
+              WarehouseId: warehouseId,
+              LocationId: sourceMatch.id,
+              Quantity: params.quantity,
+              Qty: params.quantity,
+              Comment: `Rollback failed transfer: ${comment}`,
+              ...batchFields,
+            }),
+          },
+        );
+      } catch {
+        /* best-effort rollback */
+      }
+      throw err;
+    }
+    productsInLocationReportCache = undefined;
+    return;
+  }
+
+  // Full transfer: move the entire row via TransferLocation.
   const result = await authedJson<MintsoftToolkitResult>(
     settings,
     `/api/Warehouse/StockMovement?Action=17`,
