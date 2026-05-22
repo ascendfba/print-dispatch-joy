@@ -146,9 +146,40 @@ export async function printPdfBytes(
 ): Promise<void> {
   if (!printerName) throw new Error("No printer configured");
   if (isElectron()) {
+    const api = electronApi();
     const printableByteSize = bytes.byteLength;
     const pageSize = await readFirstPageSizePt(bytes);
-    const res = await window.dispatchAPI!.printPdf({
+    await api.debugPrintLog?.({
+      phase: "printPdfBytes:start",
+      printerName,
+      silent,
+      meta: meta ?? null,
+      byteSize: printableByteSize,
+      pageSize: pageSize ?? null,
+    });
+
+    try {
+      const pages = await rasterizePdfPages(bytes);
+      const rasterRes = await api.printRasterPages({ pages, printerName, silent });
+      if (rasterRes.ok) {
+        fireLog({ printer: printerName, meta, byteSize: printableByteSize, status: "success" });
+        return;
+      }
+      await api.debugPrintLog?.({
+        phase: "printPdfBytes:raster-failed-falling-back",
+        printerName,
+        error: rasterRes.error ?? "Raster print failed",
+        logPath: rasterRes.logPath ?? null,
+      });
+    } catch (e) {
+      await api.debugPrintLog?.({
+        phase: "printPdfBytes:raster-error-falling-back",
+        printerName,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+
+    const res = await api.printPdf({
       base64: bytesToBase64(bytes),
       printerName,
       silent,
