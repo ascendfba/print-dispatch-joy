@@ -10,7 +10,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: '20' }
-      - run: npm install
+      - run: npm install --force
       - run: npm run build
       - run: npx @electron/packager . AscendFBA --platform=win32 --arch=x64 --out=electron-release --overwrite --ignore="^/src" --ignore="^/public"
       - name: Zip
