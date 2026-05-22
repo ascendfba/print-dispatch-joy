@@ -6,8 +6,8 @@ import { Toaster } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
-import ascendLogo from "@/assets/ascend-fba-logo.png";
-import ascendLogoDark from "@/assets/ascend-fba-logo-dark.png";
+import ascendLogo from "@/assets/ascend-fba-logo-full.png";
+import ascendLogoDark from "@/assets/ascend-fba-logo-full-dark.png";
 import { deviceTrust } from "@/lib/device-trust";
 
 export function AppLayout() {
@@ -62,8 +62,8 @@ export function AppLayout() {
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-3">
           <Link to="/" className="flex items-center gap-2">
-            <img src={ascendLogo} alt="Ascend FBA" className="h-7 w-auto block dark:hidden" />
-            <img src={ascendLogoDark} alt="Ascend FBA" className="h-7 w-auto hidden dark:block" />
+            <img src={ascendLogo} alt="Ascend FBA" className="h-8 w-auto block dark:hidden" />
+            <img src={ascendLogoDark} alt="Ascend FBA" className="h-8 w-auto hidden dark:block" />
           </Link>
           <nav className="flex items-center gap-1">
             {tabs.map((t) => {

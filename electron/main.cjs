@@ -130,6 +130,13 @@ ipcMain.handle("printers:printRasterPages", async (_evt, payload) => {
         </style>
       </head>
       <body>${pageCss}</body>
+      <script>
+        window.__labelsReady = Promise.all(
+          Array.from(document.images).map((img) =>
+            img.decode ? img.decode().catch(() => undefined) : Promise.resolve(),
+          ),
+        ).then(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      </script>
     </html>`;
 
   return await new Promise((resolve) => {
@@ -147,7 +154,10 @@ ipcMain.handle("printers:printRasterPages", async (_evt, payload) => {
       resolve(result);
     };
 
-    w.webContents.on("did-finish-load", () => {
+    w.webContents.on("did-finish-load", async () => {
+      try {
+        await w.webContents.executeJavaScript("window.__labelsReady", true);
+      } catch {}
       w.webContents.print(
         {
           silent: !!silent,
