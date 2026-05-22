@@ -1352,6 +1352,7 @@ export async function transferStockLocation(
     comment?: string;
     batchNumber?: string;
     bestBeforeDate?: string;
+    serialNumber?: string;
   },
 ): Promise<void> {
   const normalize = (s: string) => s.trim().toLowerCase();
@@ -1408,6 +1409,7 @@ export async function transferStockLocation(
   const batchFields = {
     ...(params.batchNumber ? { BatchNo: params.batchNumber } : {}),
     ...(params.bestBeforeDate ? { ExpiryDate: params.bestBeforeDate } : {}),
+    ...(params.serialNumber ? { SerialNo: params.serialNumber, SerialNumber: params.serialNumber } : {}),
   };
   // Mintsoft's Action=17 (TransferLocation) moves the FULL contents of a
   // location regardless of the Quantity field, so it can't be used for
