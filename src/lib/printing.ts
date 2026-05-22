@@ -203,23 +203,38 @@ export async function printPdfBytes(
 ): Promise<void> {
   if (!printerName) throw new Error("No printer configured");
   if (isElectron()) {
-    const printableBytes = await makePrintablePdf(bytes);
-    const res = await window.dispatchAPI!.printPdf({
-      base64: bytesToBase64(printableBytes),
-      printerName,
-      silent,
-    });
+    let printableByteSize = bytes.byteLength;
+    let res: { ok: boolean; error?: string };
+
+    try {
+      const pages = await rasterizePdfToPrintPages(bytes);
+      printableByteSize = pages.reduce((total, page) => total + page.pngBase64.length, 0);
+      res = await window.dispatchAPI!.printRasterPages({
+        pages,
+        printerName,
+        silent,
+      });
+    } catch {
+      const printableBytes = await makePrintablePdf(bytes);
+      printableByteSize = printableBytes.byteLength;
+      res = await window.dispatchAPI!.printPdf({
+        base64: bytesToBase64(printableBytes),
+        printerName,
+        silent,
+      });
+    }
+
     if (!res.ok) {
       fireLog({
         printer: printerName,
         meta,
-        byteSize: printableBytes.byteLength,
+        byteSize: printableByteSize,
         status: "error",
         error: res.error || "Print failed",
       });
       throw new Error(res.error || "Print failed");
     }
-    fireLog({ printer: printerName, meta, byteSize: printableBytes.byteLength, status: "success" });
+    fireLog({ printer: printerName, meta, byteSize: printableByteSize, status: "success" });
     return;
   }
   // Browser fallback: open the PDF in a new tab — user prints manually.
