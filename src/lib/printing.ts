@@ -4,20 +4,6 @@ import type { Settings } from "./storage";
 import type { LabelKind } from "./pdfSize";
 import { logPrintEvent } from "./print-history.functions";
 
-let pdfjsPromise: Promise<typeof import("pdfjs-dist")> | null = null;
-
-async function loadPdfjs() {
-  if (!pdfjsPromise) {
-    pdfjsPromise = (async () => {
-      const pdfjs = await import("pdfjs-dist");
-      const workerUrl = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
-      pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
-      return pdfjs;
-    })();
-  }
-  return pdfjsPromise;
-}
-
 export function isElectron(): boolean {
   return typeof window !== "undefined" && !!window.dispatchAPI?.isElectron;
 }
