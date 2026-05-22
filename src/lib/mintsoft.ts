@@ -926,7 +926,12 @@ function stockLocationsFromReport(
   const matches = rows.filter(
     (r) => typeof r.ProductSKU === "string" && r.ProductSKU.trim() === sku,
   );
-  const byLocation = new Map<string, StockLocation>();
+  // Emit one StockLocation per report row so callers can see every distinct
+  // batch/best-before combo at a location. The UI aggregator (in stock.tsx)
+  // re-merges per location while still collecting each batch entry. This is
+  // required for Mintsoft stock transfers: SKUs with batch/expiry tracking
+  // must include BatchNo and ExpiryDate on the StockMovement call.
+  const out: StockLocation[] = [];
   for (const r of matches) {
     const location = (r.Location ?? "").toString().trim();
     if (!location) continue;
@@ -935,28 +940,19 @@ function stockLocationsFromReport(
     const isAllocated =
       typeof (r as { AllocatedOrder?: unknown }).AllocatedOrder === "string" &&
       ((r as { AllocatedOrder?: string }).AllocatedOrder ?? "").trim().length > 0;
-    const key = location;
     const warehouseName = (r.Warehouse ?? "").toString().trim() || undefined;
-    const existing = byLocation.get(key);
-    if (existing) {
-      existing.quantity += qty;
-      existing.stockLevel = (existing.stockLevel ?? 0) + qty;
-      existing.onHand = (existing.onHand ?? 0) + qty;
-      if (isAllocated) existing.allocated = (existing.allocated ?? 0) + qty;
-    } else {
-      byLocation.set(key, {
-        location,
-        quantity: qty,
-        stockLevel: qty,
-        allocated: isAllocated ? qty : 0,
-        onHand: qty,
-        warehouseName,
-        batchNumber: r.BatchNo?.toString().trim() || undefined,
-        bestBeforeDate: r.BestBefore?.toString().trim() || undefined,
-      });
-    }
+    out.push({
+      location,
+      quantity: qty,
+      stockLevel: qty,
+      allocated: isAllocated ? qty : 0,
+      onHand: qty,
+      warehouseName,
+      batchNumber: r.BatchNo?.toString().trim() || undefined,
+      bestBeforeDate: r.BestBefore?.toString().trim() || undefined,
+    });
   }
-  return Array.from(byLocation.values());
+  return out;
 }
 
 async function fetchWarehouseStockLevels(
