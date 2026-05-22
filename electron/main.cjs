@@ -55,7 +55,7 @@ ipcMain.handle("printers:list", async (event) => {
 
 // ---- IPC: silent print a PDF buffer to a named printer ----
 ipcMain.handle("printers:printPdf", async (_evt, payload) => {
-  const { base64, printerName, silent } = payload || {};
+  const { base64, printerName, silent, pageSize } = payload || {};
   if (!base64 || !printerName) {
     return { ok: false, error: "Missing base64 or printerName" };
   }
@@ -64,6 +64,16 @@ ipcMain.handle("printers:printPdf", async (_evt, payload) => {
     `dispatch-${Date.now()}-${Math.random().toString(36).slice(2)}.pdf`,
   );
   fs.writeFileSync(tmp, Buffer.from(base64, "base64"));
+  // Chromium's print stack expects pageSize in microns. 1pt = 352.778 microns.
+  // Passing this means a 4x6 label prints at 4x6, not scaled to A4.
+  const ptToMicrons = (pt) => Math.round(pt * 352.778);
+  const printPageSize =
+    pageSize && pageSize.widthPt > 0 && pageSize.heightPt > 0
+      ? {
+          width: ptToMicrons(pageSize.widthPt),
+          height: ptToMicrons(pageSize.heightPt),
+        }
+      : undefined;
   return await new Promise((resolve) => {
     const w = new BrowserWindow({
       show: false,
@@ -74,8 +84,11 @@ ipcMain.handle("printers:printPdf", async (_evt, payload) => {
         {
           silent: !!silent,
           deviceName: printerName,
-          color: false,
-          printBackground: false,
+          color: true,
+          printBackground: true,
+          margins: { marginType: "none" },
+          scaleFactor: 100,
+          ...(printPageSize ? { pageSize: printPageSize } : {}),
         },
         (success, failureReason) => {
           try {

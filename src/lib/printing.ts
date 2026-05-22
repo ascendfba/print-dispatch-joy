@@ -1,3 +1,4 @@
+import { PDFDocument } from "pdf-lib";
 import { bytesToBase64 } from "./mintsoft";
 import type { Settings } from "./storage";
 import type { LabelKind } from "./pdfSize";
@@ -47,14 +48,29 @@ function fireLog(args: {
   });
 }
 
-async function makePrintablePdf(bytes: Uint8Array): Promise<Uint8Array> {
-  // Previously this rebuilt every PDF via pdf-lib `embedPage` to ensure an
-  // opaque white background. That transformation lost rotation, cropbox
-  // offsets and form XObjects on real-world Mintsoft documents (invoices,
-  // picking lists, courier labels) — Chrome's PDF viewer then printed a
-  // blank page. Trust the source PDF as-is; it's already a valid PDF from
-  // Mintsoft / pdf-lib.
-  return bytes;
+/**
+ * Inspect the PDF's first page so we can tell Electron the exact paper
+ * size. Without this, Chromium falls back to the printer's default paper
+ * (usually A4) and scales / clips the PDF — courier labels end up tiny on
+ * a huge page, invoices get cropped, etc.
+ */
+async function readFirstPageSizePt(
+  bytes: Uint8Array,
+): Promise<{ widthPt: number; heightPt: number } | null> {
+  try {
+    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+    const page = doc.getPages()[0];
+    if (!page) return null;
+    const { width, height } = page.getSize();
+    const rotation = page.getRotation().angle % 360;
+    const swap = rotation === 90 || rotation === 270;
+    return {
+      widthPt: swap ? height : width,
+      heightPt: swap ? width : height,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function printPdfBytes(
@@ -65,24 +81,14 @@ export async function printPdfBytes(
 ): Promise<void> {
   if (!printerName) throw new Error("No printer configured");
   if (isElectron()) {
-    let printableByteSize = bytes.byteLength;
-    let res: { ok: boolean; error?: string };
-
-    try {
-      const printableBytes = await makePrintablePdf(bytes);
-      printableByteSize = printableBytes.byteLength;
-      res = await window.dispatchAPI!.printPdf({
-        base64: bytesToBase64(printableBytes),
-        printerName,
-        silent,
-      });
-    } catch {
-      res = await window.dispatchAPI!.printPdf({
-        base64: bytesToBase64(bytes),
-        printerName,
-        silent,
-      });
-    }
+    const printableByteSize = bytes.byteLength;
+    const pageSize = await readFirstPageSizePt(bytes);
+    const res = await window.dispatchAPI!.printPdf({
+      base64: bytesToBase64(bytes),
+      printerName,
+      silent,
+      pageSize: pageSize ?? undefined,
+    });
 
     if (!res.ok) {
       fireLog({
