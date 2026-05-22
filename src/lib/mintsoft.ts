@@ -1377,6 +1377,9 @@ export async function transferStockLocation(
   },
 ): Promise<void> {
   const normalize = (s: string) => s.trim().toLowerCase();
+  let batchNumber = params.batchNumber;
+  let bestBeforeDate = params.bestBeforeDate;
+  let serialNumber = params.serialNumber;
   let warehouseId = params.warehouseId;
   if (!Number.isFinite(warehouseId ?? Number.NaN)) {
     const warehouses = await listWarehouses(settings);
@@ -1425,12 +1428,27 @@ export async function transferStockLocation(
   if (destMatch.id === sourceMatch.id && destWarehouseId === warehouseId) {
     throw new Error("Destination location is the same as the source.");
   }
+  if (!batchNumber || !bestBeforeDate || !serialNumber) {
+    const sourceStock = await fetchProductStockLocations(settings, params.productId);
+    const matchingTracked = sourceStock.find(
+      (location) =>
+        hasStockTrackingFields(location) &&
+        (location.locationId === sourceMatch.id ||
+          normalize(location.location) === normalize(params.fromLocationName) ||
+          normalize(location.location) === normalize(sourceMatch.name) ||
+          normalize(location.location) === normalize(sourceMatch.code ?? "")),
+    );
+    batchNumber = batchNumber ?? matchingTracked?.batchNumber;
+    bestBeforeDate = bestBeforeDate ?? matchingTracked?.bestBeforeDate;
+    serialNumber = serialNumber ?? matchingTracked?.serialNumber;
+  }
   const comment =
     params.comment ?? `Transfer ${params.fromLocationName} → ${params.toLocationName}`;
+  const expiryDate = mintsoftStockDateValue(bestBeforeDate);
   const batchFields = {
-    ...(params.batchNumber ? { BatchNo: params.batchNumber } : {}),
-    ...(params.bestBeforeDate ? { ExpiryDate: params.bestBeforeDate } : {}),
-    ...(params.serialNumber ? { SerialNo: params.serialNumber, SerialNumber: params.serialNumber } : {}),
+    ...(batchNumber ? { BatchNo: batchNumber, BatchNumber: batchNumber } : {}),
+    ...(expiryDate ? { ExpiryDate: expiryDate, BestBeforeDate: expiryDate, BestBefore: expiryDate } : {}),
+    ...(serialNumber ? { SerialNo: serialNumber, SerialNumber: serialNumber } : {}),
   };
   // Mintsoft's Action=17 (TransferLocation) moves the FULL contents of a
   // location regardless of the Quantity field, so it can't be used for
