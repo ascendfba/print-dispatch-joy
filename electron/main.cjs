@@ -34,6 +34,11 @@ function writePrintLog(event, details = {}) {
   console.log("print-debug", entry);
 }
 
+// Chromium's print stack expects pageSize in microns. 1pt = 352.778 microns.
+function ptToMicrons(pt) {
+  return Math.round(pt * 352.778);
+}
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1400,
@@ -97,9 +102,7 @@ ipcMain.handle("printers:printPdf", async (_evt, payload) => {
     `dispatch-${Date.now()}-${Math.random().toString(36).slice(2)}.pdf`,
   );
   fs.writeFileSync(tmp, Buffer.from(base64, "base64"));
-  // Chromium's print stack expects pageSize in microns. 1pt = 352.778 microns.
-  // Passing this means a 4x6 label prints at 4x6, not scaled to A4.
-  const ptToMicrons = (pt) => Math.round(pt * 352.778);
+  // Passing this means labels print at their real size, not scaled to A4.
   const printPageSize =
     pageSize && pageSize.widthPt > 0 && pageSize.heightPt > 0
       ? {
