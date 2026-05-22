@@ -15,6 +15,7 @@ jobs:
         run: |
           Remove-Item package-lock.json -Force -ErrorAction SilentlyContinue
           npm install --force --include=optional
+          npm install --force @rollup/rollup-win32-x64-msvc --no-save
       - run: npm run build
       - run: npx @electron/packager . AscendFBA --platform=win32 --arch=x64 --out=electron-release --overwrite --ignore="^/src" --ignore="^/public"
       - name: Zip
