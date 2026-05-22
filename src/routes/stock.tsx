@@ -106,7 +106,12 @@ function ExpandedDetails({
         stockLevel: number;
         allocated: number;
         onHand: number;
-        batches: Array<{ batchNumber?: string; bestBeforeDate?: string; quantity: number }>;
+        batches: Array<{
+          batchNumber?: string;
+          bestBeforeDate?: string;
+          serialNumber?: string;
+          quantity: number;
+        }>;
         orders: ProductOrderAllocation[];
       }
     >();
@@ -131,10 +136,11 @@ function ExpandedDetails({
         });
       }
       const row = map.get(key);
-      if (row && (l.batchNumber || l.bestBeforeDate)) {
+      if (row && (l.batchNumber || l.bestBeforeDate || l.serialNumber)) {
         row.batches.push({
           batchNumber: l.batchNumber,
           bestBeforeDate: l.bestBeforeDate,
+          serialNumber: l.serialNumber,
           quantity: l.quantity ?? l.stockLevel ?? l.onHand ?? 0,
         });
       }
@@ -168,7 +174,12 @@ function ExpandedDetails({
     toLocation: string;
     quantity: string;
     submitting: boolean;
-    batches: Array<{ batchNumber?: string; bestBeforeDate?: string; quantity: number }>;
+    batches: Array<{
+      batchNumber?: string;
+      bestBeforeDate?: string;
+      serialNumber?: string;
+      quantity: number;
+    }>;
   } | null>(null);
 
   const locationsQuery = useQuery({
