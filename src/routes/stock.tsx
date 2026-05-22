@@ -227,29 +227,48 @@ function ExpandedDetails({
     setTransfer({ ...transfer, submitting: true });
     try {
       // If the location has batch/expiry-tracked stock, Mintsoft requires
-      // those values on the stock movement. We currently support transferring
-      // a single batch at a time — if multiple distinct batches sit at the
-      // source location, ask the user to split the move.
-      const distinctBatches = transfer.batches.filter(
-        (b) => b.batchNumber || b.bestBeforeDate,
+      // BatchNo + ExpiryDate on every stock movement. Transfer FIFO by
+      // best-before date across batches until the requested quantity is met.
+      const tracked = transfer.batches.filter(
+        (b) => (b.batchNumber || b.bestBeforeDate) && b.quantity > 0,
       );
-      if (distinctBatches.length > 1) {
-        toast.error(
-          "This location holds multiple batches. Transfer one batch at a time from Mintsoft.",
-        );
-        setTransfer((t) => (t ? { ...t, submitting: false } : t));
-        return;
+      if (tracked.length === 0) {
+        await transferStockLocation(loadSettings(), {
+          productId,
+          warehouseName: transfer.warehouseName,
+          fromLocationName: transfer.fromLocation,
+          toLocationName: dest,
+          quantity: qty,
+        });
+      } else {
+        const sorted = [...tracked].sort((a, b) => {
+          const da = a.bestBeforeDate ? Date.parse(a.bestBeforeDate) : Number.POSITIVE_INFINITY;
+          const db = b.bestBeforeDate ? Date.parse(b.bestBeforeDate) : Number.POSITIVE_INFINITY;
+          return (Number.isFinite(da) ? da : Number.POSITIVE_INFINITY) -
+            (Number.isFinite(db) ? db : Number.POSITIVE_INFINITY);
+        });
+        let remaining = qty;
+        for (const b of sorted) {
+          if (remaining <= 0) break;
+          const take = Math.min(remaining, b.quantity);
+          if (take <= 0) continue;
+          await transferStockLocation(loadSettings(), {
+            productId,
+            warehouseName: transfer.warehouseName,
+            fromLocationName: transfer.fromLocation,
+            toLocationName: dest,
+            quantity: take,
+            batchNumber: b.batchNumber,
+            bestBeforeDate: b.bestBeforeDate,
+          });
+          remaining -= take;
+        }
+        if (remaining > 0) {
+          throw new Error(
+            `Only ${qty - remaining} of ${qty} units could be moved (batch quantities exhausted).`,
+          );
+        }
       }
-      const batch = distinctBatches[0];
-      await transferStockLocation(loadSettings(), {
-        productId,
-        warehouseName: transfer.warehouseName,
-        fromLocationName: transfer.fromLocation,
-        toLocationName: dest,
-        quantity: qty,
-        batchNumber: batch?.batchNumber,
-        bestBeforeDate: batch?.bestBeforeDate,
-      });
       toast.success(`Moved ${qty} × from ${transfer.fromLocation} to ${dest}`);
       setTransfer(null);
       onTransferred?.();
