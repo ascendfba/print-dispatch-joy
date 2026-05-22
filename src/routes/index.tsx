@@ -147,7 +147,7 @@ const sections: Section[] = [
       {
         key: "app",
         title: "Desktop App",
-        description: "Download v1.0.2 for Windows.",
+        description: "Download the latest Windows build.",
         icon: Monitor,
         href: DESKTOP_APP_DOWNLOAD_URL,
         brandColor: "3b82f6",
