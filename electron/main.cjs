@@ -107,6 +107,13 @@ ipcMain.handle("printers:printPdf", async (_evt, payload) => {
           height: ptToMicrons(pageSize.heightPt),
         }
       : undefined;
+  writePrintLog("printPdf:start", {
+    printerName,
+    silent: !!silent,
+    pageSize,
+    chromiumPageSize: printPageSize,
+    byteLength: Buffer.byteLength(base64, "base64"),
+  });
   return await new Promise((resolve) => {
     const w = new BrowserWindow({
       show: false,
@@ -130,8 +137,9 @@ ipcMain.handle("printers:printPdf", async (_evt, payload) => {
           try {
             fs.unlinkSync(tmp);
           } catch {}
-          if (success) resolve({ ok: true });
-          else resolve({ ok: false, error: failureReason || "Print failed" });
+          writePrintLog("printPdf:finish", { printerName, success, failureReason: failureReason || null });
+          if (success) resolve({ ok: true, logPath: getPrintLogPath() });
+          else resolve({ ok: false, error: failureReason || "Print failed", logPath: getPrintLogPath() });
         },
       );
     });
@@ -139,7 +147,8 @@ ipcMain.handle("printers:printPdf", async (_evt, payload) => {
       try {
         w.close();
       } catch {}
-      resolve({ ok: false, error: String(e) });
+      writePrintLog("printPdf:load-error", { printerName, error: String(e) });
+      resolve({ ok: false, error: String(e), logPath: getPrintLogPath() });
     });
   });
 });
