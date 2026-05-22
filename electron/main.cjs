@@ -8,9 +8,7 @@ const os = require("os");
 // picks up the new version on next launch (or Ctrl+R refresh) — no reinstall.
 //
 // Override at runtime with:  DISPATCH_URL=https://your-domain.com  DispatchConsole.exe
-const APP_URL =
-  process.env.DISPATCH_URL ||
-  "https://start.ascendfba.co.uk";
+const APP_URL = process.env.DISPATCH_URL || "https://start.ascendfba.co.uk";
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -52,7 +50,10 @@ ipcMain.handle("printers:printPdf", async (_evt, payload) => {
   if (!base64 || !printerName) {
     return { ok: false, error: "Missing base64 or printerName" };
   }
-  const tmp = path.join(os.tmpdir(), `dispatch-${Date.now()}-${Math.random().toString(36).slice(2)}.pdf`);
+  const tmp = path.join(
+    os.tmpdir(),
+    `dispatch-${Date.now()}-${Math.random().toString(36).slice(2)}.pdf`,
+  );
   fs.writeFileSync(tmp, Buffer.from(base64, "base64"));
   return await new Promise((resolve) => {
     const w = new BrowserWindow({
@@ -64,19 +65,25 @@ ipcMain.handle("printers:printPdf", async (_evt, payload) => {
         {
           silent: !!silent,
           deviceName: printerName,
-          color: true,
-          printBackground: true,
+          color: false,
+          printBackground: false,
         },
         (success, failureReason) => {
-          try { w.close(); } catch {}
-          try { fs.unlinkSync(tmp); } catch {}
+          try {
+            w.close();
+          } catch {}
+          try {
+            fs.unlinkSync(tmp);
+          } catch {}
           if (success) resolve({ ok: true });
           else resolve({ ok: false, error: failureReason || "Print failed" });
         },
       );
     });
     w.loadFile(tmp).catch((e) => {
-      try { w.close(); } catch {}
+      try {
+        w.close();
+      } catch {}
       resolve({ ok: false, error: String(e) });
     });
   });
@@ -134,7 +141,9 @@ ipcMain.handle("printers:printRasterPages", async (_evt, payload) => {
     const finish = (result) => {
       if (settled) return;
       settled = true;
-      try { w.close(); } catch {}
+      try {
+        w.close();
+      } catch {}
       resolve(result);
     };
 
