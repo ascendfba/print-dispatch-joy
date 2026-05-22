@@ -276,16 +276,15 @@ function SettingsPage() {
     }
     try {
       const pdf = await PDFDocument.create();
-      // 100x60mm test card — readable on every label size.
-      const page = pdf.addPage([283, 170]);
+      const pageSize: [number, number] = slot === "small" ? [142, 71] : slot === "large" ? [288, 432] : [595, 842];
+      const page = pdf.addPage(pageSize);
       const font = await pdf.embedFont(StandardFonts.HelveticaBold);
       const body = await pdf.embedFont(StandardFonts.Helvetica);
-      page.drawText("Dispatch Console", { x: 14, y: 132, size: 18, font });
-      page.drawText("Printer test", { x: 14, y: 108, size: 14, font: body });
-      page.drawText(`Slot: ${slot}`, { x: 14, y: 82, size: 11, font: body });
-      page.drawText(`Printer: ${printerName}`, { x: 14, y: 64, size: 11, font: body });
-      page.drawText(new Date().toLocaleString(), { x: 14, y: 46, size: 10, font: body });
-      page.drawRectangle({ x: 8, y: 8, width: 267, height: 154, borderWidth: 1 });
+      const [, h] = pageSize;
+      page.drawText("Dispatch", { x: 8, y: h - 22, size: slot === "small" ? 12 : 18, font });
+      page.drawText(`Test: ${slot}`, { x: 8, y: h - 40, size: slot === "small" ? 8 : 12, font: body });
+      page.drawText(new Date().toLocaleTimeString(), { x: 8, y: h - 56, size: slot === "small" ? 7 : 10, font: body });
+      page.drawRectangle({ x: 4, y: 4, width: pageSize[0] - 8, height: pageSize[1] - 8, borderWidth: 1 });
       const bytes = await pdf.save();
       await printPdfBytes(bytes, printerName, settings.silentPrint, {
         kind: "test",

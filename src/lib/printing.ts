@@ -23,6 +23,74 @@ export type PrintMeta = {
   orderId?: string;
 };
 
+type ElectronPrintResult = { ok: boolean; error?: string; logPath?: string };
+type ElectronPrintApi = Omit<
+  NonNullable<Window["dispatchAPI"]>,
+  "printPdf" | "printRasterPages" | "debugPrintLog"
+> & {
+  debugPrintLog?: (args: Record<string, unknown>) => Promise<{ ok: boolean; logPath?: string }>;
+  printPdf: (args: {
+    base64: string;
+    printerName: string;
+    silent: boolean;
+    pageSize?: { widthPt: number; heightPt: number };
+  }) => Promise<ElectronPrintResult>;
+  printRasterPages: (args: {
+    pages: Array<{ pngBase64: string; widthPt: number; heightPt: number }>;
+    printerName: string;
+    silent: boolean;
+  }) => Promise<ElectronPrintResult>;
+};
+
+function electronApi(): ElectronPrintApi {
+  return window.dispatchAPI! as ElectronPrintApi;
+}
+
+let pdfjsPromise: Promise<typeof import("pdfjs-dist")> | null = null;
+async function loadPdfjs() {
+  if (!pdfjsPromise) {
+    pdfjsPromise = (async () => {
+      const pdfjs = await import("pdfjs-dist");
+      const workerUrl = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
+      pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+      return pdfjs;
+    })();
+  }
+  return pdfjsPromise;
+}
+
+async function rasterizePdfPages(bytes: Uint8Array) {
+  const pdfjs = await loadPdfjs();
+  const pdf = await pdfjs.getDocument({ data: bytes.slice().buffer }).promise;
+  const pages: Array<{ pngBase64: string; widthPt: number; heightPt: number }> = [];
+
+  try {
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const baseViewport = page.getViewport({ scale: 1 });
+      const scale = Math.max(baseViewport.width, baseViewport.height) <= 300 ? 5 : 2;
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Could not prepare print image");
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+      pages.push({
+        pngBase64: canvas.toDataURL("image/png").split(",")[1] ?? "",
+        widthPt: baseViewport.width,
+        heightPt: baseViewport.height,
+      });
+    }
+  } finally {
+    await pdf.destroy();
+  }
+
+  return pages;
+}
+
 function fireLog(args: {
   printer: string;
   meta?: PrintMeta;
@@ -81,9 +149,40 @@ export async function printPdfBytes(
 ): Promise<void> {
   if (!printerName) throw new Error("No printer configured");
   if (isElectron()) {
+    const api = electronApi();
     const printableByteSize = bytes.byteLength;
     const pageSize = await readFirstPageSizePt(bytes);
-    const res = await window.dispatchAPI!.printPdf({
+    await api.debugPrintLog?.({
+      phase: "printPdfBytes:start",
+      printerName,
+      silent,
+      meta: meta ?? null,
+      byteSize: printableByteSize,
+      pageSize: pageSize ?? null,
+    });
+
+    try {
+      const pages = await rasterizePdfPages(bytes);
+      const rasterRes = await api.printRasterPages({ pages, printerName, silent });
+      if (rasterRes.ok) {
+        fireLog({ printer: printerName, meta, byteSize: printableByteSize, status: "success" });
+        return;
+      }
+      await api.debugPrintLog?.({
+        phase: "printPdfBytes:raster-failed-falling-back",
+        printerName,
+        error: rasterRes.error ?? "Raster print failed",
+        logPath: rasterRes.logPath ?? null,
+      });
+    } catch (e) {
+      await api.debugPrintLog?.({
+        phase: "printPdfBytes:raster-error-falling-back",
+        printerName,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+
+    const res = await api.printPdf({
       base64: bytesToBase64(bytes),
       printerName,
       silent,
@@ -91,14 +190,15 @@ export async function printPdfBytes(
     });
 
     if (!res.ok) {
+      const logHint = res.logPath ? ` Print log: ${res.logPath}` : "";
       fireLog({
         printer: printerName,
         meta,
         byteSize: printableByteSize,
         status: "error",
-        error: res.error || "Print failed",
+        error: `${res.error || "Print failed"}${logHint}`,
       });
-      throw new Error(res.error || "Print failed");
+      throw new Error(`${res.error || "Print failed"}${logHint}`);
     }
     fireLog({ printer: printerName, meta, byteSize: printableByteSize, status: "success" });
     return;

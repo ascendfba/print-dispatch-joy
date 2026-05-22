@@ -10,6 +10,35 @@ const os = require("os");
 // Override at runtime with:  DISPATCH_URL=https://your-domain.com  DispatchConsole.exe
 const APP_URL = process.env.DISPATCH_URL || "https://start.ascendfba.co.uk";
 
+function getPrintLogPath() {
+  try {
+    return path.join(app.getPath("userData"), "print-debug.log");
+  } catch {
+    return path.join(os.tmpdir(), "dispatch-print-debug.log");
+  }
+}
+
+function writePrintLog(event, details = {}) {
+  const entry = {
+    ts: new Date().toISOString(),
+    event,
+    ...details,
+  };
+  const line = `${JSON.stringify(entry)}\n`;
+  try {
+    fs.mkdirSync(path.dirname(getPrintLogPath()), { recursive: true });
+    fs.appendFileSync(getPrintLogPath(), line, "utf8");
+  } catch (e) {
+    console.error("write print log failed", e);
+  }
+  console.log("print-debug", entry);
+}
+
+// Chromium's print stack expects pageSize in microns. 1pt = 352.778 microns.
+function ptToMicrons(pt) {
+  return Math.round(pt * 352.778);
+}
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1400,
@@ -46,11 +75,20 @@ ipcMain.handle("printers:list", async (event) => {
   const wc = event.sender;
   try {
     const list = await wc.getPrintersAsync();
+    writePrintLog("printers:list", { printers: list.map((p) => p.name) });
     return list.map((p) => p.name);
   } catch (e) {
+    writePrintLog("printers:list:error", { error: String(e) });
     console.error("list printers failed", e);
     return [];
   }
+});
+
+ipcMain.handle("printers:getPrintLogPath", async () => getPrintLogPath());
+
+ipcMain.handle("printers:debugLog", async (_evt, payload) => {
+  writePrintLog("renderer", payload && typeof payload === "object" ? payload : { payload });
+  return { ok: true, logPath: getPrintLogPath() };
 });
 
 // ---- IPC: silent print a PDF buffer to a named printer ----
@@ -64,9 +102,7 @@ ipcMain.handle("printers:printPdf", async (_evt, payload) => {
     `dispatch-${Date.now()}-${Math.random().toString(36).slice(2)}.pdf`,
   );
   fs.writeFileSync(tmp, Buffer.from(base64, "base64"));
-  // Chromium's print stack expects pageSize in microns. 1pt = 352.778 microns.
-  // Passing this means a 4x6 label prints at 4x6, not scaled to A4.
-  const ptToMicrons = (pt) => Math.round(pt * 352.778);
+  // Passing this means labels print at their real size, not scaled to A4.
   const printPageSize =
     pageSize && pageSize.widthPt > 0 && pageSize.heightPt > 0
       ? {
@@ -74,6 +110,13 @@ ipcMain.handle("printers:printPdf", async (_evt, payload) => {
           height: ptToMicrons(pageSize.heightPt),
         }
       : undefined;
+  writePrintLog("printPdf:start", {
+    printerName,
+    silent: !!silent,
+    pageSize,
+    chromiumPageSize: printPageSize,
+    byteLength: Buffer.byteLength(base64, "base64"),
+  });
   return await new Promise((resolve) => {
     const w = new BrowserWindow({
       show: false,
@@ -97,8 +140,9 @@ ipcMain.handle("printers:printPdf", async (_evt, payload) => {
           try {
             fs.unlinkSync(tmp);
           } catch {}
-          if (success) resolve({ ok: true });
-          else resolve({ ok: false, error: failureReason || "Print failed" });
+          writePrintLog("printPdf:finish", { printerName, success, failureReason: failureReason || null });
+          if (success) resolve({ ok: true, logPath: getPrintLogPath() });
+          else resolve({ ok: false, error: failureReason || "Print failed", logPath: getPrintLogPath() });
         },
       );
     });
@@ -106,7 +150,8 @@ ipcMain.handle("printers:printPdf", async (_evt, payload) => {
       try {
         w.close();
       } catch {}
-      resolve({ ok: false, error: String(e) });
+      writePrintLog("printPdf:load-error", { printerName, error: String(e) });
+      resolve({ ok: false, error: String(e), logPath: getPrintLogPath() });
     });
   });
 });
@@ -129,6 +174,13 @@ ipcMain.handle("printers:printRasterPages", async (_evt, payload) => {
   if (safePages.length === 0) {
     return { ok: false, error: "No printable pages" };
   }
+
+  writePrintLog("printRasterPages:start", {
+    printerName,
+    silent: !!silent,
+    pageCount: safePages.length,
+    firstPageSize: { widthPt: safePages[0].widthPt, heightPt: safePages[0].heightPt },
+  });
 
   const pageCss = safePages
     .map(
@@ -188,16 +240,23 @@ ipcMain.handle("printers:printRasterPages", async (_evt, payload) => {
           printBackground: true,
           margins: { marginType: "none" },
           scaleFactor: 100,
+          pageSize: { width: ptToMicrons(first.widthPt), height: ptToMicrons(first.heightPt) },
         },
         (success, failureReason) => {
-          if (success) finish({ ok: true });
-          else finish({ ok: false, error: failureReason || "Print failed" });
+          writePrintLog("printRasterPages:finish", {
+            printerName,
+            success,
+            failureReason: failureReason || null,
+          });
+          if (success) finish({ ok: true, logPath: getPrintLogPath() });
+          else finish({ ok: false, error: failureReason || "Print failed", logPath: getPrintLogPath() });
         },
       );
     });
 
     w.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`).catch((e) => {
-      finish({ ok: false, error: String(e) });
+      writePrintLog("printRasterPages:load-error", { printerName, error: String(e) });
+      finish({ ok: false, error: String(e), logPath: getPrintLogPath() });
     });
   });
 });
