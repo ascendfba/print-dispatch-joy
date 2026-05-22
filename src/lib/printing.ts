@@ -23,6 +23,26 @@ export type PrintMeta = {
   orderId?: string;
 };
 
+type ElectronPrintResult = { ok: boolean; error?: string; logPath?: string };
+type ElectronPrintApi = NonNullable<Window["dispatchAPI"]> & {
+  debugPrintLog?: (args: Record<string, unknown>) => Promise<{ ok: boolean; logPath?: string }>;
+  printPdf: (args: {
+    base64: string;
+    printerName: string;
+    silent: boolean;
+    pageSize?: { widthPt: number; heightPt: number };
+  }) => Promise<ElectronPrintResult>;
+  printRasterPages: (args: {
+    pages: Array<{ pngBase64: string; widthPt: number; heightPt: number }>;
+    printerName: string;
+    silent: boolean;
+  }) => Promise<ElectronPrintResult>;
+};
+
+function electronApi(): ElectronPrintApi {
+  return window.dispatchAPI! as ElectronPrintApi;
+}
+
 function fireLog(args: {
   printer: string;
   meta?: PrintMeta;
