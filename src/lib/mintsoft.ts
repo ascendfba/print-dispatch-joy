@@ -976,6 +976,27 @@ function stockLocationsFromReport(
   return out;
 }
 
+function hasStockTrackingFields(location: StockLocation): boolean {
+  return Boolean(location.batchNumber || location.bestBeforeDate || location.serialNumber);
+}
+
+function mintsoftStockDateValue(input?: string): string | undefined {
+  const s = input?.trim();
+  if (!s) return undefined;
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+  const uk = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if (uk) {
+    const day = uk[1].padStart(2, "0");
+    const month = uk[2].padStart(2, "0");
+    const year = uk[3].length === 2 ? `20${uk[3]}` : uk[3];
+    return `${day}/${month}/${year}`;
+  }
+  const parsed = new Date(s);
+  if (!Number.isNaN(parsed.getTime())) return parsed.toLocaleDateString("en-GB");
+  return s;
+}
+
 async function fetchWarehouseStockLevels(
   settings: Settings,
   warehouseId: number,
