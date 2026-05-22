@@ -141,6 +141,52 @@ async function rasterizePdfForPrint(bytes: Uint8Array): Promise<Uint8Array> {
   }
 }
 
+type RasterPrintPage = {
+  pngBase64: string;
+  widthPt: number;
+  heightPt: number;
+};
+
+async function rasterizePdfToPrintPages(bytes: Uint8Array): Promise<RasterPrintPage[]> {
+  const pdfjs = await loadPdfjs();
+  const loadingTask = pdfjs.getDocument({ data: bytes.slice().buffer });
+  const src = await loadingTask.promise;
+  const pages: RasterPrintPage[] = [];
+
+  try {
+    for (let pageIndex = 1; pageIndex <= src.numPages; pageIndex++) {
+      const srcPage = await src.getPage(pageIndex);
+      const baseViewport = srcPage.getViewport({ scale: 1 });
+      const maxEdge = Math.max(baseViewport.width, baseViewport.height);
+      const scale = Math.min(8, Math.max(2, 1800 / maxEdge));
+      const viewport = srcPage.getViewport({ scale });
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      const ctx = canvas.getContext("2d", { alpha: false });
+      if (!ctx) throw new Error("Could not create PDF print canvas");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await srcPage.render({
+        canvas,
+        canvasContext: ctx,
+        viewport,
+        background: "#ffffff",
+      }).promise;
+
+      pages.push({
+        pngBase64: bytesToBase64(await canvasToPngBytes(canvas)),
+        widthPt: baseViewport.width,
+        heightPt: baseViewport.height,
+      });
+    }
+  } finally {
+    await src.destroy();
+  }
+
+  return pages;
+}
+
 async function makePrintablePdf(bytes: Uint8Array): Promise<Uint8Array> {
   try {
     return await rasterizePdfForPrint(bytes);
