@@ -65,7 +65,7 @@ ipcMain.handle("printers:printPdf", async (_evt, payload) => {
           silent: !!silent,
           deviceName: printerName,
           color: true,
-          printBackground: false,
+          printBackground: true,
         },
         (success, failureReason) => {
           try { w.close(); } catch {}
