@@ -686,6 +686,7 @@ export type ProductStockEntry = {
   warehouseName?: string;
   batchNumber?: string;
   bestBeforeDate?: string;
+  serialNumber?: string;
 };
 
 type ProductStockTotal = {
