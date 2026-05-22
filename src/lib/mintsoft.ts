@@ -1055,6 +1055,7 @@ export async function fetchProductStockLocations(
             "Expires",
             "BBE",
           ]);
+          const serialNumber = optionalStringField(r, ["SerialNumber", "SerialNo", "Serial"]);
           const stockLevel =
             optionalNumericField(r, [
               "StockLevel",
@@ -1092,6 +1093,7 @@ export async function fetchProductStockLocations(
               warehouseId: Number.isFinite(warehouseId) ? warehouseId : undefined,
               batchNumber,
               bestBeforeDate,
+              serialNumber,
             });
           }
           if (!directLocationName && (!Number.isFinite(locationId) || locationId === 0)) continue;
@@ -1110,6 +1112,7 @@ export async function fetchProductStockLocations(
               warehouseId: Number.isFinite(warehouseId) ? warehouseId : undefined,
               batchNumber,
               bestBeforeDate,
+              serialNumber,
             });
           }
         }
