@@ -203,13 +203,21 @@ export async function printPdfBytes(
 ): Promise<void> {
   if (!printerName) throw new Error("No printer configured");
   if (isElectron()) {
+    const desktopApi = window.dispatchAPI! as typeof window.dispatchAPI & {
+      printRasterPages?: (args: {
+        pages: RasterPrintPage[];
+        printerName: string;
+        silent: boolean;
+      }) => Promise<{ ok: boolean; error?: string }>;
+    };
     let printableByteSize = bytes.byteLength;
     let res: { ok: boolean; error?: string };
 
     try {
+      if (!desktopApi.printRasterPages) throw new Error("Desktop app needs update");
       const pages = await rasterizePdfToPrintPages(bytes);
       printableByteSize = pages.reduce((total, page) => total + page.pngBase64.length, 0);
-      res = await window.dispatchAPI!.printRasterPages({
+      res = await desktopApi.printRasterPages({
         pages,
         printerName,
         silent,
