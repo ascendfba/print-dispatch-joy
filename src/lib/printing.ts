@@ -48,45 +48,14 @@ function fireLog(args: {
   });
 }
 
-async function addOpaqueWhiteBackground(bytes: Uint8Array): Promise<Uint8Array> {
-  try {
-    const src = await PDFDocument.load(bytes, { ignoreEncryption: true });
-    const out = await PDFDocument.create();
-
-    for (const srcPage of src.getPages()) {
-      const { width, height } = srcPage.getSize();
-      const rotation = srcPage.getRotation().angle % 360;
-      // For rotated pages, the visible canvas swaps width/height at 90/270.
-      const rotated = rotation === 90 || rotation === 270;
-      const pageW = rotated ? height : width;
-      const pageH = rotated ? width : height;
-      const embedded = await out.embedPage(srcPage);
-      const page = out.addPage([pageW, pageH]);
-      page.drawRectangle({ x: 0, y: 0, width: pageW, height: pageH, color: rgb(1, 1, 1) });
-
-      // Honour the source page's /Rotate flag so content lands inside the page.
-      let x = 0;
-      let y = 0;
-      if (rotation === 90) { x = pageW; y = 0; }
-      else if (rotation === 180) { x = pageW; y = pageH; }
-      else if (rotation === 270) { x = 0; y = pageH; }
-      page.drawPage(embedded, {
-        x,
-        y,
-        width,
-        height,
-        rotate: { type: "degrees", angle: rotation } as never,
-      });
-    }
-
-    return await out.save({ useObjectStreams: false });
-  } catch {
-    return bytes;
-  }
-}
-
 async function makePrintablePdf(bytes: Uint8Array): Promise<Uint8Array> {
-  return addOpaqueWhiteBackground(bytes);
+  // Previously this rebuilt every PDF via pdf-lib `embedPage` to ensure an
+  // opaque white background. That transformation lost rotation, cropbox
+  // offsets and form XObjects on real-world Mintsoft documents (invoices,
+  // picking lists, courier labels) — Chrome's PDF viewer then printed a
+  // blank page. Trust the source PDF as-is; it's already a valid PDF from
+  // Mintsoft / pdf-lib.
+  return bytes;
 }
 
 export async function printPdfBytes(
