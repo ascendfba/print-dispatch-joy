@@ -1,3 +1,4 @@
+import { PDFDocument, rgb } from "pdf-lib";
 import { bytesToBase64 } from "./mintsoft";
 import type { Settings } from "./storage";
 import type { LabelKind } from "./pdfSize";
@@ -47,6 +48,25 @@ function fireLog(args: {
   });
 }
 
+async function addOpaqueWhiteBackground(bytes: Uint8Array): Promise<Uint8Array> {
+  try {
+    const src = await PDFDocument.load(bytes, { ignoreEncryption: true });
+    const out = await PDFDocument.create();
+
+    for (const srcPage of src.getPages()) {
+      const { width, height } = srcPage.getSize();
+      const embedded = await out.embedPage(srcPage);
+      const page = out.addPage([width, height]);
+      page.drawRectangle({ x: 0, y: 0, width, height, color: rgb(1, 1, 1) });
+      page.drawPage(embedded, { x: 0, y: 0, width, height });
+    }
+
+    return await out.save({ useObjectStreams: false });
+  } catch {
+    return bytes;
+  }
+}
+
 export async function printPdfBytes(
   bytes: Uint8Array,
   printerName: string,
@@ -55,8 +75,9 @@ export async function printPdfBytes(
 ): Promise<void> {
   if (!printerName) throw new Error("No printer configured");
   if (isElectron()) {
+    const printableBytes = await addOpaqueWhiteBackground(bytes);
     const res = await window.dispatchAPI!.printPdf({
-      base64: bytesToBase64(bytes),
+      base64: bytesToBase64(printableBytes),
       printerName,
       silent,
     });
@@ -64,13 +85,13 @@ export async function printPdfBytes(
       fireLog({
         printer: printerName,
         meta,
-        byteSize: bytes.byteLength,
+        byteSize: printableBytes.byteLength,
         status: "error",
         error: res.error || "Print failed",
       });
       throw new Error(res.error || "Print failed");
     }
-    fireLog({ printer: printerName, meta, byteSize: bytes.byteLength, status: "success" });
+    fireLog({ printer: printerName, meta, byteSize: printableBytes.byteLength, status: "success" });
     return;
   }
   // Browser fallback: open the PDF in a new tab — user prints manually.
