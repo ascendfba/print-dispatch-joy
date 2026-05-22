@@ -214,19 +214,16 @@ export async function printPdfBytes(
     let res: { ok: boolean; error?: string };
 
     try {
-      if (!desktopApi.printRasterPages) throw new Error("Desktop app needs update");
-      const pages = await rasterizePdfToPrintPages(bytes);
-      printableByteSize = pages.reduce((total, page) => total + page.pngBase64.length, 0);
-      res = await desktopApi.printRasterPages({
-        pages,
-        printerName,
-        silent,
-      });
-    } catch {
       const printableBytes = await makePrintablePdf(bytes);
       printableByteSize = printableBytes.byteLength;
       res = await window.dispatchAPI!.printPdf({
         base64: bytesToBase64(printableBytes),
+        printerName,
+        silent,
+      });
+    } catch {
+      res = await window.dispatchAPI!.printPdf({
+        base64: bytesToBase64(bytes),
         printerName,
         silent,
       });
