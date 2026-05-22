@@ -20,9 +20,18 @@ function createWindow() {
       nodeIntegration: false,
     },
   });
-  win.loadURL(APP_URL);
-  // Ctrl+R / F5 reloads to pick up the latest published build.
+  // Always fetch the freshest published build — never serve a stale cached
+  // HTML/JS bundle. This means every time the user opens the desktop app
+  // (or logs in, which triggers a reload from the renderer), they get the
+  // latest code without needing a new GitHub release of the shell.
+  win.webContents.session.clearCache().finally(() => {
+    win.loadURL(APP_URL, { extraHeaders: "pragma: no-cache\n" });
+  });
 }
+
+// Tell Chromium not to cache HTTP responses for this shell. The web app is
+// the source of truth; we always want the newest version.
+app.commandLine.appendSwitch("disable-http-cache");
 
 app.whenReady().then(createWindow);
 app.on("window-all-closed", () => {

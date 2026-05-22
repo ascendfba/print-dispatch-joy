@@ -66,6 +66,14 @@ function LoginPage() {
     setLoading(false);
     deviceTrust.clearLock();
     toast.success("Signed in");
+    // In the Electron desktop shell, force a hard reload after sign-in so
+    // the session always runs against the very latest published web build.
+    // This means new printing fixes / UI changes take effect immediately,
+    // without ever needing to re-release the desktop .zip.
+    if (typeof window !== "undefined" && (window as unknown as { dispatchAPI?: unknown }).dispatchAPI) {
+      setTimeout(() => window.location.reload(), 100);
+      return;
+    }
     // Always offer to save fresh session tokens after a full sign-in. This
     // repairs any old trusted-device entry whose refresh token has rotated.
     setShowPinSetup(true);
