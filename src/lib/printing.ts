@@ -43,6 +43,51 @@ function electronApi(): ElectronPrintApi {
   return window.dispatchAPI! as ElectronPrintApi;
 }
 
+let pdfjsPromise: Promise<typeof import("pdfjs-dist")> | null = null;
+async function loadPdfjs() {
+  if (!pdfjsPromise) {
+    pdfjsPromise = (async () => {
+      const pdfjs = await import("pdfjs-dist");
+      const workerUrl = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
+      pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+      return pdfjs;
+    })();
+  }
+  return pdfjsPromise;
+}
+
+async function rasterizePdfPages(bytes: Uint8Array) {
+  const pdfjs = await loadPdfjs();
+  const pdf = await pdfjs.getDocument({ data: bytes.slice().buffer }).promise;
+  const pages: Array<{ pngBase64: string; widthPt: number; heightPt: number }> = [];
+
+  try {
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const baseViewport = page.getViewport({ scale: 1 });
+      const scale = Math.max(baseViewport.width, baseViewport.height) <= 300 ? 5 : 2;
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Could not prepare print image");
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+      pages.push({
+        pngBase64: canvas.toDataURL("image/png").split(",")[1] ?? "",
+        widthPt: baseViewport.width,
+        heightPt: baseViewport.height,
+      });
+    }
+  } finally {
+    await pdf.destroy();
+  }
+
+  return pages;
+}
+
 function fireLog(args: {
   printer: string;
   meta?: PrintMeta;
