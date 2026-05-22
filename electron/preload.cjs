@@ -4,5 +4,6 @@ contextBridge.exposeInMainWorld("dispatchAPI", {
   isElectron: true,
   listPrinters: () => ipcRenderer.invoke("printers:list"),
   printPdf: (args) => ipcRenderer.invoke("printers:printPdf", args),
+  printRasterPages: (args) => ipcRenderer.invoke("printers:printRasterPages", args),
   mintsoftFetch: (args) => ipcRenderer.invoke("mintsoft:fetch", args),
 });
