@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { requireAuth } from "@/lib/require-auth";
+import { DESKTOP_APP_DOWNLOAD_URL } from "@/lib/desktop-app";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { HubOverview } from "@/components/HubOverview";
@@ -146,9 +147,9 @@ const sections: Section[] = [
       {
         key: "app",
         title: "Desktop App",
-        description: "Download the Windows desktop dispatch console.",
+        description: "Download v1.0.2 for Windows.",
         icon: Monitor,
-        href: "https://github.com/ascendfba/dispatch-console-desktop/releases",
+        href: DESKTOP_APP_DOWNLOAD_URL,
         brandColor: "3b82f6",
       },
       {
