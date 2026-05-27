@@ -2680,6 +2680,7 @@ export async function receiveASNItem(
   const {
     ASNId,
     ASNDetailId,
+    ProductId,
     LocationId,
     Quantity,
     Complete = false,
@@ -2690,29 +2691,22 @@ export async function receiveASNItem(
 
   if (!ASNDetailId) throw new Error("Missing ASN item id for Mintsoft receive");
 
-  // Mintsoft is fussy about date formats — accept either ISO (YYYY-MM-DD) or
-  // DDMMYYYY from callers and send BOTH variants in BOTH common field names so
-  // any tenant configuration picks one up. If we only send the wrong format,
-  // Mintsoft silently falls back to 31/12/9999 (its "no expiry" sentinel).
-  let bestBeforeIso: string | undefined;
-  let bestBeforeDdmmyyyy: string | undefined;
-  let bestBeforeSlash: string | undefined;
+  // Mintsoft's API docs say API dates are hardcoded as YYYY-MM-DD. If this is
+  // sent as DD/MM/YYYY the receive call can succeed but expiry falls back to
+  // Mintsoft's 31/12/9999 sentinel, so convert explicitly and only send
+  // ExpiryDate (the documented ASNItemAllocation field).
+  let expiryDate: string | undefined;
   if (BestBeforeDate) {
-    const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(BestBeforeDate);
-    const ddmm = /^(\d{2})(\d{2})(\d{4})$/.exec(BestBeforeDate);
+    const value = BestBeforeDate.trim();
+    const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    const ddmmyyyy = /^(\d{2})(\d{2})(\d{4})$/.exec(value.replace(/\D/g, ""));
+    const ddmmyy = /^(\d{2})(\d{2})(\d{2})$/.exec(value.replace(/\D/g, ""));
     if (iso) {
-      bestBeforeIso = BestBeforeDate;
-      bestBeforeDdmmyyyy = `${iso[3]}${iso[2]}${iso[1]}`;
-      bestBeforeSlash = `${iso[3]}/${iso[2]}/${iso[1]}`;
-    } else if (ddmm) {
-      bestBeforeDdmmyyyy = BestBeforeDate;
-      bestBeforeIso = `${ddmm[3]}-${ddmm[2]}-${ddmm[1]}`;
-      bestBeforeSlash = `${ddmm[1]}/${ddmm[2]}/${ddmm[3]}`;
-    } else {
-      // Unknown format — send as-is in both fields and let Mintsoft decide.
-      bestBeforeIso = BestBeforeDate;
-      bestBeforeDdmmyyyy = BestBeforeDate;
-      bestBeforeSlash = BestBeforeDate;
+      expiryDate = value;
+    } else if (ddmmyyyy) {
+      expiryDate = `${ddmmyyyy[3]}-${ddmmyyyy[2]}-${ddmmyyyy[1]}`;
+    } else if (ddmmyy) {
+      expiryDate = `20${ddmmyy[3]}-${ddmmyy[2]}-${ddmmyy[1]}`;
     }
   }
 
@@ -2721,15 +2715,9 @@ export async function receiveASNItem(
     Quantity,
     Complete,
     LocationId,
+    ...(ProductId ? { ProductId } : {}),
     ...(BatchNumber ? { BatchNo: BatchNumber, BatchNumber } : {}),
-    ...(bestBeforeSlash
-      ? {
-          ExpiryDate: bestBeforeSlash,
-          BestBeforeDate: bestBeforeSlash,
-          BBE: bestBeforeSlash,
-          BestBefore: bestBeforeSlash,
-        }
-      : {}),
+    ...(expiryDate ? { ExpiryDate: expiryDate } : {}),
     ...(Comment ? { Comment, Notes: Comment } : {}),
   };
 

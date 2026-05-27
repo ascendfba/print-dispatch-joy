@@ -28,8 +28,8 @@ import { Button } from "@/components/ui/button";
 type VerifiedRow = { receivedQty: number; bbf: string; location: string };
 
 // Mintsoft accepts ISO YYYY-MM-DD on the ASN receive endpoint. We keep this
-// helper to display the DDMMYYYY equivalent in the UI for clarity, but the
-// value we actually send is the ISO string itself.
+// helper to display the UK date the user expects while the API payload stays
+// in Mintsoft's documented date format.
 function isoToSlash(iso: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
   if (!m) return iso;
@@ -606,7 +606,7 @@ function VerifyDrawer({
                 {bbf ? (
                   normalisedBbf ? (
                     <span className="text-emerald-700">
-                      Sends {isoToSlash(normalisedBbf)} to Mintsoft
+                      Date recognised as {isoToSlash(normalisedBbf)}
                     </span>
                   ) : (
                     <span className="text-rose-600">Invalid date</span>
