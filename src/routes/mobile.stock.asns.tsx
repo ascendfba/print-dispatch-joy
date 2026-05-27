@@ -260,6 +260,27 @@ function MobileASNs() {
 }
 
 function ASNCard({ asn, clientName }: { asn: MintsoftASN; clientName: string }) {
+  const itemsQuery = useQuery({
+    queryKey: ["mobile-asn-items", asn.ID],
+    queryFn: async () => {
+      const settings = loadSettings();
+      return fetchASNItems(settings, asn.ID);
+    },
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+  const items = itemsQuery.data ?? [];
+  const skuCountLive = items.length || getSkuCount(asn);
+  const totalUnitsLive =
+    items.length > 0
+      ? items.reduce((sum, it) => {
+          const r = it as unknown as Record<string, unknown>;
+          const q = r["ExpectedQuantity"] ?? r["Quantity"] ?? r["Qty"];
+          const n = typeof q === "number" ? q : typeof q === "string" ? Number(q) : 0;
+          return sum + (Number.isFinite(n) ? n : 0);
+        }, 0)
+      : getTotalUnits(asn);
+
   const expected = asn.ExpectedDate
     ? new Date(asn.ExpectedDate)
     : null;
@@ -328,17 +349,12 @@ function ASNCard({ asn, clientName }: { asn: MintsoftASN; clientName: string }) 
             </span>
           )}
         </div>
-        {(() => {
-          const skuCount = getSkuCount(asn);
-            const qty = getTotalUnits(asn);
-          if (skuCount == null && qty == null) return null;
-          return (
-            <div className="flex items-center gap-3 mt-1 flex-wrap text-[11px] font-medium text-[#0a2e3d]">
-              {skuCount != null && <span>SKU: {skuCount}</span>}
-              {qty != null && <span>Total Units: {qty}</span>}
-            </div>
-          );
-        })()}
+        {(skuCountLive != null || totalUnitsLive != null) && (
+          <div className="flex items-center gap-3 mt-1 flex-wrap text-[11px] font-medium text-[#0a2e3d]">
+            {skuCountLive != null && <span>SKU: {skuCountLive}</span>}
+            {totalUnitsLive != null && <span>Total Units: {totalUnitsLive}</span>}
+          </div>
+        )}
         {(() => {
           const breakdown = getPackageBreakdown(asn);
           if (!breakdown) return null;
