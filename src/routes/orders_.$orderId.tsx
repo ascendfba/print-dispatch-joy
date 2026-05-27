@@ -2512,6 +2512,16 @@ function PackingListDialog({
       );
       return;
     }
+    const overweight = boxes
+      .map((b, i) => ({ i, kg: Number(b.weight) }))
+      .filter((x) => x.kg > 22)
+      .map((x) => x.i + 1);
+    if (overweight.length > 0) {
+      toast.error(
+        `Box ${overweight.join(", ")} exceeds the 22 kg limit — split the contents into more boxes`,
+      );
+      return;
+    }
     submitInFlightRef.current = true;
     setSubmitting(true);
     try {
@@ -2525,6 +2535,7 @@ function PackingListDialog({
       setSubmitted(true);
       toast.success("Packing list successfully submitted");
       onSaved?.(boxes.length);
+      qc.invalidateQueries({ queryKey: ["packing-list-doc", orderId] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to submit packing list");
     } finally {
