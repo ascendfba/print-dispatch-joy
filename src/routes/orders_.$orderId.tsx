@@ -2486,6 +2486,16 @@ function PackingListDialog({
       toast.error("Generate the packing list first");
       return;
     }
+    const missingWeight = boxes
+      .map((b, i) => ({ i, hasWeight: !!(b.weight && Number(b.weight) > 0) }))
+      .filter((x) => !x.hasWeight)
+      .map((x) => x.i + 1);
+    if (missingWeight.length > 0) {
+      toast.error(
+        `Enter a weight for Box ${missingWeight.join(", ")} before submitting`,
+      );
+      return;
+    }
     submitInFlightRef.current = true;
     setSubmitting(true);
     try {
