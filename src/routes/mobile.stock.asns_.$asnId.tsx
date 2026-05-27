@@ -656,8 +656,13 @@ function VerifyDrawer({
               className="w-full h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
             />
             <p className="mt-1.5 text-[11px] text-muted-foreground">
-              Scan the location barcode — on-screen keyboard is disabled.
+              Scan the location barcode, or use the keypad below to type manually.
             </p>
+            <OnScreenKeypad
+              value={location}
+              onChange={(v) => setLocation(v.toUpperCase())}
+              maxLength={32}
+            />
           </div>
         </div>
 
@@ -679,6 +684,61 @@ function VerifyDrawer({
 }
 
 type ImageCandidate = { image: string; title?: string | null };
+
+function OnScreenKeypad({
+  value,
+  onChange,
+  maxLength = 32,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  maxLength?: number;
+}) {
+  const rows = [
+    ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
+    ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+    ["A", "S", "D", "F", "G", "H", "J", "K", "L", "-"],
+    ["Z", "X", "C", "V", "B", "N", "M", "/", ".", "_"],
+  ];
+  const press = (ch: string) => {
+    if (value.length >= maxLength) return;
+    onChange(value + ch);
+  };
+  return (
+    <div className="mt-2 select-none rounded-xl border bg-muted/40 p-1.5 space-y-1">
+      {rows.map((row, i) => (
+        <div key={i} className="flex gap-1">
+          {row.map((ch) => (
+            <button
+              key={ch}
+              type="button"
+              onClick={() => press(ch)}
+              className="flex-1 h-9 rounded-md bg-background border text-sm font-mono font-semibold active:bg-muted"
+            >
+              {ch}
+            </button>
+          ))}
+        </div>
+      ))}
+      <div className="flex gap-1">
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          className="flex-1 h-9 rounded-md bg-background border text-xs font-medium active:bg-muted"
+        >
+          Clear
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange(value.slice(0, -1))}
+          className="flex-[2] h-9 rounded-md bg-background border text-xs font-medium active:bg-muted"
+        >
+          ⌫ Backspace
+        </button>
+      </div>
+    </div>
+  );
+}
 
 async function fetchImageCandidates(query: string): Promise<ImageCandidate[]> {
   try {
