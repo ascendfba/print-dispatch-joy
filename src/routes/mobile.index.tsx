@@ -6,13 +6,8 @@ import {
   ArrowLeftRight,
   PackagePlus,
   BookOpen,
-  ChevronRight,
-  Loader2,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { listASNs, type MintsoftASN } from "@/lib/mintsoft";
-import { loadSettings } from "@/lib/storage";
 
 export const Route = createFileRoute("/mobile/")({
   component: MobileHome,
@@ -48,40 +43,6 @@ function MobileHome() {
     },
   ];
 
-  const asnsQuery = useQuery({
-    queryKey: ["mobile-asns"],
-    queryFn: async () => {
-      const settings = loadSettings();
-      if (!settings.mintsoftApiKey && !settings.mintsoftUsername) {
-        throw new Error("Configure Mintsoft in Settings first");
-      }
-      return listASNs(settings);
-    },
-    staleTime: 60_000,
-    refetchOnWindowFocus: false,
-  });
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const dayMs = 86_400_000;
-
-  const dayLabels = ["Today", "Tomorrow"];
-  const dayBorderColors = ["border-l-[#0099d4]", "border-l-[#0a2e3d]"];
-  const dayBadgeColors = ["bg-[#0099d4]/10 text-[#0099d4]", "bg-[#0a2e3d]/10 text-[#0a2e3d]"];
-
-  const dayCards = [0, 1].map((offset) => {
-    const d = new Date(today.getTime() + offset * dayMs);
-    const dStr = d.toDateString();
-    const label = dayLabels[offset];
-    const asns = (asnsQuery.data ?? []).filter((a) => {
-      if (!a.ExpectedDate) return false;
-      const ed = new Date(a.ExpectedDate);
-      ed.setHours(0, 0, 0, 0);
-      return ed.toDateString() === dStr;
-    });
-    return { date: d, label, asns, borderColor: dayBorderColors[offset], badgeColor: dayBadgeColors[offset] };
-  });
-
   return (
     <div className="px-4 py-4 space-y-5">
       {sections.map((s) => (
@@ -98,80 +59,6 @@ function MobileHome() {
         </section>
       ))}
 
-      <section>
-        <div className="flex items-center gap-2 mb-2">
-          <div className="h-4 w-1 rounded-full bg-[#0099d4]" />
-          <h2 className="text-sm font-semibold">ASNs Due</h2>
-        </div>
-        {asnsQuery.isLoading ? (
-          <div className="flex items-center justify-center py-8 text-muted-foreground">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading ASNs…
-          </div>
-        ) : asnsQuery.error ? (
-          <div className="py-6 text-center text-sm text-destructive">
-            {asnsQuery.error instanceof Error
-              ? asnsQuery.error.message
-              : "Failed to load ASNs"}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {dayCards.map(({ date, label, asns, borderColor, badgeColor }) => (
-              <div
-                key={date.toDateString()}
-                className={`rounded-xl border bg-card p-3 border-l-4 ${borderColor}`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <p className="text-sm font-medium">{label}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {date.toLocaleDateString(undefined, {
-                        weekday: "short",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </p>
-                  </div>
-                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeColor}`}>
-                    {asns.length} ASN{asns.length === 1 ? "" : "s"}
-                  </span>
-                </div>
-                {asns.length === 0 ? (
-                  <p className="text-xs text-muted-foreground py-1">
-                    No ASNs due
-                  </p>
-                ) : (
-                  <div className="space-y-1">
-                    {asns.slice(0, 3).map((a) => (
-                      <Link
-                        key={a.ID}
-                        to="/asns/$asnId"
-                        params={{ asnId: String(a.ID) }}
-                        className="flex items-center gap-2 rounded-lg p-2 hover:bg-muted/60 transition-colors"
-                      >
-                        <Truck className="h-4 w-4 text-[#0099d4] shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium truncate">
-                            {a.Reference || `#${a.ID}`}
-                          </p>
-                          <p className="text-[11px] text-muted-foreground truncate">
-                            {a.SupplierName || "—"}
-                          </p>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                      </Link>
-                    ))}
-                    {asns.length > 3 && (
-                      <p className="text-xs text-muted-foreground text-center py-1">
-                        +{asns.length - 3} more
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
     </div>
   );
 }
