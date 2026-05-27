@@ -22,6 +22,7 @@ import {
   Wallet,
   Receipt,
   Monitor,
+  Smartphone,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -84,6 +85,14 @@ const sections: Section[] = [
         extra: <UpsDeadlineTimer />,
         logoSlug: "ups",
         brandColor: "521801",
+      },
+      {
+        key: "mobile-app",
+        title: "Mobile App",
+        description: "Open the mobile app for warehouse operations.",
+        icon: Smartphone,
+        href: "https://print-dispatch-joy.lovable.app",
+        brandColor: "10b981",
       },
     ],
   },
