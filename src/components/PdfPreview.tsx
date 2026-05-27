@@ -18,7 +18,9 @@ export function PdfPreview({ bytes }: { bytes: Uint8Array }) {
         const workerUrl = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
         pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
-        const data = bytes.slice().buffer;
+        // Pass a fresh copy so pdfjs can safely transfer it to its worker
+        // without detaching the caller's Uint8Array.
+        const data = new Uint8Array(bytes);
         const loadingTask = pdfjs.getDocument({ data });
         const pdf = await loadingTask.promise;
         if (cancelled) return;
@@ -42,10 +44,8 @@ export function PdfPreview({ bytes }: { bytes: Uint8Array }) {
           canvas.style.width = `${viewport.width / dpr}px`;
           canvas.style.height = `${viewport.height / dpr}px`;
           canvas.className = "mx-auto mb-3 rounded border bg-white shadow-sm";
-          const ctx = canvas.getContext("2d");
-          if (!ctx) continue;
           container.appendChild(canvas);
-          await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+          await page.render({ canvas, viewport }).promise;
         }
 
         cleanup = () => pdf.destroy();
