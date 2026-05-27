@@ -757,32 +757,32 @@ function VerifyDrawer({
             <p className="text-xs font-semibold text-muted-foreground mb-2">
               Location <span className="text-rose-600">*</span>{" "}
               <span className="text-muted-foreground/70 font-normal">
-                (scan only)
+                (scanner ready)
               </span>
             </p>
             <div className="flex items-center gap-2">
               <input
                 ref={scannerInputRef}
-                aria-hidden="true"
-                tabIndex={-1}
                 type="text"
                 inputMode="none"
                 autoComplete="off"
+                autoCapitalize="characters"
+                placeholder={scannerReady ? "Scan location" : "Confirm BBF first"}
                 value={location}
                 onChange={(event) => queueScannerCommit(event.target.value)}
-                className="fixed left-0 top-0 h-px w-px -translate-x-full opacity-0"
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === "Tab") {
+                    event.preventDefault();
+                    handleSave(scannerBufferRef.current || location);
+                  }
+                }}
+                onClick={focusScannerInput}
+                disabled={!scannerReady}
+                className="flex-1 h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4] disabled:text-muted-foreground disabled:bg-muted"
                 onFocus={() => {
-                  scannerBufferRef.current = location;
+                  scannerBufferRef.current = "";
                 }}
               />
-              <div
-                role="status"
-                aria-label="Scanned location"
-                onClick={scannerReady ? focusScannerInput : undefined}
-                className="flex-1 h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background flex items-center"
-              >
-                {location || (scannerReady ? "SCAN LOCATION" : "CONFIRM BBF FIRST")}
-              </div>
               {location && (
                 <Button
                   type="button"
