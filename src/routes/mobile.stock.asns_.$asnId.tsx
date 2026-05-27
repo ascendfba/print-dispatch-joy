@@ -735,12 +735,11 @@ function VerifyDrawer({
               <input
                 ref={locationInputRef}
                 type="text"
-                inputMode="text"
+                inputMode="none"
                 autoCapitalize="characters"
                 autoComplete="off"
-                placeholder="Scan location barcode"
-                value={location}
-                readOnly
+                aria-label="Location scanner capture"
+                value={locationScanBufferRef.current}
                 tabIndex={-1}
                 onChange={(e) => {
                   const next = e.target.value.toUpperCase();
@@ -749,8 +748,14 @@ function VerifyDrawer({
                 }}
                 onKeyDown={(e) => handleLocationScannerKey(e.key, () => e.preventDefault())}
                 maxLength={32}
-                className="pointer-events-none flex-1 h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
+                className="sr-only"
               />
+              <div
+                aria-hidden="true"
+                className="flex-1 h-12 px-3 flex items-center text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background"
+              >
+                {location || <span className="font-sans text-muted-foreground normal-case tracking-normal">Scan location barcode</span>}
+              </div>
               <Button
                 type="button"
                 variant="outline"
