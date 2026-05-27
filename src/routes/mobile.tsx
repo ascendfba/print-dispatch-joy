@@ -12,7 +12,7 @@ function MobileShell() {
     p === "/mobile" ? pathname === "/mobile" : pathname.startsWith(p);
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <div className="h-[100dvh] bg-background text-foreground flex flex-col overflow-hidden">
       {/* Top bar */}
       <header className="shrink-0 border-b bg-gradient-to-r from-[#0a2e3d] via-[#0d3a4d] to-[#0a2e3d] pt-[env(safe-area-inset-top)]">
         <div className="flex items-center justify-between px-4 h-14">
@@ -29,7 +29,7 @@ function MobileShell() {
       </header>
 
       {/* Content */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto min-h-0">
         <Outlet />
       </main>
 
