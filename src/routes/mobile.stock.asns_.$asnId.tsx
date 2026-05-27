@@ -501,6 +501,13 @@ function VerifyDrawer({
   const [showLocationKeypad, setShowLocationKeypad] = useState(false);
   const locationInputRef = useRef<HTMLInputElement | null>(null);
 
+  function focusLocationScanner(delay = 0) {
+    setTimeout(() => {
+      locationInputRef.current?.setAttribute("virtualkeyboardpolicy", "manual");
+      locationInputRef.current?.focus({ preventScroll: true });
+    }, delay);
+  }
+
   // Reset whenever a new item is opened.
   const itemKey = item ? String(item.ID ?? "") : "";
   useEffect(() => {
@@ -510,10 +517,7 @@ function VerifyDrawer({
       setLocation(existing?.location ?? "");
       setShowLocationKeypad(false);
       // Keep a real input focused so the device scanner can type into it.
-      setTimeout(() => {
-        locationInputRef.current?.setAttribute("virtualkeyboardpolicy", "manual");
-        locationInputRef.current?.focus({ preventScroll: true });
-      }, 250);
+      focusLocationScanner(250);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemKey]);
@@ -621,7 +625,10 @@ function VerifyDrawer({
                 />
                 <Button
                   type="button"
-                  onClick={() => (document.activeElement as HTMLElement | null)?.blur()}
+                  onClick={() => {
+                    (document.activeElement as HTMLElement | null)?.blur();
+                    focusLocationScanner(50);
+                  }}
                   disabled={!bbf || !normalisedBbf}
                   className="h-12 px-4 bg-[#0099d4] hover:bg-[#0088bc] text-white"
                 >
@@ -663,7 +670,7 @@ function VerifyDrawer({
               <input
                 ref={locationInputRef}
                 type="text"
-                inputMode="none"
+                inputMode="text"
                 autoCapitalize="characters"
                 autoComplete="off"
                 placeholder="Scan location barcode"
@@ -681,7 +688,7 @@ function VerifyDrawer({
                 aria-label="Open manual location keypad"
                 onClick={() => {
                   setShowLocationKeypad((show) => !show);
-                  setTimeout(() => locationInputRef.current?.focus(), 0);
+                  focusLocationScanner();
                 }}
                 className="h-12 w-12 shrink-0"
               >
@@ -693,7 +700,7 @@ function VerifyDrawer({
                 value={location}
                 onChange={(v) => {
                   setLocation(v.toUpperCase());
-                  setTimeout(() => locationInputRef.current?.focus(), 0);
+                  focusLocationScanner();
                 }}
                 maxLength={32}
               />
