@@ -1,8 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ShoppingBag,
-  Layers,
-  Package,
+  ClipboardList,
   Truck,
   ArrowLeftRight,
   PackagePlus,
