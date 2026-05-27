@@ -692,7 +692,8 @@ function VerifyDrawer({
       return;
     }
     const canonical = matched.code || matched.name || saveLocation;
-    setScannerArmed(false);
+    addScannerDebug("save", canonical);
+    setScannerArmedState(false);
     onSave({ receivedQty: qty, bbf: normalisedBbf, location: canonical });
   }
 
