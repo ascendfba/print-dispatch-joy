@@ -2789,8 +2789,9 @@ function PackingListDialog({
                   if (prev) URL.revokeObjectURL(prev.url);
                   return null;
                 });
+                setSubmitted(false);
               }}
-              disabled={submitting}
+              disabled={submitting || alreadySubmitted || submitted}
             >
               Reset
             </Button>
@@ -2804,17 +2805,34 @@ function PackingListDialog({
                 </Button>
               )}
               <Button
-                onClick={handleSubmit}
+                onClick={handleGenerate}
                 disabled={
                   submitting ||
+                  alreadySubmitted ||
+                  submitted ||
                   boxes.some((b) => !(b.length && b.width && b.height))
                 }
+                variant={pdfPreview ? "outline" : "default"}
               >
-                {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {submitting && !pdfPreview && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {pdfPreview ? "Regenerate" : "Generate packing list"}
               </Button>
+              {pdfPreview && (
+                <Button
+                  onClick={handleSubmit}
+                  disabled={submitting || alreadySubmitted || submitted}
+                >
+                  {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {alreadySubmitted || submitted ? "Submitted ✓" : "Submit"}
+                </Button>
+              )}
             </div>
           </div>
+          {(submitted || alreadySubmitted) && (
+            <div className="mt-2 rounded-md border border-emerald-500/40 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800">
+              Packing list successfully submitted. Only one packing list can be attached per order.
+            </div>
+          )}
         </div>
         </div>
       </DialogContent>
