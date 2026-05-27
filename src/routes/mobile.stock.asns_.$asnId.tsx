@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, Truck, Loader2, Package, Search, X, AlertTriangle, Save, PackageCheck, CheckCircle2, Minus, Plus, Keyboard } from "lucide-react";
+import { ChevronLeft, Truck, Loader2, Package, Search, X, AlertTriangle, Save, PackageCheck, CheckCircle2, Minus, Plus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -564,47 +564,6 @@ function VerifyDrawer({
     const canonical = matched.code || matched.name || saveLocation;
     onSave({ receivedQty: qty, bbf: normalisedBbf, location: canonical });
   }
-
-  useEffect(() => {
-    if (!item || bbfInvalid || (requiresBbf && !bbfConfirmed)) return;
-
-    const onScannerKey = (event: KeyboardEvent) => {
-      if (event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
-
-      const target = event.target as HTMLElement | null;
-      if (target?.id === "bbf-input") return;
-
-      if (event.key === "Enter" || event.key === "Tab") {
-        event.preventDefault();
-        event.stopPropagation();
-        const scannedLocation = locationScanBufferRef.current.toUpperCase();
-        setLocation(scannedLocation);
-        if (scannedLocation.trim()) handleSave(scannedLocation);
-        return;
-      }
-
-      if (event.key === "Backspace") {
-        event.preventDefault();
-        event.stopPropagation();
-        const next = locationScanBufferRef.current.slice(0, -1);
-        locationScanBufferRef.current = next;
-        setLocation(next);
-        return;
-      }
-
-      if (event.key.length === 1) {
-        event.preventDefault();
-        event.stopPropagation();
-        const next = (locationScanBufferRef.current + event.key).toUpperCase().slice(0, 32);
-        locationScanBufferRef.current = next;
-        setLocation(next);
-      }
-    };
-
-    document.addEventListener("keydown", onScannerKey, true);
-    return () => document.removeEventListener("keydown", onScannerKey, true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemKey, bbfInvalid, requiresBbf, bbfConfirmed, qty, normalisedBbf, locations]);
 
   return (
     <Drawer open={!!item} onOpenChange={(o) => !o && onClose()}>
