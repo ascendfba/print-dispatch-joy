@@ -9,7 +9,7 @@ export const Route = createFileRoute("/mobile-emulator")({
   component: MobileEmulatorPage,
 });
 
-const MOBILE_APP_URL = "https://print-dispatch-joy.lovable.app";
+const MOBILE_APP_URL = "/mobile";
 
 const DEVICES = [
   { key: "iphone-15", label: "iPhone 15", width: 393, height: 852 },

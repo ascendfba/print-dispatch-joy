@@ -15,6 +15,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as MobileEmulatorRouteImport } from './routes/mobile-emulator'
+import { Route as MobileRouteImport } from './routes/mobile'
 import { Route as MfaRouteImport } from './routes/mfa'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as InvoiceMergerRouteImport } from './routes/invoice-merger'
@@ -23,6 +24,7 @@ import { Route as FbaCalculatorRouteImport } from './routes/fba-calculator'
 import { Route as DevelopmentRouteImport } from './routes/development'
 import { Route as AsnsRouteImport } from './routes/asns'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MobileIndexRouteImport } from './routes/mobile.index'
 import { Route as OrdersOrderIdRouteImport } from './routes/orders_.$orderId'
 import { Route as DSlugRouteImport } from './routes/d.$slug'
 import { Route as AsnsAsnIdRouteImport } from './routes/asns_.$asnId'
@@ -33,6 +35,9 @@ import { Route as ApiGoogleImageRouteImport } from './routes/api/google-image'
 import { Route as ApiEstimateWeightRouteImport } from './routes/api/estimate-weight'
 import { Route as ApiAmazonImageRouteImport } from './routes/api/amazon-image'
 import { Route as DRouteImport } from './routes/d.'
+import { Route as MobileStockTransferRouteImport } from './routes/mobile.stock.transfer'
+import { Route as MobileStockLocationsRouteImport } from './routes/mobile.stock.locations'
+import { Route as MobileStockAsnsRouteImport } from './routes/mobile.stock.asns'
 import { Route as AsnsAsnIdQuickRouteImport } from './routes/asns_.$asnId.quick'
 import { Route as ApiPublicSetupWarningLabelsBucketRouteImport } from './routes/api/public/setup-warning-labels-bucket'
 import { Route as ApiPublicSetupDesktopBucketRouteImport } from './routes/api/public/setup-desktop-bucket'
@@ -67,6 +72,11 @@ const OrdersRoute = OrdersRouteImport.update({
 const MobileEmulatorRoute = MobileEmulatorRouteImport.update({
   id: '/mobile-emulator',
   path: '/mobile-emulator',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MobileRoute = MobileRouteImport.update({
+  id: '/mobile',
+  path: '/mobile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MfaRoute = MfaRouteImport.update({
@@ -108,6 +118,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const MobileIndexRoute = MobileIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MobileRoute,
 } as any)
 const OrdersOrderIdRoute = OrdersOrderIdRouteImport.update({
   id: '/orders_/$orderId',
@@ -159,6 +174,21 @@ const DRoute = DRouteImport.update({
   path: '/d/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MobileStockTransferRoute = MobileStockTransferRouteImport.update({
+  id: '/stock/transfer',
+  path: '/stock/transfer',
+  getParentRoute: () => MobileRoute,
+} as any)
+const MobileStockLocationsRoute = MobileStockLocationsRouteImport.update({
+  id: '/stock/locations',
+  path: '/stock/locations',
+  getParentRoute: () => MobileRoute,
+} as any)
+const MobileStockAsnsRoute = MobileStockAsnsRouteImport.update({
+  id: '/stock/asns',
+  path: '/stock/asns',
+  getParentRoute: () => MobileRoute,
+} as any)
 const AsnsAsnIdQuickRoute = AsnsAsnIdQuickRouteImport.update({
   id: '/quick',
   path: '/quick',
@@ -197,6 +227,7 @@ export interface FileRoutesByFullPath {
   '/invoice-merger': typeof InvoiceMergerRoute
   '/login': typeof LoginRoute
   '/mfa': typeof MfaRoute
+  '/mobile': typeof MobileRouteWithChildren
   '/mobile-emulator': typeof MobileEmulatorRoute
   '/orders': typeof OrdersRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -213,9 +244,13 @@ export interface FileRoutesByFullPath {
   '/asns/$asnId': typeof AsnsAsnIdRouteWithChildren
   '/d/$slug': typeof DSlugRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/mobile/': typeof MobileIndexRoute
   '/api/public/setup-desktop-bucket': typeof ApiPublicSetupDesktopBucketRoute
   '/api/public/setup-warning-labels-bucket': typeof ApiPublicSetupWarningLabelsBucketRoute
   '/asns/$asnId/quick': typeof AsnsAsnIdQuickRoute
+  '/mobile/stock/asns': typeof MobileStockAsnsRoute
+  '/mobile/stock/locations': typeof MobileStockLocationsRoute
+  '/mobile/stock/transfer': typeof MobileStockTransferRoute
   '/api/public/cron/sync-mintsoft': typeof ApiPublicCronSyncMintsoftRoute
   '/api/public/d/$slug': typeof ApiPublicDSlugRoute
 }
@@ -244,9 +279,13 @@ export interface FileRoutesByTo {
   '/asns/$asnId': typeof AsnsAsnIdRouteWithChildren
   '/d/$slug': typeof DSlugRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/mobile': typeof MobileIndexRoute
   '/api/public/setup-desktop-bucket': typeof ApiPublicSetupDesktopBucketRoute
   '/api/public/setup-warning-labels-bucket': typeof ApiPublicSetupWarningLabelsBucketRoute
   '/asns/$asnId/quick': typeof AsnsAsnIdQuickRoute
+  '/mobile/stock/asns': typeof MobileStockAsnsRoute
+  '/mobile/stock/locations': typeof MobileStockLocationsRoute
+  '/mobile/stock/transfer': typeof MobileStockTransferRoute
   '/api/public/cron/sync-mintsoft': typeof ApiPublicCronSyncMintsoftRoute
   '/api/public/d/$slug': typeof ApiPublicDSlugRoute
 }
@@ -260,6 +299,7 @@ export interface FileRoutesById {
   '/invoice-merger': typeof InvoiceMergerRoute
   '/login': typeof LoginRoute
   '/mfa': typeof MfaRoute
+  '/mobile': typeof MobileRouteWithChildren
   '/mobile-emulator': typeof MobileEmulatorRoute
   '/orders': typeof OrdersRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -276,9 +316,13 @@ export interface FileRoutesById {
   '/asns_/$asnId': typeof AsnsAsnIdRouteWithChildren
   '/d/$slug': typeof DSlugRoute
   '/orders_/$orderId': typeof OrdersOrderIdRoute
+  '/mobile/': typeof MobileIndexRoute
   '/api/public/setup-desktop-bucket': typeof ApiPublicSetupDesktopBucketRoute
   '/api/public/setup-warning-labels-bucket': typeof ApiPublicSetupWarningLabelsBucketRoute
   '/asns_/$asnId/quick': typeof AsnsAsnIdQuickRoute
+  '/mobile/stock/asns': typeof MobileStockAsnsRoute
+  '/mobile/stock/locations': typeof MobileStockLocationsRoute
+  '/mobile/stock/transfer': typeof MobileStockTransferRoute
   '/api/public/cron/sync-mintsoft': typeof ApiPublicCronSyncMintsoftRoute
   '/api/public/d/$slug': typeof ApiPublicDSlugRoute
 }
@@ -293,6 +337,7 @@ export interface FileRouteTypes {
     | '/invoice-merger'
     | '/login'
     | '/mfa'
+    | '/mobile'
     | '/mobile-emulator'
     | '/orders'
     | '/reset-password'
@@ -309,9 +354,13 @@ export interface FileRouteTypes {
     | '/asns/$asnId'
     | '/d/$slug'
     | '/orders/$orderId'
+    | '/mobile/'
     | '/api/public/setup-desktop-bucket'
     | '/api/public/setup-warning-labels-bucket'
     | '/asns/$asnId/quick'
+    | '/mobile/stock/asns'
+    | '/mobile/stock/locations'
+    | '/mobile/stock/transfer'
     | '/api/public/cron/sync-mintsoft'
     | '/api/public/d/$slug'
   fileRoutesByTo: FileRoutesByTo
@@ -340,9 +389,13 @@ export interface FileRouteTypes {
     | '/asns/$asnId'
     | '/d/$slug'
     | '/orders/$orderId'
+    | '/mobile'
     | '/api/public/setup-desktop-bucket'
     | '/api/public/setup-warning-labels-bucket'
     | '/asns/$asnId/quick'
+    | '/mobile/stock/asns'
+    | '/mobile/stock/locations'
+    | '/mobile/stock/transfer'
     | '/api/public/cron/sync-mintsoft'
     | '/api/public/d/$slug'
   id:
@@ -355,6 +408,7 @@ export interface FileRouteTypes {
     | '/invoice-merger'
     | '/login'
     | '/mfa'
+    | '/mobile'
     | '/mobile-emulator'
     | '/orders'
     | '/reset-password'
@@ -371,9 +425,13 @@ export interface FileRouteTypes {
     | '/asns_/$asnId'
     | '/d/$slug'
     | '/orders_/$orderId'
+    | '/mobile/'
     | '/api/public/setup-desktop-bucket'
     | '/api/public/setup-warning-labels-bucket'
     | '/asns_/$asnId/quick'
+    | '/mobile/stock/asns'
+    | '/mobile/stock/locations'
+    | '/mobile/stock/transfer'
     | '/api/public/cron/sync-mintsoft'
     | '/api/public/d/$slug'
   fileRoutesById: FileRoutesById
@@ -387,6 +445,7 @@ export interface RootRouteChildren {
   InvoiceMergerRoute: typeof InvoiceMergerRoute
   LoginRoute: typeof LoginRoute
   MfaRoute: typeof MfaRoute
+  MobileRoute: typeof MobileRouteWithChildren
   MobileEmulatorRoute: typeof MobileEmulatorRoute
   OrdersRoute: typeof OrdersRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -453,6 +512,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MobileEmulatorRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mobile': {
+      id: '/mobile'
+      path: '/mobile'
+      fullPath: '/mobile'
+      preLoaderRoute: typeof MobileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/mfa': {
       id: '/mfa'
       path: '/mfa'
@@ -508,6 +574,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/mobile/': {
+      id: '/mobile/'
+      path: '/'
+      fullPath: '/mobile/'
+      preLoaderRoute: typeof MobileIndexRouteImport
+      parentRoute: typeof MobileRoute
     }
     '/orders_/$orderId': {
       id: '/orders_/$orderId'
@@ -579,6 +652,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mobile/stock/transfer': {
+      id: '/mobile/stock/transfer'
+      path: '/stock/transfer'
+      fullPath: '/mobile/stock/transfer'
+      preLoaderRoute: typeof MobileStockTransferRouteImport
+      parentRoute: typeof MobileRoute
+    }
+    '/mobile/stock/locations': {
+      id: '/mobile/stock/locations'
+      path: '/stock/locations'
+      fullPath: '/mobile/stock/locations'
+      preLoaderRoute: typeof MobileStockLocationsRouteImport
+      parentRoute: typeof MobileRoute
+    }
+    '/mobile/stock/asns': {
+      id: '/mobile/stock/asns'
+      path: '/stock/asns'
+      fullPath: '/mobile/stock/asns'
+      preLoaderRoute: typeof MobileStockAsnsRouteImport
+      parentRoute: typeof MobileRoute
+    }
     '/asns_/$asnId/quick': {
       id: '/asns_/$asnId/quick'
       path: '/quick'
@@ -617,6 +711,23 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface MobileRouteChildren {
+  MobileIndexRoute: typeof MobileIndexRoute
+  MobileStockAsnsRoute: typeof MobileStockAsnsRoute
+  MobileStockLocationsRoute: typeof MobileStockLocationsRoute
+  MobileStockTransferRoute: typeof MobileStockTransferRoute
+}
+
+const MobileRouteChildren: MobileRouteChildren = {
+  MobileIndexRoute: MobileIndexRoute,
+  MobileStockAsnsRoute: MobileStockAsnsRoute,
+  MobileStockLocationsRoute: MobileStockLocationsRoute,
+  MobileStockTransferRoute: MobileStockTransferRoute,
+}
+
+const MobileRouteWithChildren =
+  MobileRoute._addFileChildren(MobileRouteChildren)
+
 interface AsnsAsnIdRouteChildren {
   AsnsAsnIdQuickRoute: typeof AsnsAsnIdQuickRoute
 }
@@ -638,6 +749,7 @@ const rootRouteChildren: RootRouteChildren = {
   InvoiceMergerRoute: InvoiceMergerRoute,
   LoginRoute: LoginRoute,
   MfaRoute: MfaRoute,
+  MobileRoute: MobileRouteWithChildren,
   MobileEmulatorRoute: MobileEmulatorRoute,
   OrdersRoute: OrdersRoute,
   ResetPasswordRoute: ResetPasswordRoute,
