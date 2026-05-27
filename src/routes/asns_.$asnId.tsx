@@ -1414,15 +1414,7 @@ function BarcodeRow({
   description: string;
   hasBarcode: boolean;
 }) {
-  if (hasBarcode) {
-    return (
-      <div className="text-[11px] text-muted-foreground">
-        <span className="font-semibold">Barcode:</span>{" "}
-        <span className="font-mono">{ean || upc}</span>
-      </div>
-    );
-  }
-
+  const assigned = (ean || upc).trim();
   const query = useQuery({
     queryKey: ["suggest-barcode", sku || name, name, description],
     queryFn: async () => {
@@ -1446,16 +1438,6 @@ function BarcodeRow({
     retry: false,
   });
 
-  if (query.isLoading) {
-    return (
-      <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-        <span className="font-semibold">Barcode:</span>
-        <Loader2 className="h-3 w-3 animate-spin" />
-        <span className="italic">scanning the web…</span>
-      </div>
-    );
-  }
-
   const barcode = query.data?.barcode;
   const confidence = query.data?.confidence ?? "low";
   const reason = query.data?.reason ?? "";
@@ -1465,26 +1447,51 @@ function BarcodeRow({
       : confidence === "medium"
         ? "text-orange-700 dark:text-orange-400 border-orange-500/40 bg-orange-50 dark:bg-orange-500/10"
         : "text-rose-700 dark:text-rose-400 border-rose-500/40 bg-rose-50 dark:bg-rose-500/10";
-  if (barcode) {
-    return (
-      <div className="text-[11px] text-muted-foreground" title={reason || undefined}>
-        <span className="font-semibold">Barcode:</span>{" "}
-        <span className="font-mono text-orange-700 dark:text-orange-400" title="AI-suggested">
-          {barcode}
-        </span>{" "}
-        <span
-          className={`ml-1 inline-flex items-center rounded border px-1 py-px text-[9px] font-semibold uppercase tracking-wide ${confColor}`}
-          title={reason || "AI confidence in the match"}
-        >
-          {confidence}
-        </span>
-      </div>
-    );
-  }
+
+  const matches = barcode && assigned && barcode === assigned;
+
   return (
-    <div className="text-[11px] text-muted-foreground" title={reason || undefined}>
-      <span className="font-semibold">Barcode:</span>{" "}
-      <span className="italic">None Suggested</span>
+    <div className="text-[11px] text-muted-foreground space-y-0.5" title={reason || undefined}>
+      {hasBarcode && (
+        <div>
+          <span className="font-semibold">Assigned:</span>{" "}
+          <span className="font-mono">{assigned}</span>
+          <span
+            className="ml-1 text-[9px] uppercase tracking-wide text-muted-foreground/70"
+            title="Barcode from Mintsoft / seller — may be an FNSKU or internal code"
+          >
+            Mintsoft
+          </span>
+        </div>
+      )}
+      <div className="flex items-center gap-1 flex-wrap">
+        <span className="font-semibold">Original:</span>
+        {query.isLoading ? (
+          <>
+            <Loader2 className="h-3 w-3 animate-spin" />
+            <span className="italic">scanning the web…</span>
+          </>
+        ) : barcode ? (
+          <>
+            <span className="font-mono text-orange-700 dark:text-orange-400" title="AI-found manufacturer barcode">
+              {barcode}
+            </span>
+            <span
+              className={`inline-flex items-center rounded border px-1 py-px text-[9px] font-semibold uppercase tracking-wide ${confColor}`}
+              title={reason || "AI confidence in the match"}
+            >
+              {confidence}
+            </span>
+            {matches && (
+              <span className="text-[9px] uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+                matches assigned
+              </span>
+            )}
+          </>
+        ) : (
+          <span className="italic">none found</span>
+        )}
+      </div>
     </div>
   );
 }
