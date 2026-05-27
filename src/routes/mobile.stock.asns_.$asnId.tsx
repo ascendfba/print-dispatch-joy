@@ -630,8 +630,13 @@ function VerifyDrawer({
   }
 
   return (
-    <Drawer open={!!item} onOpenChange={(o) => !o && onClose()}>
-      <DrawerContent>
+    <Drawer
+      open={!!item}
+      onOpenChange={(o) => !o && onClose()}
+      repositionInputs={false}
+      autoFocus={false}
+    >
+      <DrawerContent className="max-h-[92svh] overflow-y-auto">
         <DrawerHeader className="text-left">
           <DrawerTitle className="text-base line-clamp-2">
             {item?.Title || item?.Description || item?.SKU || "Verify item"}
@@ -704,7 +709,7 @@ function VerifyDrawer({
                     setBbf(next);
                     setBbfConfirmed(validDate);
                     if (validDate) {
-                      setTimeout(() => (document.activeElement as HTMLElement | null)?.blur(), 0);
+                      focusScannerInput();
                     }
                   }}
                   maxLength={10}
@@ -714,7 +719,7 @@ function VerifyDrawer({
                   type="button"
                   onClick={() => {
                     setBbfConfirmed(true);
-                    (document.activeElement as HTMLElement | null)?.blur();
+                    focusScannerInput();
                   }}
                   disabled={!bbf || !normalisedBbf}
                   className="h-12 px-4 bg-[#0099d4] hover:bg-[#0088bc] text-white"
@@ -754,9 +759,21 @@ function VerifyDrawer({
               </span>
             </p>
             <div className="flex items-center gap-2">
+              <input
+                ref={scannerInputRef}
+                aria-hidden="true"
+                tabIndex={-1}
+                inputMode="none"
+                autoComplete="off"
+                className="fixed left-0 top-0 h-px w-px -translate-x-full opacity-0"
+                onFocus={() => {
+                  scannerBufferRef.current = location;
+                }}
+              />
               <div
                 role="status"
                 aria-label="Scanned location"
+                onClick={scannerReady ? focusScannerInput : undefined}
                 className="flex-1 h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background flex items-center"
               >
                 {location || (scannerReady ? "SCAN LOCATION" : "CONFIRM BBF FIRST")}
