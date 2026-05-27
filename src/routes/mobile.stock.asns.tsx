@@ -37,7 +37,13 @@ function MobileASNs() {
       })
     : allAsns;
 
-  const sorted = [...filtered].sort((a, b) => {
+  // Hide booked-in / received / completed ASNs
+  const activeAsns = filtered.filter((a) => {
+    const status = (a.Status ?? "").toLowerCase();
+    return !status.includes("booked") && !status.includes("received") && !status.includes("complete") && !status.includes("closed") && !status.includes("processed");
+  });
+
+  const sorted = [...activeAsns].sort((a, b) => {
     const dateA = a.ExpectedDate ? new Date(a.ExpectedDate).getTime() : 0;
     const dateB = b.ExpectedDate ? new Date(b.ExpectedDate).getTime() : 0;
     return dateB - dateA;
