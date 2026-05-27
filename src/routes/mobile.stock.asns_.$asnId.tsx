@@ -676,8 +676,13 @@ function VerifyDrawer({
                   placeholder="010126"
                   value={bbf}
                   onChange={(e) => {
-                    setBbf(e.target.value);
-                    setBbfConfirmed(false);
+                    const next = e.target.value;
+                    const validDate = Boolean(normaliseBbf(next));
+                    setBbf(next);
+                    setBbfConfirmed(validDate);
+                    if (validDate) {
+                      setTimeout(() => (document.activeElement as HTMLElement | null)?.blur(), 0);
+                    }
                   }}
                   maxLength={10}
                   className="flex-1 h-12 px-3 text-base tabular-nums rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
