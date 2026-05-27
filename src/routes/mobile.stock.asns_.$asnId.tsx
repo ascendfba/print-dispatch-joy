@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, Truck, Loader2, Package, Search, X, AlertTriangle, Save, PackageCheck, CheckCircle2, Minus, Plus } from "lucide-react";
+import { ChevronLeft, Truck, Loader2, Package, Search, X, AlertTriangle, Save, PackageCheck, CheckCircle2, Minus, Plus, Keyboard } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -498,7 +498,15 @@ function VerifyDrawer({
   const [qty, setQty] = useState<number>(0);
   const [bbf, setBbf] = useState<string>("");
   const [location, setLocation] = useState<string>("");
+  const [showLocationKeypad, setShowLocationKeypad] = useState(false);
   const locationInputRef = useRef<HTMLInputElement | null>(null);
+
+  function focusLocationScanner(delay = 0) {
+    setTimeout(() => {
+      locationInputRef.current?.setAttribute("virtualkeyboardpolicy", "manual");
+      locationInputRef.current?.focus({ preventScroll: true });
+    }, delay);
+  }
 
   // Reset whenever a new item is opened.
   const itemKey = item ? String(item.ID ?? "") : "";
@@ -507,8 +515,9 @@ function VerifyDrawer({
       setQty(existing?.receivedQty ?? expected);
       setBbf(existing?.bbf ?? "");
       setLocation(existing?.location ?? "");
-      // Auto-focus the location field so HID barcode scanners write into it.
-      setTimeout(() => locationInputRef.current?.focus(), 250);
+      setShowLocationKeypad(false);
+      // Keep a real input focused so the device scanner can type into it.
+      focusLocationScanner(250);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemKey]);
@@ -518,7 +527,17 @@ function VerifyDrawer({
   const trimmedLocation = location.trim();
   const locationInvalid = !trimmedLocation;
 
-  function handleSave() {
+  function handleLocationScannerKey(key: string, preventDefault: () => void) {
+    if (key === "Enter" || key === "Tab") {
+      preventDefault();
+      const scannedLocation = (locationInputRef.current?.value ?? location).toUpperCase();
+      setLocation(scannedLocation);
+      if (!bbfInvalid && scannedLocation.trim()) handleSave(scannedLocation);
+    }
+  }
+
+  function handleSave(locationOverride = location) {
+    const saveLocation = locationOverride.trim();
     if (qty < 0) {
       toast.error("Quantity cannot be negative");
       return;
@@ -527,11 +546,11 @@ function VerifyDrawer({
       toast.error("Enter a valid BBF date (DDMMYY)");
       return;
     }
-    if (!trimmedLocation) {
+    if (!saveLocation) {
       toast.error("Scan or enter a location");
       return;
     }
-    onSave({ receivedQty: qty, bbf: normalisedBbf, location: trimmedLocation });
+    onSave({ receivedQty: qty, bbf: normalisedBbf, location: saveLocation });
   }
 
   return (
@@ -609,7 +628,10 @@ function VerifyDrawer({
                 />
                 <Button
                   type="button"
-                  onClick={() => (document.activeElement as HTMLElement | null)?.blur()}
+                  onClick={() => {
+                    (document.activeElement as HTMLElement | null)?.blur();
+                    focusLocationScanner(50);
+                  }}
                   disabled={!bbf || !normalisedBbf}
                   className="h-12 px-4 bg-[#0099d4] hover:bg-[#0088bc] text-white"
                 >
@@ -647,38 +669,55 @@ function VerifyDrawer({
                 (scan or type)
               </span>
             </p>
-            <input
-              ref={locationInputRef}
-              type="text"
-              inputMode="none"
-              autoCapitalize="characters"
-              autoComplete="off"
-              placeholder="Scan location barcode"
-              value={location}
-              onChange={(e) => setLocation(e.target.value.toUpperCase())}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
+            <div className="flex items-center gap-2">
+              <input
+                ref={locationInputRef}
+                type="text"
+                inputMode="text"
+                autoCapitalize="characters"
+                autoComplete="off"
+                placeholder="Scan location barcode"
+                value={location}
+                onPointerDown={(e) => {
                   e.preventDefault();
-                  if (!bbfInvalid && location.trim()) handleSave();
-                }
-              }}
-              maxLength={32}
-              className="w-full h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
-            />
-            <p className="mt-1.5 text-[11px] text-muted-foreground">
-              Scan the location barcode, or use the keypad below to type manually.
-            </p>
-            <OnScreenKeypad
-              value={location}
-              onChange={(v) => setLocation(v.toUpperCase())}
-              maxLength={32}
-            />
+                  focusLocationScanner();
+                }}
+                onFocus={() => locationInputRef.current?.setAttribute("virtualkeyboardpolicy", "manual")}
+                onChange={(e) => setLocation(e.target.value.toUpperCase())}
+                onKeyDown={(e) => handleLocationScannerKey(e.key, () => e.preventDefault())}
+                maxLength={32}
+                className="flex-1 h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label="Open manual location keypad"
+                onClick={() => {
+                  setShowLocationKeypad((show) => !show);
+                  focusLocationScanner();
+                }}
+                className="h-12 w-12 shrink-0"
+              >
+                <Keyboard className="h-5 w-5" />
+              </Button>
+            </div>
+            {showLocationKeypad && (
+              <OnScreenKeypad
+                value={location}
+                onChange={(v) => {
+                  setLocation(v.toUpperCase());
+                  focusLocationScanner();
+                }}
+                maxLength={32}
+              />
+            )}
           </div>
         </div>
 
         <DrawerFooter className="pt-2">
           <Button
-            onClick={handleSave}
+            onClick={() => handleSave()}
             disabled={bbfInvalid || locationInvalid}
             className="h-14 text-base bg-[#0099d4] hover:bg-[#0088bc] text-white"
           >
