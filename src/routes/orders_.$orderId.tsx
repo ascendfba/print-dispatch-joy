@@ -2864,7 +2864,8 @@ function PackingListDialog({
                   alreadySubmitted ||
                   submitted ||
                   boxes.some((b) => !(b.length && b.width && b.height)) ||
-                  boxes.some((b) => !(b.weight && Number(b.weight) > 0))
+                  boxes.some((b) => !(b.weight && Number(b.weight) > 0)) ||
+                  boxes.some((b) => Number(b.weight) > 22)
                 }
                 variant={pdfPreview ? "outline" : "default"}
               >
@@ -2878,7 +2879,8 @@ function PackingListDialog({
                     submitting ||
                     alreadySubmitted ||
                     submitted ||
-                    boxes.some((b) => !(b.weight && Number(b.weight) > 0))
+                    boxes.some((b) => !(b.weight && Number(b.weight) > 0)) ||
+                    boxes.some((b) => Number(b.weight) > 22)
                   }
                 >
                   {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
