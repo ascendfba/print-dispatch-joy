@@ -61,8 +61,8 @@ function MobileHome() {
   today.setHours(0, 0, 0, 0);
   const dayMs = 86_400_000;
 
-  const dayLabels = ["Today", "Tomorrow", "Day after"];
-  const dayCards = [0, 1, 2].map((offset) => {
+  const dayLabels = ["Today", "Tomorrow"];
+  const dayCards = [0, 1].map((offset) => {
     const d = new Date(today.getTime() + offset * dayMs);
     const dStr = d.toDateString();
     const label = dayLabels[offset];
