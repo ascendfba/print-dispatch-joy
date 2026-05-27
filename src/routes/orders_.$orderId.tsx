@@ -2678,6 +2678,12 @@ function PackingListDialog({
                     Weight is required — enter or confirm below
                   </div>
                 )}
+                {Number(b.weight) > 22 && (
+                  <div className="rounded border border-red-500 bg-red-100 px-2 py-1 text-[11px] font-semibold text-red-900">
+                    <AlertTriangle className="mr-1 inline h-3 w-3" />
+                    Box exceeds 22 kg limit — split into more boxes before saving
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-2">
                   {[
                     { label: "S DISP/B", size: "37", weight: "0.7" },
