@@ -2435,13 +2435,23 @@ function PackingListDialog({
 
   const handleGenerate = async () => {
     if (submitInFlightRef.current) return;
-    const missing = boxes
+    const missingDims = boxes
       .map((b, i) => ({ i, hasDims: !!(b.length && b.width && b.height) }))
       .filter((x) => !x.hasDims)
       .map((x) => x.i + 1);
-    if (missing.length > 0) {
+    if (missingDims.length > 0) {
       toast.error(
-        `Pick a box size for Box ${missing.join(", ")} before saving`,
+        `Pick a box size for Box ${missingDims.join(", ")} before saving`,
+      );
+      return;
+    }
+    const missingWeight = boxes
+      .map((b, i) => ({ i, hasWeight: !!(b.weight && Number(b.weight) > 0) }))
+      .filter((x) => !x.hasWeight)
+      .map((x) => x.i + 1);
+    if (missingWeight.length > 0) {
+      toast.error(
+        `Enter a weight for Box ${missingWeight.join(", ")} before saving`,
       );
       return;
     }
@@ -2474,6 +2484,16 @@ function PackingListDialog({
     }
     if (!pdfPreview) {
       toast.error("Generate the packing list first");
+      return;
+    }
+    const missingWeight = boxes
+      .map((b, i) => ({ i, hasWeight: !!(b.weight && Number(b.weight) > 0) }))
+      .filter((x) => !x.hasWeight)
+      .map((x) => x.i + 1);
+    if (missingWeight.length > 0) {
+      toast.error(
+        `Enter a weight for Box ${missingWeight.join(", ")} before submitting`,
+      );
       return;
     }
     submitInFlightRef.current = true;
@@ -2623,6 +2643,12 @@ function PackingListDialog({
                   <div className="rounded border border-amber-400 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800">
                     <AlertTriangle className="mr-1 inline h-3 w-3" />
                     Pick a box size below before saving
+                  </div>
+                )}
+                {!!(b.length && b.width && b.height) && !(b.weight && Number(b.weight) > 0) && (
+                  <div className="rounded border border-red-400 bg-red-50 px-2 py-1 text-[11px] font-medium text-red-800">
+                    <AlertTriangle className="mr-1 inline h-3 w-3" />
+                    Weight is required — enter or confirm below
                   </div>
                 )}
                 <div className="flex flex-wrap gap-2">
@@ -2810,7 +2836,8 @@ function PackingListDialog({
                   submitting ||
                   alreadySubmitted ||
                   submitted ||
-                  boxes.some((b) => !(b.length && b.width && b.height))
+                  boxes.some((b) => !(b.length && b.width && b.height)) ||
+                  boxes.some((b) => !(b.weight && Number(b.weight) > 0))
                 }
                 variant={pdfPreview ? "outline" : "default"}
               >
@@ -2820,7 +2847,12 @@ function PackingListDialog({
               {pdfPreview && (
                 <Button
                   onClick={handleSubmit}
-                  disabled={submitting || alreadySubmitted || submitted}
+                  disabled={
+                    submitting ||
+                    alreadySubmitted ||
+                    submitted ||
+                    boxes.some((b) => !(b.weight && Number(b.weight) > 0))
+                  }
                 >
                   {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {alreadySubmitted || submitted ? "Submitted ✓" : "Submit"}
