@@ -521,7 +521,7 @@ function VerifyDrawer({
   const [bbfConfirmed, setBbfConfirmed] = useState(false);
   const [location, setLocation] = useState<string>("");
   const [scannerArmed, setScannerArmed] = useState(false);
-  const scannerInputRef = useRef<HTMLButtonElement | null>(null);
+  const scannerInputRef = useRef<HTMLInputElement | null>(null);
   const scannerBufferRef = useRef("");
   const scannerLastKeyAtRef = useRef(0);
   const scannerCommitTimerRef = useRef<number | null>(null);
@@ -551,7 +551,13 @@ function VerifyDrawer({
     setScannerArmed(true);
     scannerLastKeyAtRef.current = 0;
     scannerBufferRef.current = "";
-    scannerInputRef.current?.focus({ preventScroll: true });
+    const input = scannerInputRef.current;
+    if (!input) return;
+    input.readOnly = true;
+    input.focus({ preventScroll: true });
+    window.setTimeout(() => {
+      if (scannerInputRef.current === input) input.readOnly = false;
+    }, 80);
   }
 
   function focusScannerInput() {
