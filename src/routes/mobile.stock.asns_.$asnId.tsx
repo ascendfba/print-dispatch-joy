@@ -590,15 +590,9 @@ function VerifyDrawer({
       if (attempt < 8) window.setTimeout(() => armScanner(reason, attempt + 1), 75);
       return;
     }
-    input.readOnly = true;
     input.focus({ preventScroll: true });
     addScannerDebug("armed", `reason=${reason} attempt=${attempt} focused=${document.activeElement === input}`);
-    window.setTimeout(() => {
-      if (scannerInputRef.current === input) {
-        input.readOnly = false;
-        addScannerDebug("input ready", `reason=${reason}`);
-      }
-    }, 80);
+    addScannerDebug("input ready", `reason=${reason}`);
   }
 
   function focusScannerInput(reason = "focus") {
@@ -621,6 +615,11 @@ function VerifyDrawer({
         handleSave(nextLocation);
       }
     }, 300);
+  }
+
+  function readInputValue() {
+    const value = scannerInputRef.current?.value ?? "";
+    if (value) queueScannerCommit(value);
   }
 
   useEffect(() => {
