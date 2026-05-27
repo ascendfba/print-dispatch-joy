@@ -2337,12 +2337,43 @@ function PackingListDialog({
 
   // Invalidate generated PDF whenever entries change.
   useEffect(() => {
+    if (alreadySubmitted) return;
     setPdfPreview((prev) => {
       if (prev) URL.revokeObjectURL(prev.url);
       return null;
     });
     setSubmitted(false);
-  }, [boxes]);
+  }, [boxes, alreadySubmitted]);
+
+  // When opened for an already-submitted order, load the saved Mintsoft PDF
+  // so the user can view exactly what was previously entered.
+  useEffect(() => {
+    if (!open || !alreadySubmitted) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const docs = await fetchOrderDocuments(loadSettings(), orderId);
+        const match =
+          docs.find((d) => /packing\s*list/i.test(d.fileName ?? d.label ?? "")) ||
+          docs.find((d) => /packing\s*list/i.test(d.label ?? ""));
+        if (!match || cancelled) return;
+        const blob = new Blob([match.bytes as BlobPart], { type: "application/pdf" });
+        setPdfPreview((prev) => {
+          if (prev) URL.revokeObjectURL(prev.url);
+          return {
+            url: URL.createObjectURL(blob),
+            bytes: match.bytes,
+            fileName: match.fileName || "Packing List.pdf",
+          };
+        });
+      } catch (e) {
+        console.warn("[packing-list] failed to load saved PDF", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, alreadySubmitted, orderId]);
 
   const applyBoxCount = (n: number) => {
     const next = Math.max(1, Math.min(50, Math.floor(n || 1)));
