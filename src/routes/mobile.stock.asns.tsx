@@ -231,7 +231,7 @@ function ASNCard({ asn }: { asn: MintsoftASN }) {
         <p className="text-xs text-muted-foreground truncate">
           {asn.SupplierName || "—"}
         </p>
-        <div className="flex items-center gap-2 mt-1">
+        <div className="flex items-center gap-2 mt-1 flex-wrap">
           {expected && (
             <span
               className={`text-[11px] ${
@@ -253,13 +253,38 @@ function ASNCard({ asn }: { asn: MintsoftASN }) {
                     })}
             </span>
           )}
-          {asn.TotalQuantity != null && (
-            <span className="text-[11px] text-muted-foreground">
-              {asn.TotalQuantity} item{asn.TotalQuantity === 1 ? "" : "s"}
-            </span>
-          )}
         </div>
+        <div className="flex items-center gap-2 mt-1 flex-wrap">
+          {(() => {
+            const skuCount = getSkuCount(asn);
+            const qty = asn.TotalQuantity;
+            if (skuCount != null || qty != null) {
+              const parts: string[] = [];
+              if (skuCount != null) parts.push(`${skuCount} SKU${skuCount === 1 ? "" : "'s"}`);
+              if (qty != null) parts.push(`${qty} QTY`);
+              return (
+                <span className="text-[11px] font-medium text-[#0a2e3d]">
+                  {parts.join(": ")}
+                </span>
+              );
+            }
+            return null;
+          })()}
+        </div>
+        {(() => {
+          const breakdown = getPackageBreakdown(asn);
+          if (!breakdown) return null;
+          return (
+            <div className="flex items-center gap-1.5 mt-1">
+              <Boxes className="h-3 w-3 text-muted-foreground" />
+              <span className="text-[11px] text-muted-foreground capitalize">
+                Type: {breakdown}
+              </span>
+            </div>
+          );
+        })()}
       </div>
     </Link>
   );
 }
+
