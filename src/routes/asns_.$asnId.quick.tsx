@@ -391,3 +391,47 @@ function QuickAsnPage() {
     </div>
   );
 }
+
+function QuickProductImage({ product }: { product: MintsoftProduct | null }) {
+  const q = useProductImage({
+    imageUrl: product?.ImageURL,
+    name: product?.Title ?? product?.Name,
+    description: product?.Description,
+    sku: product?.SKU,
+    ean: product?.EAN,
+    upc: product?.UPC,
+  });
+  const resolved = q.data;
+  const cls = "max-h-48 rounded-md border bg-white object-contain p-2";
+  if (resolved?.url && !resolved.suggested) {
+    return (
+      <div className="flex justify-center">
+        <img src={resolved.url} alt={product?.Title ?? ""} className={cls} />
+      </div>
+    );
+  }
+  if (q.isLoading) {
+    return (
+      <div className="flex justify-center">
+        <div className="flex h-32 w-32 items-center justify-center rounded-md border bg-muted">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
+  if (resolved?.url) {
+    return (
+      <div className="flex flex-col items-center gap-1">
+        <img
+          src={resolved.url}
+          alt={`Suggested for ${product?.Title ?? ""}`}
+          className={`${cls} border-2 border-orange-500`}
+        />
+        <div className="flex items-center gap-1 rounded-sm border border-orange-500 bg-orange-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-orange-800 dark:bg-orange-500/15 dark:text-orange-300">
+          <AlertTriangle className="h-3 w-3" /> Suggested
+        </div>
+      </div>
+    );
+  }
+  return null;
+}
