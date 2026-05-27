@@ -2597,7 +2597,7 @@ function PackingListDialog({
             {pdfPreview ? (
               <>
                 <div className="h-[70vh] rounded-md border overflow-hidden">
-                  <PdfPreview url={pdfPreview.url} fileName={pdfPreview.fileName} />
+                  <PdfPreview bytes={pdfPreview.bytes} />
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button
