@@ -145,7 +145,15 @@ export const Route = createFileRoute("/api/suggest-barcode")({
           .replace(/\s+/g, " ")
           .slice(0, 120)
           .trim();
-        const queryParts = [name || sku, descSnippet, "EAN barcode"].filter(Boolean);
+        // We're explicitly looking for the ORIGINAL manufacturer/retail barcode
+        // (EAN-13 / UPC-A printed on the actual product packaging), NOT the
+        // Amazon FNSKU or Mintsoft-assigned internal code. Bias the search
+        // toward manufacturer/retailer product listings and barcode databases.
+        const queryParts = [
+          name || sku,
+          descSnippet,
+          "original manufacturer EAN UPC barcode -site:amazon.com -site:amazon.co.uk",
+        ].filter(Boolean);
         const query = queryParts.join(" ");
         const enc = encodeURIComponent(query);
         const searchHtml = await fetchHtml(
@@ -183,9 +191,14 @@ export const Route = createFileRoute("/api/suggest-barcode")({
 
         const prompt =
           "You are a product-identification assistant for a UK warehouse. " +
-          "Choose the most likely retail barcode (EAN-13 or UPC-A) for this exact product variant. " +
+          "Your job: find the ORIGINAL manufacturer retail barcode (EAN-13 or UPC-A) " +
+          "that is physically printed on the product's own packaging by the brand. " +
+          "IMPORTANT: Do NOT return an Amazon FNSKU, an Amazon-assigned code, a Mintsoft " +
+          "warehouse code, or any seller-/marketplace-assigned identifier. We already have those and they are not useful. " +
+          "Prefer barcodes that appear on the brand's own site, a retailer product page, " +
+          "or a barcode lookup database (barcodelookup, ean-search, gs1, upcitemdb, etc.). " +
           "Use ONLY the web-scraped candidates below; do not invent digits. " +
-          "If none of the candidates clearly match the product (brand, variant, size, pack count), return null.\n\n" +
+          "If none of the candidates clearly match the product (brand, variant, size, pack count) as the manufacturer barcode, return null.\n\n" +
           `Name: ${name || "(unknown)"}\n` +
           `SKU: ${sku || "(unknown)"}\n` +
           `Description: ${description || "(none)"}\n\n` +
