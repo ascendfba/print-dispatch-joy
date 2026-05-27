@@ -34,7 +34,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Loader2, Plus, RefreshCw, Truck } from "lucide-react";
+import { Loader2, Plus, RefreshCw, Truck, Zap } from "lucide-react";
 import {
   createASN,
   listASNs,
@@ -278,6 +278,7 @@ function AsnsPage() {
                   <TableHead className="w-24 text-right">Qty</TableHead>
                   <TableHead className="w-[180px]">Estimated arrival date</TableHead>
                   <TableHead>Comments</TableHead>
+                  <TableHead className="w-[120px]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -325,6 +326,21 @@ function AsnsPage() {
                     <TableCell>{formatDate(a.ExpectedDate)}</TableCell>
                     <TableCell className="max-w-[280px] truncate" title={a.Comments || a.Notes || ""}>
                       {a.Comments || a.Notes || "—"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        asChild
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Link
+                          to="/asns/$asnId/quick"
+                          params={{ asnId: String(a.ID) }}
+                        >
+                          <Zap className="h-4 w-4" /> Quick ASN
+                        </Link>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

@@ -32,6 +32,7 @@ import { Route as ApiGoogleImageRouteImport } from './routes/api/google-image'
 import { Route as ApiEstimateWeightRouteImport } from './routes/api/estimate-weight'
 import { Route as ApiAmazonImageRouteImport } from './routes/api/amazon-image'
 import { Route as DRouteImport } from './routes/d.'
+import { Route as AsnsAsnIdQuickRouteImport } from './routes/asns_.$asnId.quick'
 import { Route as ApiPublicSetupWarningLabelsBucketRouteImport } from './routes/api/public/setup-warning-labels-bucket'
 import { Route as ApiPublicSetupDesktopBucketRouteImport } from './routes/api/public/setup-desktop-bucket'
 import { Route as ApiPublicDSlugRouteImport } from './routes/api/public/d/$slug'
@@ -152,6 +153,11 @@ const DRoute = DRouteImport.update({
   path: '/d/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AsnsAsnIdQuickRoute = AsnsAsnIdQuickRouteImport.update({
+  id: '/quick',
+  path: '/quick',
+  getParentRoute: () => AsnsAsnIdRoute,
+} as any)
 const ApiPublicSetupWarningLabelsBucketRoute =
   ApiPublicSetupWarningLabelsBucketRouteImport.update({
     id: '/api/public/setup-warning-labels-bucket',
@@ -197,11 +203,12 @@ export interface FileRoutesByFullPath {
   '/api/mintsoft': typeof ApiMintsoftRoute
   '/api/pick-product-image': typeof ApiPickProductImageRoute
   '/api/suggest-barcode': typeof ApiSuggestBarcodeRoute
-  '/asns/$asnId': typeof AsnsAsnIdRoute
+  '/asns/$asnId': typeof AsnsAsnIdRouteWithChildren
   '/d/$slug': typeof DSlugRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
   '/api/public/setup-desktop-bucket': typeof ApiPublicSetupDesktopBucketRoute
   '/api/public/setup-warning-labels-bucket': typeof ApiPublicSetupWarningLabelsBucketRoute
+  '/asns/$asnId/quick': typeof AsnsAsnIdQuickRoute
   '/api/public/cron/sync-mintsoft': typeof ApiPublicCronSyncMintsoftRoute
   '/api/public/d/$slug': typeof ApiPublicDSlugRoute
 }
@@ -226,11 +233,12 @@ export interface FileRoutesByTo {
   '/api/mintsoft': typeof ApiMintsoftRoute
   '/api/pick-product-image': typeof ApiPickProductImageRoute
   '/api/suggest-barcode': typeof ApiSuggestBarcodeRoute
-  '/asns/$asnId': typeof AsnsAsnIdRoute
+  '/asns/$asnId': typeof AsnsAsnIdRouteWithChildren
   '/d/$slug': typeof DSlugRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
   '/api/public/setup-desktop-bucket': typeof ApiPublicSetupDesktopBucketRoute
   '/api/public/setup-warning-labels-bucket': typeof ApiPublicSetupWarningLabelsBucketRoute
+  '/asns/$asnId/quick': typeof AsnsAsnIdQuickRoute
   '/api/public/cron/sync-mintsoft': typeof ApiPublicCronSyncMintsoftRoute
   '/api/public/d/$slug': typeof ApiPublicDSlugRoute
 }
@@ -256,11 +264,12 @@ export interface FileRoutesById {
   '/api/mintsoft': typeof ApiMintsoftRoute
   '/api/pick-product-image': typeof ApiPickProductImageRoute
   '/api/suggest-barcode': typeof ApiSuggestBarcodeRoute
-  '/asns_/$asnId': typeof AsnsAsnIdRoute
+  '/asns_/$asnId': typeof AsnsAsnIdRouteWithChildren
   '/d/$slug': typeof DSlugRoute
   '/orders_/$orderId': typeof OrdersOrderIdRoute
   '/api/public/setup-desktop-bucket': typeof ApiPublicSetupDesktopBucketRoute
   '/api/public/setup-warning-labels-bucket': typeof ApiPublicSetupWarningLabelsBucketRoute
+  '/asns_/$asnId/quick': typeof AsnsAsnIdQuickRoute
   '/api/public/cron/sync-mintsoft': typeof ApiPublicCronSyncMintsoftRoute
   '/api/public/d/$slug': typeof ApiPublicDSlugRoute
 }
@@ -292,6 +301,7 @@ export interface FileRouteTypes {
     | '/orders/$orderId'
     | '/api/public/setup-desktop-bucket'
     | '/api/public/setup-warning-labels-bucket'
+    | '/asns/$asnId/quick'
     | '/api/public/cron/sync-mintsoft'
     | '/api/public/d/$slug'
   fileRoutesByTo: FileRoutesByTo
@@ -321,6 +331,7 @@ export interface FileRouteTypes {
     | '/orders/$orderId'
     | '/api/public/setup-desktop-bucket'
     | '/api/public/setup-warning-labels-bucket'
+    | '/asns/$asnId/quick'
     | '/api/public/cron/sync-mintsoft'
     | '/api/public/d/$slug'
   id:
@@ -350,6 +361,7 @@ export interface FileRouteTypes {
     | '/orders_/$orderId'
     | '/api/public/setup-desktop-bucket'
     | '/api/public/setup-warning-labels-bucket'
+    | '/asns_/$asnId/quick'
     | '/api/public/cron/sync-mintsoft'
     | '/api/public/d/$slug'
   fileRoutesById: FileRoutesById
@@ -375,7 +387,7 @@ export interface RootRouteChildren {
   ApiMintsoftRoute: typeof ApiMintsoftRoute
   ApiPickProductImageRoute: typeof ApiPickProductImageRoute
   ApiSuggestBarcodeRoute: typeof ApiSuggestBarcodeRoute
-  AsnsAsnIdRoute: typeof AsnsAsnIdRoute
+  AsnsAsnIdRoute: typeof AsnsAsnIdRouteWithChildren
   DSlugRoute: typeof DSlugRoute
   OrdersOrderIdRoute: typeof OrdersOrderIdRoute
   ApiPublicSetupDesktopBucketRoute: typeof ApiPublicSetupDesktopBucketRoute
@@ -547,6 +559,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/asns_/$asnId/quick': {
+      id: '/asns_/$asnId/quick'
+      path: '/quick'
+      fullPath: '/asns/$asnId/quick'
+      preLoaderRoute: typeof AsnsAsnIdQuickRouteImport
+      parentRoute: typeof AsnsAsnIdRoute
+    }
     '/api/public/setup-warning-labels-bucket': {
       id: '/api/public/setup-warning-labels-bucket'
       path: '/api/public/setup-warning-labels-bucket'
@@ -578,6 +597,18 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AsnsAsnIdRouteChildren {
+  AsnsAsnIdQuickRoute: typeof AsnsAsnIdQuickRoute
+}
+
+const AsnsAsnIdRouteChildren: AsnsAsnIdRouteChildren = {
+  AsnsAsnIdQuickRoute: AsnsAsnIdQuickRoute,
+}
+
+const AsnsAsnIdRouteWithChildren = AsnsAsnIdRoute._addFileChildren(
+  AsnsAsnIdRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AsnsRoute: AsnsRoute,
@@ -599,7 +630,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMintsoftRoute: ApiMintsoftRoute,
   ApiPickProductImageRoute: ApiPickProductImageRoute,
   ApiSuggestBarcodeRoute: ApiSuggestBarcodeRoute,
-  AsnsAsnIdRoute: AsnsAsnIdRoute,
+  AsnsAsnIdRoute: AsnsAsnIdRouteWithChildren,
   DSlugRoute: DSlugRoute,
   OrdersOrderIdRoute: OrdersOrderIdRoute,
   ApiPublicSetupDesktopBucketRoute: ApiPublicSetupDesktopBucketRoute,
