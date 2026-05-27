@@ -86,6 +86,56 @@ export const Route = createFileRoute("/stock")({
   component: StockPage,
 });
 
+type StockProductLike = {
+  image_url: string | null;
+  name: string | null;
+  sku: string | null;
+  ean: string | null;
+  upc: string | null;
+};
+
+function StockProductImage({ product }: { product: StockProductLike }) {
+  const q = useProductImage({
+    imageUrl: product.image_url,
+    name: product.name,
+    sku: product.sku,
+    ean: product.ean,
+    upc: product.upc,
+  });
+  const resolved = q.data;
+  const cls = "h-12 w-12 rounded border object-cover";
+  if (resolved?.url && !resolved.suggested) {
+    return <img src={resolved.url} alt={product.sku || ""} className={`${cls} border-border`} loading="lazy" />;
+  }
+  if (q.isLoading) {
+    return (
+      <div className={`${cls} border-border flex items-center justify-center bg-muted`}>
+        <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  if (resolved?.url) {
+    return (
+      <div className="relative">
+        <img
+          src={resolved.url}
+          alt={`Suggested for ${product.sku || ""}`}
+          className={`${cls} border-2 border-orange-500`}
+          loading="lazy"
+        />
+        <div className="absolute -top-1 -right-1 rounded-full bg-orange-500 p-0.5 text-white">
+          <AlertTriangle className="h-2.5 w-2.5" />
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex h-12 w-12 items-center justify-center rounded border border-dashed border-border text-muted-foreground">
+      <Package className="h-4 w-4" />
+    </div>
+  );
+}
+
 function ExpandedDetails({
   productId,
   locState,
