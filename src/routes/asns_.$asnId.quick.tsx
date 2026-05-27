@@ -393,8 +393,7 @@ function QuickAsnPage() {
 }
 
 function QuickProductImage({ product }: { product: MintsoftASNItem | null }) {
-  const anyP = product as unknown as Record<string, unknown> | null;
-  const title = (anyP?.Title as string | undefined) ?? (anyP?.Name as string | undefined) ?? "";
+  const title = product?.Title ?? "";
   const q = useProductImage({
     imageUrl: product?.ImageURL,
     name: title || null,
