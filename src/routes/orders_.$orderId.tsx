@@ -2276,6 +2276,7 @@ function PackingListDialog({
   alreadySubmitted?: boolean;
   onSaved?: (boxCount: number) => void;
 }) {
+  const qc = useQueryClient();
   const [boxCount, setBoxCount] = useState(1);
   const [boxes, setBoxes] = useState<PackingBox[]>([makeEmptyBox()]);
   const [submitting, setSubmitting] = useState(false);
