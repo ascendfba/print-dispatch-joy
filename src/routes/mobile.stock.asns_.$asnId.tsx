@@ -956,82 +956,24 @@ function VerifyDrawer({
   );
 }
 
-type ImageCandidate = { image: string; title?: string | null };
-
-async function fetchImageCandidates(query: string): Promise<ImageCandidate[]> {
-  try {
-    const r = await fetch(`/api/google-image?q=${encodeURIComponent(query)}`);
-    if (!r.ok) return [];
-    const data = (await r.json()) as {
-      candidates?: ImageCandidate[];
-      image?: string | null;
-    };
-    if (data.candidates && data.candidates.length) return data.candidates;
-    return data.image ? [{ image: data.image, title: null }] : [];
-  } catch {
-    return [];
-  }
-}
-
 function ProductImage({ product }: { product: MintsoftProduct | null }) {
-  const direct = product?.ImageURL || null;
-  const queries = [product?.EAN, product?.UPC, product?.Name]
-    .map((q) => (q ? String(q).trim() : ""))
-    .filter((q) => q.length > 0);
-  const suggestQuery = useQuery({
-    queryKey: ["mobile-best-image", product?.SKU ?? product?.Name, queries],
-    queryFn: async () => {
-      const seen = new Set<string>();
-      const candidates: ImageCandidate[] = [];
-      for (const q of queries) {
-        const found = await fetchImageCandidates(q);
-        for (const c of found) {
-          if (!seen.has(c.image)) {
-            seen.add(c.image);
-            candidates.push(c);
-          }
-          if (candidates.length >= 6) break;
-        }
-        if (candidates.length >= 6) break;
-      }
-      if (candidates.length === 0) return null;
-      try {
-        const r = await fetch("/api/pick-product-image", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            product: {
-              name: product?.Name ?? null,
-              sku: product?.SKU ?? null,
-              ean: product?.EAN ?? null,
-              upc: product?.UPC ?? null,
-              description: product?.Description ?? null,
-            },
-            candidates,
-          }),
-        });
-        if (r.ok) {
-          const data = (await r.json()) as { image?: string | null };
-          if (data.image) return data.image;
-          return null;
-        }
-      } catch {
-        // ignore
-      }
-      return candidates[0].image;
-    },
-    enabled: !direct && queries.length > 0,
-    staleTime: 60 * 60_000,
-    refetchOnWindowFocus: false,
+  const q = useProductImage({
+    imageUrl: product?.ImageURL,
+    name: product?.Name,
+    description: product?.Description,
+    sku: product?.SKU,
+    ean: product?.EAN,
+    upc: product?.UPC,
   });
+  const resolved = q.data;
 
   const box = "h-16 w-16 shrink-0 rounded-lg border bg-muted overflow-hidden flex items-center justify-center";
 
-  if (direct) {
+  if (resolved?.url && !resolved.suggested) {
     return (
       <div className={box}>
         <img
-          src={direct}
+          src={resolved.url}
           alt={product?.Name ?? ""}
           className="h-full w-full object-cover"
           loading="lazy"
@@ -1039,19 +981,19 @@ function ProductImage({ product }: { product: MintsoftProduct | null }) {
       </div>
     );
   }
-  if (suggestQuery.isLoading) {
+  if (q.isLoading) {
     return (
       <div className={box}>
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
       </div>
     );
   }
-  if (suggestQuery.data) {
+  if (resolved?.url) {
     return (
       <div className="flex flex-col items-center gap-1 shrink-0">
         <div className={`${box} border-2 border-orange-500`}>
           <img
-            src={suggestQuery.data}
+            src={resolved.url}
             alt={`Suggested image for ${product?.Name ?? ""}`}
             className="h-full w-full object-cover"
             loading="lazy"
