@@ -865,14 +865,21 @@ function VerifyDrawer({
               <input
                 ref={scannerInputRef}
                 type="text"
-                inputMode="none"
+                inputMode="text"
                 autoComplete="off"
                 autoCapitalize="characters"
                 value={location}
                 onChange={(event) => queueScannerCommit(event.target.value)}
+                onInput={() => readInputValue()}
+                onPaste={(event) => {
+                  const text = event.clipboardData.getData("text");
+                  addScannerDebug("field paste", text || "empty");
+                  if (text) queueScannerCommit(text);
+                }}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === "Tab") {
                     event.preventDefault();
+                    addScannerDebug("field submit", scannerBufferRef.current || location || "empty");
                     handleSave(scannerBufferRef.current || location);
                   }
                 }}
