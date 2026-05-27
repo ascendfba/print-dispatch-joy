@@ -296,7 +296,11 @@ function MobileASNDetail() {
           </button>
           <button
             onClick={() => void bookIn("partial")}
-            disabled={!!submitting || Object.keys(verified).length === 0}
+            disabled={
+              !!submitting ||
+              Object.keys(verified).length === 0 ||
+              (items.length > 0 && Object.keys(verified).length >= items.length)
+            }
             className="flex flex-col items-center justify-center gap-1 h-16 rounded-xl border-2 border-amber-500 bg-amber-50 text-amber-800 font-semibold text-xs active:bg-amber-100 disabled:opacity-50"
           >
             {submitting === "partial" ? (
@@ -308,7 +312,11 @@ function MobileASNDetail() {
           </button>
           <button
             onClick={() => void bookIn("full")}
-            disabled={!!submitting || Object.keys(verified).length === 0}
+            disabled={
+              !!submitting ||
+              items.length === 0 ||
+              Object.keys(verified).length < items.length
+            }
             className="flex flex-col items-center justify-center gap-1 h-16 rounded-xl bg-[#0099d4] text-white font-semibold text-xs shadow-sm active:bg-[#0088bc] disabled:opacity-50"
           >
             {submitting === "full" ? (
