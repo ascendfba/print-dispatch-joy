@@ -2435,13 +2435,23 @@ function PackingListDialog({
 
   const handleGenerate = async () => {
     if (submitInFlightRef.current) return;
-    const missing = boxes
+    const missingDims = boxes
       .map((b, i) => ({ i, hasDims: !!(b.length && b.width && b.height) }))
       .filter((x) => !x.hasDims)
       .map((x) => x.i + 1);
-    if (missing.length > 0) {
+    if (missingDims.length > 0) {
       toast.error(
-        `Pick a box size for Box ${missing.join(", ")} before saving`,
+        `Pick a box size for Box ${missingDims.join(", ")} before saving`,
+      );
+      return;
+    }
+    const missingWeight = boxes
+      .map((b, i) => ({ i, hasWeight: !!(b.weight && Number(b.weight) > 0) }))
+      .filter((x) => !x.hasWeight)
+      .map((x) => x.i + 1);
+    if (missingWeight.length > 0) {
+      toast.error(
+        `Enter a weight for Box ${missingWeight.join(", ")} before saving`,
       );
       return;
     }
