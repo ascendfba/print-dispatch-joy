@@ -780,9 +780,14 @@ function VerifyDrawer({
               </span>
             </p>
             <div className="flex items-center gap-2">
-              <button
+              <input
                 ref={scannerInputRef}
-                type="button"
+                type="text"
+                inputMode="none"
+                autoComplete="off"
+                autoCapitalize="characters"
+                value={location}
+                onChange={(event) => queueScannerCommit(event.target.value)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === "Tab") {
                     event.preventDefault();
@@ -791,13 +796,12 @@ function VerifyDrawer({
                 }}
                 onClick={armScanner}
                 disabled={!scannerReady}
-                className="flex-1 h-12 px-3 text-left text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4] disabled:text-muted-foreground disabled:bg-muted"
+                placeholder={scannerReady ? (scannerArmed ? "Ready for scan" : "Tap to scan location") : "Confirm BBF first"}
+                className="flex-1 h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4] disabled:text-muted-foreground disabled:bg-muted"
                 onFocus={() => {
                   if (scannerReady) setScannerArmed(true);
                 }}
-              >
-                {location || (scannerReady ? (scannerArmed ? "Ready for scan" : "Tap to scan location") : "Confirm BBF first")}
-              </button>
+              />
               {location && (
                 <Button
                   type="button"
