@@ -1022,6 +1022,39 @@ function OrderDetailPage() {
               </div>
             );
           })()}
+          {packingBoxCount !== null && packingBoxCount > 0 && (
+            <Button
+              className="w-full"
+              variant="outline"
+              onClick={async () => {
+                try {
+                  const ref = orderReference ?? `#${id}`;
+                  const bytes = await buildBoxLabelsPdf({
+                    orderRef: ref,
+                    boxCount: packingBoxCount,
+                  });
+                  const settings = loadSettings();
+                  const printer = pickPrinter(settings, "small");
+                  if (!printer) {
+                    throw new Error(
+                      "No small-label printer configured. Set one in Settings.",
+                    );
+                  }
+                  await printPdfBytes(bytes, printer, settings.silentPrint, {
+                    kind: "box-labels",
+                    label: `Box labels ${ref}`,
+                    orderId: String(id),
+                  });
+                  toast.success(`Printed ${packingBoxCount} box label${packingBoxCount === 1 ? "" : "s"}`);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Failed to print box labels");
+                }
+              }}
+            >
+              <Printer className="mr-2 h-4 w-4" />
+              Print box labels ({packingBoxCount})
+            </Button>
+          )}
           {(() => {
             const courier =
               (order as { CourierServiceName?: string } | undefined)?.CourierServiceName ?? "";
