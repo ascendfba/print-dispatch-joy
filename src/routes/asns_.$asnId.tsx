@@ -469,6 +469,9 @@ function BookInCard({
           patch.bbf !== undefined)
           ? { confirmed: false }
           : {}),
+        // Typing into the qty box clears the "prefilled" flag — once the
+        // user has taken ownership of the value, no verify tick is needed.
+        ...(patch.receivedQty !== undefined ? { prefilled: false } : {}),
       },
     }));
     };
