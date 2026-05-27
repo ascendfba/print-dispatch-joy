@@ -330,7 +330,7 @@ function ASNCard({ asn, clientName }: { asn: MintsoftASN; clientName: string }) 
         </div>
         {(() => {
           const skuCount = getSkuCount(asn);
-          const qty = asn.TotalQuantity;
+            const qty = getTotalUnits(asn);
           if (skuCount == null && qty == null) return null;
           return (
             <div className="flex items-center gap-3 mt-1 flex-wrap text-[11px] font-medium text-[#0a2e3d]">
