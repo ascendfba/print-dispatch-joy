@@ -508,7 +508,9 @@ function VerifyDrawer({
 
   function focusLocationScanner(delay = 0) {
     setTimeout(() => {
-      locationInputRef.current?.focus({ preventScroll: true });
+      const input = locationInputRef.current;
+      input?.focus({ preventScroll: true });
+      input?.setSelectionRange(input.value.length, input.value.length);
     }, delay);
   }
 
@@ -579,6 +581,7 @@ function VerifyDrawer({
 
       if (event.key === "Enter" || event.key === "Tab") {
         event.preventDefault();
+        event.stopPropagation();
         const scannedLocation = locationScanBufferRef.current.toUpperCase();
         setLocation(scannedLocation);
         if (scannedLocation.trim()) handleSave(scannedLocation);
@@ -587,6 +590,7 @@ function VerifyDrawer({
 
       if (event.key === "Backspace") {
         event.preventDefault();
+        event.stopPropagation();
         const next = locationScanBufferRef.current.slice(0, -1);
         locationScanBufferRef.current = next;
         setLocation(next);
@@ -595,6 +599,7 @@ function VerifyDrawer({
 
       if (event.key.length === 1) {
         event.preventDefault();
+        event.stopPropagation();
         const next = (locationScanBufferRef.current + event.key).toUpperCase().slice(0, 32);
         locationScanBufferRef.current = next;
         setLocation(next);
