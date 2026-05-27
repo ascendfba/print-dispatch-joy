@@ -549,7 +549,7 @@ function VerifyDrawer({
     const handleScannerKey = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.altKey || event.metaKey) return;
       const target = event.target as HTMLElement | null;
-      if (target?.id === "bbf-input") return;
+      if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT") return;
 
       if (event.key === "Enter" || event.key === "Tab") {
         event.preventDefault();
