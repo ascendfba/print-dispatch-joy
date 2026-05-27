@@ -688,11 +688,11 @@ function VerifyDrawer({
                 autoComplete="off"
                 placeholder="Scan location barcode"
                 value={location}
-                onClick={() => focusLocationScanner()}
+                tabIndex={-1}
                 onChange={(e) => setLocation(e.target.value.toUpperCase())}
                 onKeyDown={(e) => handleLocationScannerKey(e.key, () => e.preventDefault())}
                 maxLength={32}
-                className="flex-1 h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
+                className="pointer-events-none flex-1 h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
               />
               <Button
                 type="button"
