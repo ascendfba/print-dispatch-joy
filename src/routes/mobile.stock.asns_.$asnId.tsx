@@ -520,6 +520,7 @@ function VerifyDrawer({
   const [bbf, setBbf] = useState<string>("");
   const [bbfConfirmed, setBbfConfirmed] = useState(false);
   const [location, setLocation] = useState<string>("");
+  const [scannerArmed, setScannerArmed] = useState(false);
   const scannerInputRef = useRef<HTMLButtonElement | null>(null);
   const scannerBufferRef = useRef("");
   const scannerLastKeyAtRef = useRef(0);
@@ -533,6 +534,7 @@ function VerifyDrawer({
       setBbf(existing?.bbf ?? "");
       setBbfConfirmed(Boolean(existing?.bbf));
       setLocation(existing?.location ?? "");
+      setScannerArmed(false);
       scannerBufferRef.current = existing?.location ?? "";
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -544,15 +546,23 @@ function VerifyDrawer({
   const locationInvalid = !trimmedLocation;
   const scannerReady = !!item && (!requiresBbf || (bbfConfirmed && !bbfInvalid));
 
+  function armScanner() {
+    if (!scannerReady) return;
+    setScannerArmed(true);
+    scannerLastKeyAtRef.current = 0;
+    scannerBufferRef.current = "";
+    scannerInputRef.current?.focus({ preventScroll: true });
+  }
+
   function focusScannerInput() {
     window.setTimeout(() => {
-      scannerBufferRef.current = "";
-      scannerInputRef.current?.focus({ preventScroll: true });
+      armScanner();
     }, 0);
   }
 
   function queueScannerCommit(raw: string) {
     const scannedLocation = raw.trim().toUpperCase();
+    setScannerArmed(true);
     scannerBufferRef.current = scannedLocation;
     setLocation(scannedLocation);
     if (scannerCommitTimerRef.current) window.clearTimeout(scannerCommitTimerRef.current);
