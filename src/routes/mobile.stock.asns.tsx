@@ -44,9 +44,9 @@ function MobileASNs() {
   });
 
   const sorted = [...activeAsns].sort((a, b) => {
-    const dateA = a.ExpectedDate ? new Date(a.ExpectedDate).getTime() : 0;
-    const dateB = b.ExpectedDate ? new Date(b.ExpectedDate).getTime() : 0;
-    return dateB - dateA;
+    const dateA = a.ExpectedDate ? new Date(a.ExpectedDate).getTime() : Infinity;
+    const dateB = b.ExpectedDate ? new Date(b.ExpectedDate).getTime() : Infinity;
+    return dateA - dateB;
   });
 
   return (
