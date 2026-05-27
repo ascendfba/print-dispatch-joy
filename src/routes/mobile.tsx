@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, Link, useLocation } from "@tanstack/react-router";
-import { Menu, Home, MapPin, Search, Warehouse } from "lucide-react";
+import { Menu, Home, MapPin, Search } from "lucide-react";
 import ascendLogo from "@/assets/ascend-fba-logo.png";
 
 export const Route = createFileRoute("/mobile")({
@@ -14,7 +14,7 @@ function MobileShell() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       {/* Top bar */}
-      <header className="shrink-0 border-b bg-gradient-to-r from-amber-500 to-orange-500">
+      <header className="shrink-0 border-b bg-gradient-to-r from-amber-500 to-orange-500 pt-[env(safe-area-inset-top)]">
         <div className="flex items-center justify-between px-4 h-14">
           <button className="p-1 -ml-1 text-white/90">
             <Menu className="h-5 w-5" />
@@ -25,12 +25,6 @@ function MobileShell() {
             className="h-7 object-contain"
           />
           <div className="w-7" />
-        </div>
-        <div className="px-4 pb-3">
-          <div className="flex items-center justify-center gap-2 rounded-lg bg-white/15 backdrop-blur-sm py-2 text-sm font-medium text-white">
-            <Warehouse className="h-4 w-4" />
-            Derby Warehouse
-          </div>
         </div>
       </header>
 
