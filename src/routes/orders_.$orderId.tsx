@@ -287,6 +287,39 @@ function OrderDetailPage() {
   const [packingResetKey, setPackingResetKey] = useState(0);
   const [deletingPacking, setDeletingPacking] = useState(false);
 
+  // Detect whether a packing list has already been submitted on this order
+  // (persists across users — once saved in Mintsoft, every dispatcher sees it).
+  const packingListQuery = useQuery({
+    queryKey: ["packing-list-doc", id],
+    queryFn: async () => {
+      const docs = await fetchOrderDocumentSummaries(loadSettings(), id);
+      const types = await import("@/lib/mintsoft").then((m) =>
+        m.fetchOrderDocumentTypes(loadSettings()).catch(() => []),
+      );
+      const packingTypeId = types.find(
+        (t) => (t.Name ?? "").trim().toLowerCase() === "boxpackinglist",
+      )?.ID;
+      const match = docs.find((d) => {
+        if (packingTypeId && d.OrderDocumentTypeId === packingTypeId) return true;
+        const name = (d.FileName ?? "").toLowerCase();
+        return /packing\s*list/.test(name);
+      });
+      if (!match) return { exists: false as const, boxCount: 0 };
+      // Box count is embedded in the filename: "Packing List <ref> (N boxes).pdf".
+      const m = /\((\d+)\s*box/i.exec(match.FileName ?? "");
+      const boxCount = m ? Number(m[1]) : 1;
+      return { exists: true as const, boxCount };
+    },
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  useEffect(() => {
+    if (packingListQuery.data?.exists) {
+      setPackingBoxCount(packingListQuery.data.boxCount || 1);
+    }
+  }, [packingListQuery.data]);
+
   // Load order summary from the cached open-orders list (avoids an extra fetch).
   const ordersQuery = useQuery({
     queryKey: ["orders"],
