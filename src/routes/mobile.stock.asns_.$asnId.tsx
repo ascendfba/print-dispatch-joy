@@ -590,15 +590,9 @@ function VerifyDrawer({
       if (attempt < 8) window.setTimeout(() => armScanner(reason, attempt + 1), 75);
       return;
     }
-    input.readOnly = true;
     input.focus({ preventScroll: true });
     addScannerDebug("armed", `reason=${reason} attempt=${attempt} focused=${document.activeElement === input}`);
-    window.setTimeout(() => {
-      if (scannerInputRef.current === input) {
-        input.readOnly = false;
-        addScannerDebug("input ready", `reason=${reason}`);
-      }
-    }, 80);
+    addScannerDebug("input ready", `reason=${reason}`);
   }
 
   function focusScannerInput(reason = "focus") {
@@ -623,9 +617,33 @@ function VerifyDrawer({
     }, 300);
   }
 
+  function readInputValue() {
+    const value = scannerInputRef.current?.value ?? "";
+    if (value) queueScannerCommit(value);
+  }
+
   useEffect(() => {
     if (!scannerReady) return;
     if (!requiresBbf) focusScannerInput("no-bbf-auto");
+    const handleBeforeInput = (event: InputEvent) => {
+      if (!scannerArmedRef.current) return;
+      const data = event.data ?? "";
+      addScannerDebug("beforeinput", data || event.inputType);
+      window.setTimeout(readInputValue, 0);
+    };
+    const handleInput = (event: Event) => {
+      if (!scannerArmedRef.current) return;
+      const target = event.target as HTMLInputElement | null;
+      if (target !== scannerInputRef.current) return;
+      addScannerDebug("input", target?.value ?? "empty");
+      readInputValue();
+    };
+    const handlePaste = (event: ClipboardEvent) => {
+      if (!scannerArmedRef.current) return;
+      const text = event.clipboardData?.getData("text") ?? "";
+      addScannerDebug("paste", text || "empty");
+      if (text) queueScannerCommit(text);
+    };
     const handleScannerKey = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.altKey || event.metaKey) return;
       const target = event.target as HTMLElement | null;
@@ -665,8 +683,14 @@ function VerifyDrawer({
       queueScannerCommit((scannerBufferRef.current + event.key).slice(0, 64));
     };
 
+    document.addEventListener("beforeinput", handleBeforeInput, true);
+    document.addEventListener("input", handleInput, true);
+    document.addEventListener("paste", handlePaste, true);
     document.addEventListener("keydown", handleScannerKey, true);
     return () => {
+      document.removeEventListener("beforeinput", handleBeforeInput, true);
+      document.removeEventListener("input", handleInput, true);
+      document.removeEventListener("paste", handlePaste, true);
       document.removeEventListener("keydown", handleScannerKey, true);
       if (scannerCommitTimerRef.current) window.clearTimeout(scannerCommitTimerRef.current);
     };
@@ -841,14 +865,21 @@ function VerifyDrawer({
               <input
                 ref={scannerInputRef}
                 type="text"
-                inputMode="none"
+                inputMode="text"
                 autoComplete="off"
                 autoCapitalize="characters"
                 value={location}
                 onChange={(event) => queueScannerCommit(event.target.value)}
+                onInput={() => readInputValue()}
+                onPaste={(event) => {
+                  const text = event.clipboardData.getData("text");
+                  addScannerDebug("field paste", text || "empty");
+                  if (text) queueScannerCommit(text);
+                }}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === "Tab") {
                     event.preventDefault();
+                    addScannerDebug("field submit", scannerBufferRef.current || location || "empty");
                     handleSave(scannerBufferRef.current || location);
                   }
                 }}
