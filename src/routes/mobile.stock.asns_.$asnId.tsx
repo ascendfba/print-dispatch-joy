@@ -790,6 +790,7 @@ function VerifyDrawer({
                   onClick={() => {
                     scannerBufferRef.current = "";
                     setLocation("");
+                    focusScannerInput();
                   }}
                   className="h-12 px-3"
                 >
