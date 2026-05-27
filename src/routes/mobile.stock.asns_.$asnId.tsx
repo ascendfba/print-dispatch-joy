@@ -675,13 +675,17 @@ function VerifyDrawer({
                   inputMode="numeric"
                   placeholder="010126"
                   value={bbf}
-                  onChange={(e) => setBbf(e.target.value)}
+                  onChange={(e) => {
+                    setBbf(e.target.value);
+                    setBbfConfirmed(false);
+                  }}
                   maxLength={10}
                   className="flex-1 h-12 px-3 text-base tabular-nums rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
                 />
                 <Button
                   type="button"
                   onClick={() => {
+                    setBbfConfirmed(true);
                     (document.activeElement as HTMLElement | null)?.blur();
                     focusLocationScanner(50);
                   }}
@@ -731,8 +735,13 @@ function VerifyDrawer({
                 autoComplete="off"
                 placeholder="Scan location barcode"
                 value={location}
+                readOnly
                 tabIndex={-1}
-                onChange={(e) => setLocation(e.target.value.toUpperCase())}
+                onChange={(e) => {
+                  const next = e.target.value.toUpperCase();
+                  locationScanBufferRef.current = next;
+                  setLocation(next);
+                }}
                 onKeyDown={(e) => handleLocationScannerKey(e.key, () => e.preventDefault())}
                 maxLength={32}
                 className="pointer-events-none flex-1 h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
@@ -755,7 +764,9 @@ function VerifyDrawer({
               <OnScreenKeypad
                 value={location}
                 onChange={(v) => {
-                  setLocation(v.toUpperCase());
+                  const next = v.toUpperCase();
+                  locationScanBufferRef.current = next;
+                  setLocation(next);
                   focusLocationScanner();
                 }}
                 maxLength={32}
