@@ -35,6 +35,7 @@ import { Route as ApiGoogleImageRouteImport } from './routes/api/google-image'
 import { Route as ApiEstimateWeightRouteImport } from './routes/api/estimate-weight'
 import { Route as ApiAmazonImageRouteImport } from './routes/api/amazon-image'
 import { Route as DRouteImport } from './routes/d.'
+import { Route as MobileStockAsnsRouteImport } from './routes/mobile.stock.asns'
 import { Route as AsnsAsnIdQuickRouteImport } from './routes/asns_.$asnId.quick'
 import { Route as ApiPublicSetupWarningLabelsBucketRouteImport } from './routes/api/public/setup-warning-labels-bucket'
 import { Route as ApiPublicSetupDesktopBucketRouteImport } from './routes/api/public/setup-desktop-bucket'
@@ -171,6 +172,11 @@ const DRoute = DRouteImport.update({
   path: '/d/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MobileStockAsnsRoute = MobileStockAsnsRouteImport.update({
+  id: '/stock/asns',
+  path: '/stock/asns',
+  getParentRoute: () => MobileRoute,
+} as any)
 const AsnsAsnIdQuickRoute = AsnsAsnIdQuickRouteImport.update({
   id: '/quick',
   path: '/quick',
@@ -230,6 +236,7 @@ export interface FileRoutesByFullPath {
   '/api/public/setup-desktop-bucket': typeof ApiPublicSetupDesktopBucketRoute
   '/api/public/setup-warning-labels-bucket': typeof ApiPublicSetupWarningLabelsBucketRoute
   '/asns/$asnId/quick': typeof AsnsAsnIdQuickRoute
+  '/mobile/stock/asns': typeof MobileStockAsnsRoute
   '/api/public/cron/sync-mintsoft': typeof ApiPublicCronSyncMintsoftRoute
   '/api/public/d/$slug': typeof ApiPublicDSlugRoute
 }
@@ -262,6 +269,7 @@ export interface FileRoutesByTo {
   '/api/public/setup-desktop-bucket': typeof ApiPublicSetupDesktopBucketRoute
   '/api/public/setup-warning-labels-bucket': typeof ApiPublicSetupWarningLabelsBucketRoute
   '/asns/$asnId/quick': typeof AsnsAsnIdQuickRoute
+  '/mobile/stock/asns': typeof MobileStockAsnsRoute
   '/api/public/cron/sync-mintsoft': typeof ApiPublicCronSyncMintsoftRoute
   '/api/public/d/$slug': typeof ApiPublicDSlugRoute
 }
@@ -296,6 +304,7 @@ export interface FileRoutesById {
   '/api/public/setup-desktop-bucket': typeof ApiPublicSetupDesktopBucketRoute
   '/api/public/setup-warning-labels-bucket': typeof ApiPublicSetupWarningLabelsBucketRoute
   '/asns_/$asnId/quick': typeof AsnsAsnIdQuickRoute
+  '/mobile/stock/asns': typeof MobileStockAsnsRoute
   '/api/public/cron/sync-mintsoft': typeof ApiPublicCronSyncMintsoftRoute
   '/api/public/d/$slug': typeof ApiPublicDSlugRoute
 }
@@ -331,6 +340,7 @@ export interface FileRouteTypes {
     | '/api/public/setup-desktop-bucket'
     | '/api/public/setup-warning-labels-bucket'
     | '/asns/$asnId/quick'
+    | '/mobile/stock/asns'
     | '/api/public/cron/sync-mintsoft'
     | '/api/public/d/$slug'
   fileRoutesByTo: FileRoutesByTo
@@ -363,6 +373,7 @@ export interface FileRouteTypes {
     | '/api/public/setup-desktop-bucket'
     | '/api/public/setup-warning-labels-bucket'
     | '/asns/$asnId/quick'
+    | '/mobile/stock/asns'
     | '/api/public/cron/sync-mintsoft'
     | '/api/public/d/$slug'
   id:
@@ -396,6 +407,7 @@ export interface FileRouteTypes {
     | '/api/public/setup-desktop-bucket'
     | '/api/public/setup-warning-labels-bucket'
     | '/asns_/$asnId/quick'
+    | '/mobile/stock/asns'
     | '/api/public/cron/sync-mintsoft'
     | '/api/public/d/$slug'
   fileRoutesById: FileRoutesById
@@ -616,6 +628,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mobile/stock/asns': {
+      id: '/mobile/stock/asns'
+      path: '/stock/asns'
+      fullPath: '/mobile/stock/asns'
+      preLoaderRoute: typeof MobileStockAsnsRouteImport
+      parentRoute: typeof MobileRoute
+    }
     '/asns_/$asnId/quick': {
       id: '/asns_/$asnId/quick'
       path: '/quick'
@@ -656,10 +675,12 @@ declare module '@tanstack/react-router' {
 
 interface MobileRouteChildren {
   MobileIndexRoute: typeof MobileIndexRoute
+  MobileStockAsnsRoute: typeof MobileStockAsnsRoute
 }
 
 const MobileRouteChildren: MobileRouteChildren = {
   MobileIndexRoute: MobileIndexRoute,
+  MobileStockAsnsRoute: MobileStockAsnsRoute,
 }
 
 const MobileRouteWithChildren =
