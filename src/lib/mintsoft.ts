@@ -2696,19 +2696,23 @@ export async function receiveASNItem(
   // Mintsoft silently falls back to 31/12/9999 (its "no expiry" sentinel).
   let bestBeforeIso: string | undefined;
   let bestBeforeDdmmyyyy: string | undefined;
+  let bestBeforeSlash: string | undefined;
   if (BestBeforeDate) {
     const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(BestBeforeDate);
     const ddmm = /^(\d{2})(\d{2})(\d{4})$/.exec(BestBeforeDate);
     if (iso) {
       bestBeforeIso = BestBeforeDate;
       bestBeforeDdmmyyyy = `${iso[3]}${iso[2]}${iso[1]}`;
+      bestBeforeSlash = `${iso[3]}/${iso[2]}/${iso[1]}`;
     } else if (ddmm) {
       bestBeforeDdmmyyyy = BestBeforeDate;
       bestBeforeIso = `${ddmm[3]}-${ddmm[2]}-${ddmm[1]}`;
+      bestBeforeSlash = `${ddmm[1]}/${ddmm[2]}/${ddmm[3]}`;
     } else {
       // Unknown format — send as-is in both fields and let Mintsoft decide.
       bestBeforeIso = BestBeforeDate;
       bestBeforeDdmmyyyy = BestBeforeDate;
+      bestBeforeSlash = BestBeforeDate;
     }
   }
 
@@ -2718,12 +2722,12 @@ export async function receiveASNItem(
     Complete,
     LocationId,
     ...(BatchNumber ? { BatchNo: BatchNumber, BatchNumber } : {}),
-    ...(bestBeforeIso
+    ...(bestBeforeSlash
       ? {
-          ExpiryDate: bestBeforeIso,
-          BestBeforeDate: bestBeforeIso,
-          BBE: bestBeforeDdmmyyyy,
-          BestBefore: bestBeforeIso,
+          ExpiryDate: bestBeforeSlash,
+          BestBeforeDate: bestBeforeSlash,
+          BBE: bestBeforeSlash,
+          BestBefore: bestBeforeSlash,
         }
       : {}),
     ...(Comment ? { Comment, Notes: Comment } : {}),
