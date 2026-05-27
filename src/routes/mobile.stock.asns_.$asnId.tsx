@@ -27,6 +27,8 @@ import { Button } from "@/components/ui/button";
 
 type VerifiedRow = { receivedQty: number; bbf: string; location: string };
 
+const mobileVerifiedKey = (asnId: number) => `mobile-asn-verified:${asnId}`;
+
 // Mintsoft accepts ISO YYYY-MM-DD on the ASN receive endpoint. We keep this
 // helper to display the UK date the user expects while the API payload stays
 // in Mintsoft's documented date format.
@@ -69,6 +71,21 @@ function MobileASNDetail() {
   const [openItem, setOpenItem] = useState<MintsoftASNItem | null>(null);
   const [submitting, setSubmitting] = useState<null | "partial" | "full">(null);
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(mobileVerifiedKey(id));
+      setVerified(raw ? (JSON.parse(raw) as Record<string, VerifiedRow>) : {});
+    } catch {
+      setVerified({});
+    }
+  }, [id]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(mobileVerifiedKey(id), JSON.stringify(verified));
+    } catch { /* ignore */ }
+  }, [id, verified]);
 
   const asnQuery = useQuery({
     queryKey: ["mobile-asn", id],
@@ -175,6 +192,9 @@ function MobileASNDetail() {
           : `Partially booked ${okCount} line${okCount === 1 ? "" : "s"}`,
       );
       setVerified({});
+      try {
+        localStorage.removeItem(mobileVerifiedKey(id));
+      } catch { /* ignore */ }
       try {
         const raw = localStorage.getItem("mobile.asns.hidden");
         const arr = raw ? (JSON.parse(raw) as number[]) : [];
