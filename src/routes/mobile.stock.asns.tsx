@@ -114,7 +114,7 @@ function ASNCard({ asn }: { asn: MintsoftASN }) {
 
   return (
     <Link
-      to="/asns/$asnId"
+      to="/mobile/stock/asns/$asnId"
       params={{ asnId: String(asn.ID) }}
       className={`flex items-start gap-3 rounded-xl border bg-card p-3 border-l-4 ${borderColor} active:bg-muted/60 transition-colors`}
     >
