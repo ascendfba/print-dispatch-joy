@@ -18,6 +18,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChevronDown, ChevronRight, Loader2, Package, Pencil, RefreshCw } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import {
   fetchProductStockLocations,
   fetchProductOpenOrderAllocations,
@@ -34,6 +35,7 @@ import {
 } from "@/lib/mintsoft-cache.functions";
 import { loadSettings } from "@/lib/storage";
 import { MultiSelect } from "@/components/MultiSelect";
+import { useProductImage } from "@/lib/useProductImage";
 
 function formatBbe(input: string): string {
   const s = input.trim();
