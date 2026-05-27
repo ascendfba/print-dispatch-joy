@@ -766,8 +766,11 @@ function VerifyDrawer({
                 ref={scannerInputRef}
                 aria-hidden="true"
                 tabIndex={-1}
+                type="text"
                 inputMode="none"
                 autoComplete="off"
+                value={location}
+                onChange={(event) => queueScannerCommit(event.target.value)}
                 className="fixed left-0 top-0 h-px w-px -translate-x-full opacity-0"
                 onFocus={() => {
                   scannerBufferRef.current = location;
