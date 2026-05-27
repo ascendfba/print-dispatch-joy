@@ -565,6 +565,12 @@ function BookInCard({
       if (!s.locationId) {
         return { rowsToBook: [], error: `Pick a location for ${item.SKU ?? item.Title ?? "item"}` };
       }
+      if (s.prefilled && !s.confirmed) {
+        return {
+          rowsToBook: [],
+          error: `Tick to verify the prefilled qty for ${item.SKU ?? item.Title ?? "item"}`,
+        };
+      }
       const normalisedBbf = normaliseBbf(s.bbf ?? "");
       if (requiresBbfByKey[key]) {
         if (!s.bbf) {
