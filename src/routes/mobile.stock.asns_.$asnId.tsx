@@ -327,16 +327,14 @@ function MobileASNDetail() {
         onClose={() => setOpenItem(null)}
         onSave={(row) => {
           if (!openItem) return;
-          setVerified((prev) => {
-            const next = {
-              ...prev,
-              [String(openItem.ID ?? "")]: row,
-            };
-            try {
-              localStorage.setItem(mobileVerifiedKey(id), JSON.stringify(next));
-            } catch { /* ignore */ }
-            return next;
-          });
+          const next: Record<string, VerifiedRow> = {
+            ...verified,
+            [String(openItem.ID ?? "")]: row,
+          };
+          setVerified(next);
+          try {
+            localStorage.setItem(mobileVerifiedKey(id), JSON.stringify(next));
+          } catch { /* ignore */ }
           setOpenItem(null);
           toast.success("Item verified");
         }}
