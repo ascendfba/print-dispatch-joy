@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 
-type VerifiedRow = { receivedQty: number; bbf: string };
+type VerifiedRow = { receivedQty: number; bbf: string; location: string };
 
 export const Route = createFileRoute("/mobile/stock/asns_/$asnId")({
   component: MobileASNDetail,
@@ -269,6 +269,7 @@ function ASNItemRow({
             <span className="inline-flex items-center rounded-full px-2 py-0.5 font-medium bg-emerald-100 text-emerald-700">
               Received {verified.receivedQty}
               {verified.bbf ? ` · BBF ${verified.bbf}` : ""}
+              {verified.location ? ` · ${verified.location}` : ""}
             </span>
           ) : item.ReceivedQuantity != null && item.ReceivedQuantity > 0 ? (
             <span className="text-muted-foreground">
