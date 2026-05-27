@@ -770,7 +770,7 @@ function VerifyDrawer({
             <p className="text-xs font-semibold text-muted-foreground mb-2">
               Location <span className="text-rose-600">*</span>{" "}
               <span className="text-muted-foreground/70 font-normal">
-                (scanner ready)
+                {scannerArmed ? "(scan now)" : "(tap to scan)"}
               </span>
             </p>
             <div className="flex items-center gap-2">
@@ -783,14 +783,14 @@ function VerifyDrawer({
                     handleSave(scannerBufferRef.current || location);
                   }
                 }}
-                onClick={focusScannerInput}
+                onClick={armScanner}
                 disabled={!scannerReady}
                 className="flex-1 h-12 px-3 text-left text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4] disabled:text-muted-foreground disabled:bg-muted"
                 onFocus={() => {
-                  scannerBufferRef.current = "";
+                  if (scannerReady) setScannerArmed(true);
                 }}
               >
-                {location || (scannerReady ? "Scan location" : "Confirm BBF first")}
+                {location || (scannerReady ? (scannerArmed ? "Ready for scan" : "Tap to scan location") : "Confirm BBF first")}
               </button>
               {location && (
                 <Button
@@ -799,7 +799,7 @@ function VerifyDrawer({
                   onClick={() => {
                     scannerBufferRef.current = "";
                     setLocation("");
-                    focusScannerInput();
+                    armScanner();
                   }}
                   className="h-12 px-3"
                 >
