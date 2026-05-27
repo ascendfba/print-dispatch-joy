@@ -81,12 +81,6 @@ function MobileASNDetail() {
     }
   }, [id]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(mobileVerifiedKey(id), JSON.stringify(verified));
-    } catch { /* ignore */ }
-  }, [id, verified]);
-
   const asnQuery = useQuery({
     queryKey: ["mobile-asn", id],
     queryFn: async () => {
@@ -334,9 +328,15 @@ function MobileASNDetail() {
         onSave={(row) => {
           if (!openItem) return;
           setVerified((prev) => ({
-            ...prev,
-            [String(openItem.ID ?? "")]: row,
-          }));
+            const next = {
+              ...prev,
+              [String(openItem.ID ?? "")]: row,
+            };
+            try {
+              localStorage.setItem(mobileVerifiedKey(id), JSON.stringify(next));
+            } catch { /* ignore */ }
+            return next;
+          });
           setOpenItem(null);
           toast.success("Item verified");
         }}
