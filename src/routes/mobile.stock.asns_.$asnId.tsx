@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft, Truck, Loader2, Package, Search, X, AlertTriangle, Save, PackageCheck, CheckCircle2, Minus, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -60,6 +60,7 @@ export const Route = createFileRoute("/mobile/stock/asns_/$asnId")({
 function MobileASNDetail() {
   const { asnId } = Route.useParams();
   const id = Number(asnId);
+  const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [verified, setVerified] = useState<Record<string, VerifiedRow>>({});
   const [openItem, setOpenItem] = useState<MintsoftASNItem | null>(null);
@@ -171,6 +172,13 @@ function MobileASNDetail() {
           : `Partially booked ${okCount} line${okCount === 1 ? "" : "s"}`,
       );
       setVerified({});
+      try {
+        const raw = localStorage.getItem("mobile.asns.hidden");
+        const arr = raw ? (JSON.parse(raw) as number[]) : [];
+        const next = Array.from(new Set([...arr, id]));
+        localStorage.setItem("mobile.asns.hidden", JSON.stringify(next));
+      } catch { /* ignore */ }
+      navigate({ to: "/mobile/stock/asns" });
     } else if (okCount > 0) {
       toast.warning(`Booked ${okCount}/${resolved.length}. ${errors[0]}`);
     } else {
