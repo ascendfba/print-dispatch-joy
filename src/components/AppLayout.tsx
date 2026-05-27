@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { Package, Settings as SettingsIcon, Truck, LogOut, LayoutGrid, Boxes } from "lucide-react";
 import { isElectron } from "@/lib/printing";
 import { Toaster } from "@/components/ui/sonner";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import ascendLogo from "@/assets/ascend-fba-logo-full.png";
