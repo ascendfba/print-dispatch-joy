@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { Package, Settings as SettingsIcon, Truck, LogOut, LayoutGrid, Boxes } from "lucide-react";
 import { isElectron } from "@/lib/printing";
 import { Toaster } from "@/components/ui/sonner";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import ascendLogo from "@/assets/ascend-fba-logo-full.png";
@@ -86,16 +85,20 @@ export function AppLayout() {
                 </Link>
               );
             })}
+            {email && (
+              <button
+                onClick={signOut}
+                className="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign out
+              </button>
+            )}
           </nav>
           <div className="flex items-center gap-3">
             <div className="text-xs text-muted-foreground">
               {email ?? (isElectron() ? "Desktop mode" : "Browser preview")}
             </div>
-            {email && (
-              <Button variant="ghost" size="sm" onClick={signOut}>
-                <LogOut className="mr-1 h-4 w-4" /> Sign out
-              </Button>
-            )}
           </div>
         </div>
       </header>
