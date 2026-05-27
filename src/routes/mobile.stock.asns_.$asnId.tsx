@@ -478,12 +478,34 @@ function VerifyDrawer({
               <Loader2 className="h-3 w-3 animate-spin" /> Checking SKU requirements…
             </p>
           )}
+
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground mb-2">
+              Location <span className="text-rose-600">*</span>{" "}
+              <span className="text-muted-foreground/70 font-normal">
+                (scan or type)
+              </span>
+            </p>
+            <input
+              type="text"
+              inputMode="text"
+              autoCapitalize="characters"
+              placeholder="e.g. A-12-3"
+              value={location}
+              onChange={(e) => setLocation(e.target.value.toUpperCase())}
+              maxLength={32}
+              className="w-full h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
+            />
+            <p className="mt-1.5 text-[11px] text-muted-foreground">
+              Items will be booked into this location.
+            </p>
+          </div>
         </div>
 
         <DrawerFooter className="pt-2">
           <Button
             onClick={handleSave}
-            disabled={bbfInvalid}
+            disabled={bbfInvalid || locationInvalid}
             className="h-14 text-base bg-[#0099d4] hover:bg-[#0088bc] text-white"
           >
             <Save className="h-5 w-5 mr-2" /> Save
