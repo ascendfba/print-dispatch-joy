@@ -60,6 +60,7 @@ import { PDFDocument } from "pdf-lib";
 import { scanLabelPdf, buildSkuBarcodeMap } from "@/lib/labelScan";
 import { pickPrinter, printPdfBytes } from "@/lib/printing";
 import { loadSettings } from "@/lib/storage";
+import { useProductImage } from "@/lib/useProductImage";
 import { REWORK_CATALOG, getRate, formatGBP } from "@/lib/rework";
 import { ArrowLeft, ArrowRight, Check, Eye, FileText, Flag, ImageOff, Loader2, MapPin, Minus, Package, Printer, AlertTriangle, ListChecks, Plus, Trash2, Weight } from "lucide-react";
 import {
