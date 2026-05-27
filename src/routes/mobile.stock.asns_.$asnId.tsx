@@ -520,7 +520,8 @@ function VerifyDrawer({
   const [bbf, setBbf] = useState<string>("");
   const [bbfConfirmed, setBbfConfirmed] = useState(false);
   const [location, setLocation] = useState<string>("");
-  const scannerInputRef = useRef<HTMLButtonElement | null>(null);
+  const [scannerArmed, setScannerArmed] = useState(false);
+  const scannerInputRef = useRef<HTMLInputElement | null>(null);
   const scannerBufferRef = useRef("");
   const scannerLastKeyAtRef = useRef(0);
   const scannerCommitTimerRef = useRef<number | null>(null);
@@ -533,6 +534,7 @@ function VerifyDrawer({
       setBbf(existing?.bbf ?? "");
       setBbfConfirmed(Boolean(existing?.bbf));
       setLocation(existing?.location ?? "");
+      setScannerArmed(false);
       scannerBufferRef.current = existing?.location ?? "";
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -544,15 +546,29 @@ function VerifyDrawer({
   const locationInvalid = !trimmedLocation;
   const scannerReady = !!item && (!requiresBbf || (bbfConfirmed && !bbfInvalid));
 
+  function armScanner() {
+    if (!scannerReady) return;
+    setScannerArmed(true);
+    scannerLastKeyAtRef.current = 0;
+    scannerBufferRef.current = "";
+    const input = scannerInputRef.current;
+    if (!input) return;
+    input.readOnly = true;
+    input.focus({ preventScroll: true });
+    window.setTimeout(() => {
+      if (scannerInputRef.current === input) input.readOnly = false;
+    }, 80);
+  }
+
   function focusScannerInput() {
     window.setTimeout(() => {
-      scannerBufferRef.current = "";
-      scannerInputRef.current?.focus({ preventScroll: true });
+      armScanner();
     }, 0);
   }
 
   function queueScannerCommit(raw: string) {
     const scannedLocation = raw.trim().toUpperCase();
+    setScannerArmed(true);
     scannerBufferRef.current = scannedLocation;
     setLocation(scannedLocation);
     if (scannerCommitTimerRef.current) window.clearTimeout(scannerCommitTimerRef.current);
@@ -566,7 +582,7 @@ function VerifyDrawer({
 
   useEffect(() => {
     if (!scannerReady) return;
-    focusScannerInput();
+    if (!requiresBbf) focusScannerInput();
     const handleScannerKey = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.altKey || event.metaKey) return;
       const target = event.target as HTMLElement | null;
@@ -575,6 +591,8 @@ function VerifyDrawer({
         !isScannerInput &&
         (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT")
       ) return;
+
+      if (!scannerArmed && !isScannerInput) return;
 
       if (event.key === "Enter" || event.key === "Tab") {
         event.preventDefault();
@@ -606,7 +624,7 @@ function VerifyDrawer({
       document.removeEventListener("keydown", handleScannerKey, true);
       if (scannerCommitTimerRef.current) window.clearTimeout(scannerCommitTimerRef.current);
     };
-  }, [scannerReady, bbfInvalid, normalisedBbf, qty, locations]);
+  }, [scannerReady, scannerArmed, requiresBbf, bbfInvalid, normalisedBbf, qty, locations]);
 
   function handleSave(locationOverride = location) {
     const saveLocation = locationOverride.trim();
@@ -628,6 +646,7 @@ function VerifyDrawer({
       return;
     }
     const canonical = matched.code || matched.name || saveLocation;
+    setScannerArmed(false);
     onSave({ receivedQty: qty, bbf: normalisedBbf, location: canonical });
   }
 
@@ -757,28 +776,32 @@ function VerifyDrawer({
             <p className="text-xs font-semibold text-muted-foreground mb-2">
               Location <span className="text-rose-600">*</span>{" "}
               <span className="text-muted-foreground/70 font-normal">
-                (scanner ready)
+                {scannerArmed ? "(scan now)" : "(tap to scan)"}
               </span>
             </p>
             <div className="flex items-center gap-2">
-              <button
+              <input
                 ref={scannerInputRef}
-                type="button"
+                type="text"
+                inputMode="none"
+                autoComplete="off"
+                autoCapitalize="characters"
+                value={location}
+                onChange={(event) => queueScannerCommit(event.target.value)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === "Tab") {
                     event.preventDefault();
                     handleSave(scannerBufferRef.current || location);
                   }
                 }}
-                onClick={focusScannerInput}
+                onClick={armScanner}
                 disabled={!scannerReady}
-                className="flex-1 h-12 px-3 text-left text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4] disabled:text-muted-foreground disabled:bg-muted"
+                placeholder={scannerReady ? (scannerArmed ? "Ready for scan" : "Tap to scan location") : "Confirm BBF first"}
+                className="flex-1 h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4] disabled:text-muted-foreground disabled:bg-muted"
                 onFocus={() => {
-                  scannerBufferRef.current = "";
+                  if (scannerReady) setScannerArmed(true);
                 }}
-              >
-                {location || (scannerReady ? "Scan location" : "Confirm BBF first")}
-              </button>
+              />
               {location && (
                 <Button
                   type="button"
@@ -786,7 +809,7 @@ function VerifyDrawer({
                   onClick={() => {
                     scannerBufferRef.current = "";
                     setLocation("");
-                    focusScannerInput();
+                    armScanner();
                   }}
                   className="h-12 px-3"
                 >
