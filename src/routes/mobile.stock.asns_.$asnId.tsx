@@ -309,6 +309,7 @@ function MobileASNDetail() {
       <VerifyDrawer
         item={openItem}
         existing={openItem ? verified[String(openItem.ID ?? "")] : undefined}
+        locations={locationsQuery.data ?? []}
         onClose={() => setOpenItem(null)}
         onSave={(row) => {
           if (!openItem) return;
@@ -471,11 +472,13 @@ function normaliseBbf(raw: string): string {
 function VerifyDrawer({
   item,
   existing,
+  locations,
   onClose,
   onSave,
 }: {
   item: MintsoftASNItem | null;
   existing?: VerifiedRow;
+  locations: MintsoftWarehouseLocation[];
   onClose: () => void;
   onSave: (row: VerifiedRow) => void;
 }) {
@@ -550,7 +553,15 @@ function VerifyDrawer({
       toast.error("Scan or enter a location");
       return;
     }
-    onSave({ receivedQty: qty, bbf: normalisedBbf, location: saveLocation });
+    const matched = resolveLocationId(saveLocation, locations);
+    if (!matched) {
+      toast.error(`Location "${saveLocation}" not found in this warehouse`);
+      setLocation("");
+      focusLocationScanner(50);
+      return;
+    }
+    const canonical = matched.code || matched.name || saveLocation;
+    onSave({ receivedQty: qty, bbf: normalisedBbf, location: canonical });
   }
 
   return (
