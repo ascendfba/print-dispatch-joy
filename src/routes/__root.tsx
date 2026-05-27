@@ -86,7 +86,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:description", content: "." },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/7d01055a-a8c8-4265-ad56-c17949fc6dc1/id-preview-29fb832e--484fae32-a6a4-4c64-8416-14ca1d53c6c9.lovable.app-1778894317406.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/7d01055a-a8c8-4265-ad56-c17949fc6dc1/id-preview-29fb832e--484fae32-a6a4-4c64-8416-14ca1d53c6c9.lovable.app-1778894317406.png" },
-      { name: "theme-color", content: "#0f1b3d" },
+      { name: "theme-color", content: "#1ca0db" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { name: "apple-mobile-web-app-title", content: "Ascend FBA" },
