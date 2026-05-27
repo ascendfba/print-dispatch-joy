@@ -35,6 +35,8 @@ import { Route as ApiGoogleImageRouteImport } from './routes/api/google-image'
 import { Route as ApiEstimateWeightRouteImport } from './routes/api/estimate-weight'
 import { Route as ApiAmazonImageRouteImport } from './routes/api/amazon-image'
 import { Route as DRouteImport } from './routes/d.'
+import { Route as MobileStockTransferRouteImport } from './routes/mobile.stock.transfer'
+import { Route as MobileStockLocationsRouteImport } from './routes/mobile.stock.locations'
 import { Route as MobileStockAsnsRouteImport } from './routes/mobile.stock.asns'
 import { Route as AsnsAsnIdQuickRouteImport } from './routes/asns_.$asnId.quick'
 import { Route as ApiPublicSetupWarningLabelsBucketRouteImport } from './routes/api/public/setup-warning-labels-bucket'
@@ -172,6 +174,16 @@ const DRoute = DRouteImport.update({
   path: '/d/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MobileStockTransferRoute = MobileStockTransferRouteImport.update({
+  id: '/stock/transfer',
+  path: '/stock/transfer',
+  getParentRoute: () => MobileRoute,
+} as any)
+const MobileStockLocationsRoute = MobileStockLocationsRouteImport.update({
+  id: '/stock/locations',
+  path: '/stock/locations',
+  getParentRoute: () => MobileRoute,
+} as any)
 const MobileStockAsnsRoute = MobileStockAsnsRouteImport.update({
   id: '/stock/asns',
   path: '/stock/asns',
@@ -237,6 +249,8 @@ export interface FileRoutesByFullPath {
   '/api/public/setup-warning-labels-bucket': typeof ApiPublicSetupWarningLabelsBucketRoute
   '/asns/$asnId/quick': typeof AsnsAsnIdQuickRoute
   '/mobile/stock/asns': typeof MobileStockAsnsRoute
+  '/mobile/stock/locations': typeof MobileStockLocationsRoute
+  '/mobile/stock/transfer': typeof MobileStockTransferRoute
   '/api/public/cron/sync-mintsoft': typeof ApiPublicCronSyncMintsoftRoute
   '/api/public/d/$slug': typeof ApiPublicDSlugRoute
 }
@@ -270,6 +284,8 @@ export interface FileRoutesByTo {
   '/api/public/setup-warning-labels-bucket': typeof ApiPublicSetupWarningLabelsBucketRoute
   '/asns/$asnId/quick': typeof AsnsAsnIdQuickRoute
   '/mobile/stock/asns': typeof MobileStockAsnsRoute
+  '/mobile/stock/locations': typeof MobileStockLocationsRoute
+  '/mobile/stock/transfer': typeof MobileStockTransferRoute
   '/api/public/cron/sync-mintsoft': typeof ApiPublicCronSyncMintsoftRoute
   '/api/public/d/$slug': typeof ApiPublicDSlugRoute
 }
@@ -305,6 +321,8 @@ export interface FileRoutesById {
   '/api/public/setup-warning-labels-bucket': typeof ApiPublicSetupWarningLabelsBucketRoute
   '/asns_/$asnId/quick': typeof AsnsAsnIdQuickRoute
   '/mobile/stock/asns': typeof MobileStockAsnsRoute
+  '/mobile/stock/locations': typeof MobileStockLocationsRoute
+  '/mobile/stock/transfer': typeof MobileStockTransferRoute
   '/api/public/cron/sync-mintsoft': typeof ApiPublicCronSyncMintsoftRoute
   '/api/public/d/$slug': typeof ApiPublicDSlugRoute
 }
@@ -341,6 +359,8 @@ export interface FileRouteTypes {
     | '/api/public/setup-warning-labels-bucket'
     | '/asns/$asnId/quick'
     | '/mobile/stock/asns'
+    | '/mobile/stock/locations'
+    | '/mobile/stock/transfer'
     | '/api/public/cron/sync-mintsoft'
     | '/api/public/d/$slug'
   fileRoutesByTo: FileRoutesByTo
@@ -374,6 +394,8 @@ export interface FileRouteTypes {
     | '/api/public/setup-warning-labels-bucket'
     | '/asns/$asnId/quick'
     | '/mobile/stock/asns'
+    | '/mobile/stock/locations'
+    | '/mobile/stock/transfer'
     | '/api/public/cron/sync-mintsoft'
     | '/api/public/d/$slug'
   id:
@@ -408,6 +430,8 @@ export interface FileRouteTypes {
     | '/api/public/setup-warning-labels-bucket'
     | '/asns_/$asnId/quick'
     | '/mobile/stock/asns'
+    | '/mobile/stock/locations'
+    | '/mobile/stock/transfer'
     | '/api/public/cron/sync-mintsoft'
     | '/api/public/d/$slug'
   fileRoutesById: FileRoutesById
@@ -628,6 +652,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mobile/stock/transfer': {
+      id: '/mobile/stock/transfer'
+      path: '/stock/transfer'
+      fullPath: '/mobile/stock/transfer'
+      preLoaderRoute: typeof MobileStockTransferRouteImport
+      parentRoute: typeof MobileRoute
+    }
+    '/mobile/stock/locations': {
+      id: '/mobile/stock/locations'
+      path: '/stock/locations'
+      fullPath: '/mobile/stock/locations'
+      preLoaderRoute: typeof MobileStockLocationsRouteImport
+      parentRoute: typeof MobileRoute
+    }
     '/mobile/stock/asns': {
       id: '/mobile/stock/asns'
       path: '/stock/asns'
@@ -676,11 +714,15 @@ declare module '@tanstack/react-router' {
 interface MobileRouteChildren {
   MobileIndexRoute: typeof MobileIndexRoute
   MobileStockAsnsRoute: typeof MobileStockAsnsRoute
+  MobileStockLocationsRoute: typeof MobileStockLocationsRoute
+  MobileStockTransferRoute: typeof MobileStockTransferRoute
 }
 
 const MobileRouteChildren: MobileRouteChildren = {
   MobileIndexRoute: MobileIndexRoute,
   MobileStockAsnsRoute: MobileStockAsnsRoute,
+  MobileStockLocationsRoute: MobileStockLocationsRoute,
+  MobileStockTransferRoute: MobileStockTransferRoute,
 }
 
 const MobileRouteWithChildren =
