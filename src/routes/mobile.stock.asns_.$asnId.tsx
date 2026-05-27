@@ -499,7 +499,7 @@ function VerifyDrawer({
   const [bbf, setBbf] = useState<string>("");
   const [location, setLocation] = useState<string>("");
   const [showLocationKeypad, setShowLocationKeypad] = useState(false);
-  const locationInputRef = useRef<HTMLDivElement | null>(null);
+  const locationInputRef = useRef<HTMLInputElement | null>(null);
 
   // Reset whenever a new item is opened.
   const itemKey = item ? String(item.ID ?? "") : "";
@@ -509,8 +509,11 @@ function VerifyDrawer({
       setBbf(existing?.bbf ?? "");
       setLocation(existing?.location ?? "");
       setShowLocationKeypad(false);
-      // Focus a non-input scanner target so HID scanners work without opening the device keyboard.
-      setTimeout(() => locationInputRef.current?.focus(), 250);
+      // Keep a real input focused so the device scanner can type into it.
+      setTimeout(() => {
+        locationInputRef.current?.setAttribute("virtualkeyboardpolicy", "manual");
+        locationInputRef.current?.focus({ preventScroll: true });
+      }, 250);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemKey]);
@@ -524,16 +527,6 @@ function VerifyDrawer({
     if (key === "Enter" || key === "Tab") {
       preventDefault();
       if (!bbfInvalid && location.trim()) handleSave();
-      return;
-    }
-    if (key === "Backspace") {
-      preventDefault();
-      setLocation((prev) => prev.slice(0, -1));
-      return;
-    }
-    if (key.length === 1) {
-      preventDefault();
-      setLocation((prev) => `${prev}${key}`.toUpperCase().slice(0, 32));
     }
   }
 
