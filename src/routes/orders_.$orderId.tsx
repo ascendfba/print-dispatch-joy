@@ -2645,6 +2645,12 @@ function PackingListDialog({
                     Pick a box size below before saving
                   </div>
                 )}
+                {!!(b.length && b.width && b.height) && !(b.weight && Number(b.weight) > 0) && (
+                  <div className="rounded border border-red-400 bg-red-50 px-2 py-1 text-[11px] font-medium text-red-800">
+                    <AlertTriangle className="mr-1 inline h-3 w-3" />
+                    Weight is required — enter or confirm below
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-2">
                   {[
                     { label: "S DISP/B", size: "37", weight: "0.7" },
