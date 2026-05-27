@@ -30,20 +30,20 @@ function MobileHome() {
   const sections: { title: string; accentColor: string; tiles: Tile[] }[] = [
     {
       title: "Picking",
-      accentColor: "bg-blue-500",
+      accentColor: "bg-[#0099d4]",
       tiles: [
-        { label: "Order Picking", icon: <ShoppingBag className="h-6 w-6" />, iconColor: "text-blue-600", bgColor: "bg-blue-500/10" },
-        { label: "View Orders", icon: <ClipboardList className="h-6 w-6" />, iconColor: "text-slate-600", bgColor: "bg-slate-500/10" },
+        { label: "Order Picking", icon: <ShoppingBag className="h-6 w-6" />, iconColor: "text-[#0099d4]", bgColor: "bg-[#0099d4]/10" },
+        { label: "View Orders", icon: <ClipboardList className="h-6 w-6" />, iconColor: "text-[#0a2e3d]", bgColor: "bg-[#0a2e3d]/10" },
       ],
     },
     {
       title: "Inventory Management",
-      accentColor: "bg-emerald-500",
+      accentColor: "bg-[#0099d4]",
       tiles: [
-        { label: "ASNs", icon: <Truck className="h-6 w-6" />, iconColor: "text-amber-600", bgColor: "bg-amber-500/10", to: "/mobile/stock/asns" },
-        { label: "Transfer Inventory", icon: <ArrowLeftRight className="h-6 w-6" />, iconColor: "text-emerald-600", bgColor: "bg-emerald-500/10", to: "/mobile/stock/transfer" },
-        { label: "Bulk Transfer Inventory", icon: <PackagePlus className="h-6 w-6" />, iconColor: "text-teal-600", bgColor: "bg-teal-500/10" },
-        { label: "Book Inventory", icon: <BookOpen className="h-6 w-6" />, iconColor: "text-violet-600", bgColor: "bg-violet-500/10" },
+        { label: "ASNs", icon: <Truck className="h-6 w-6" />, iconColor: "text-[#0099d4]", bgColor: "bg-[#0099d4]/10", to: "/mobile/stock/asns" },
+        { label: "Transfer Inventory", icon: <ArrowLeftRight className="h-6 w-6" />, iconColor: "text-[#0a2e3d]", bgColor: "bg-[#0a2e3d]/10", to: "/mobile/stock/transfer" },
+        { label: "Bulk Transfer Inventory", icon: <PackagePlus className="h-6 w-6" />, iconColor: "text-[#0099d4]", bgColor: "bg-[#0099d4]/10" },
+        { label: "Book Inventory", icon: <BookOpen className="h-6 w-6" />, iconColor: "text-[#0a2e3d]", bgColor: "bg-[#0a2e3d]/10" },
       ],
     },
   ];
@@ -66,8 +66,8 @@ function MobileHome() {
   const dayMs = 86_400_000;
 
   const dayLabels = ["Today", "Tomorrow"];
-  const dayBorderColors = ["border-l-amber-500", "border-l-blue-500"];
-  const dayBadgeColors = ["bg-amber-500/10 text-amber-700", "bg-blue-500/10 text-blue-700"];
+  const dayBorderColors = ["border-l-[#0099d4]", "border-l-[#0a2e3d]"];
+  const dayBadgeColors = ["bg-[#0099d4]/10 text-[#0099d4]", "bg-[#0a2e3d]/10 text-[#0a2e3d]"];
 
   const dayCards = [0, 1].map((offset) => {
     const d = new Date(today.getTime() + offset * dayMs);
@@ -100,7 +100,7 @@ function MobileHome() {
 
       <section>
         <div className="flex items-center gap-2 mb-2">
-          <div className="h-4 w-1 rounded-full bg-amber-500" />
+          <div className="h-4 w-1 rounded-full bg-[#0099d4]" />
           <h2 className="text-sm font-semibold">ASNs Due</h2>
         </div>
         {asnsQuery.isLoading ? (
@@ -148,7 +148,7 @@ function MobileHome() {
                         params={{ asnId: String(a.ID) }}
                         className="flex items-center gap-2 rounded-lg p-2 hover:bg-muted/60 transition-colors"
                       >
-                        <Truck className="h-4 w-4 text-amber-500 shrink-0" />
+                        <Truck className="h-4 w-4 text-[#0099d4] shrink-0" />
                         <div className="min-w-0 flex-1">
                           <p className="text-xs font-medium truncate">
                             {a.Reference || `#${a.ID}`}
