@@ -2847,7 +2847,12 @@ function PackingListDialog({
               {pdfPreview && (
                 <Button
                   onClick={handleSubmit}
-                  disabled={submitting || alreadySubmitted || submitted}
+                  disabled={
+                    submitting ||
+                    alreadySubmitted ||
+                    submitted ||
+                    boxes.some((b) => !(b.weight && Number(b.weight) > 0))
+                  }
                 >
                   {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {alreadySubmitted || submitted ? "Submitted ✓" : "Submit"}
