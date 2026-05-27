@@ -91,7 +91,7 @@ const sections: Section[] = [
         title: "Mobile App",
         description: "Open the mobile app for warehouse operations.",
         icon: Smartphone,
-        href: "https://print-dispatch-joy.lovable.app",
+        to: "/mobile-emulator",
         brandColor: "10b981",
       },
     ],

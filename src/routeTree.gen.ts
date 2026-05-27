@@ -14,6 +14,7 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as OrdersRouteImport } from './routes/orders'
+import { Route as MobileEmulatorRouteImport } from './routes/mobile-emulator'
 import { Route as MfaRouteImport } from './routes/mfa'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as InvoiceMergerRouteImport } from './routes/invoice-merger'
@@ -61,6 +62,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const OrdersRoute = OrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MobileEmulatorRoute = MobileEmulatorRouteImport.update({
+  id: '/mobile-emulator',
+  path: '/mobile-emulator',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MfaRoute = MfaRouteImport.update({
@@ -191,6 +197,7 @@ export interface FileRoutesByFullPath {
   '/invoice-merger': typeof InvoiceMergerRoute
   '/login': typeof LoginRoute
   '/mfa': typeof MfaRoute
+  '/mobile-emulator': typeof MobileEmulatorRoute
   '/orders': typeof OrdersRoute
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
@@ -221,6 +228,7 @@ export interface FileRoutesByTo {
   '/invoice-merger': typeof InvoiceMergerRoute
   '/login': typeof LoginRoute
   '/mfa': typeof MfaRoute
+  '/mobile-emulator': typeof MobileEmulatorRoute
   '/orders': typeof OrdersRoute
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
@@ -252,6 +260,7 @@ export interface FileRoutesById {
   '/invoice-merger': typeof InvoiceMergerRoute
   '/login': typeof LoginRoute
   '/mfa': typeof MfaRoute
+  '/mobile-emulator': typeof MobileEmulatorRoute
   '/orders': typeof OrdersRoute
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
@@ -284,6 +293,7 @@ export interface FileRouteTypes {
     | '/invoice-merger'
     | '/login'
     | '/mfa'
+    | '/mobile-emulator'
     | '/orders'
     | '/reset-password'
     | '/settings'
@@ -314,6 +324,7 @@ export interface FileRouteTypes {
     | '/invoice-merger'
     | '/login'
     | '/mfa'
+    | '/mobile-emulator'
     | '/orders'
     | '/reset-password'
     | '/settings'
@@ -344,6 +355,7 @@ export interface FileRouteTypes {
     | '/invoice-merger'
     | '/login'
     | '/mfa'
+    | '/mobile-emulator'
     | '/orders'
     | '/reset-password'
     | '/settings'
@@ -375,6 +387,7 @@ export interface RootRouteChildren {
   InvoiceMergerRoute: typeof InvoiceMergerRoute
   LoginRoute: typeof LoginRoute
   MfaRoute: typeof MfaRoute
+  MobileEmulatorRoute: typeof MobileEmulatorRoute
   OrdersRoute: typeof OrdersRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SettingsRoute: typeof SettingsRoute
@@ -431,6 +444,13 @@ declare module '@tanstack/react-router' {
       path: '/orders'
       fullPath: '/orders'
       preLoaderRoute: typeof OrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mobile-emulator': {
+      id: '/mobile-emulator'
+      path: '/mobile-emulator'
+      fullPath: '/mobile-emulator'
+      preLoaderRoute: typeof MobileEmulatorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mfa': {
@@ -618,6 +638,7 @@ const rootRouteChildren: RootRouteChildren = {
   InvoiceMergerRoute: InvoiceMergerRoute,
   LoginRoute: LoginRoute,
   MfaRoute: MfaRoute,
+  MobileEmulatorRoute: MobileEmulatorRoute,
   OrdersRoute: OrdersRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SettingsRoute: SettingsRoute,
