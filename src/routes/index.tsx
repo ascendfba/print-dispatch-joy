@@ -22,6 +22,7 @@ import {
   Wallet,
   Receipt,
   Monitor,
+  Smartphone,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
