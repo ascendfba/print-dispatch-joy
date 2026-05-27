@@ -602,7 +602,9 @@ function VerifyDrawer({
               <p className="mt-1.5 text-[11px]">
                 {bbf ? (
                   normalisedBbf ? (
-                    <span className="text-emerald-700">{normalisedBbf}</span>
+                    <span className="text-emerald-700">
+                      {normalisedBbf} → sends {isoToDdmmyyyy(normalisedBbf)}
+                    </span>
                   ) : (
                     <span className="text-rose-600">Invalid date</span>
                   )
