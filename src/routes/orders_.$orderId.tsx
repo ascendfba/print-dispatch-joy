@@ -2259,6 +2259,7 @@ function PackingListDialog({
   products,
   orderId,
   orderNumber,
+  alreadySubmitted,
   onSaved,
 }: {
   open: boolean;
@@ -2267,12 +2268,14 @@ function PackingListDialog({
   products: Map<number, MintsoftProduct | null> | undefined;
   orderId: number;
   orderNumber: string | null;
+  alreadySubmitted?: boolean;
   onSaved?: (boxCount: number) => void;
 }) {
   const [boxCount, setBoxCount] = useState(1);
   const [boxes, setBoxes] = useState<PackingBox[]>([makeEmptyBox()]);
   const [submitting, setSubmitting] = useState(false);
   const [pdfPreview, setPdfPreview] = useState<{ url: string; bytes: Uint8Array; fileName: string } | null>(null);
+  const [submitted, setSubmitted] = useState(false);
   const submitInFlightRef = useRef(false);
 
   // Available SKUs from the order (sku + total ordered qty).
@@ -2333,6 +2336,7 @@ function PackingListDialog({
       if (prev) URL.revokeObjectURL(prev.url);
       return null;
     });
+    setSubmitted(false);
   }, [boxes]);
 
   const applyBoxCount = (n: number) => {
@@ -2429,7 +2433,7 @@ function PackingListDialog({
     );
   };
 
-  const handleSubmit = async () => {
+  const handleGenerate = async () => {
     if (submitInFlightRef.current) return;
     const missing = boxes
       .map((b, i) => ({ i, hasDims: !!(b.length && b.width && b.height) }))
@@ -2445,34 +2449,52 @@ function PackingListDialog({
     setSubmitting(true);
     try {
       const ref = orderNumber ?? `#${orderId}`;
-      // Generate the PDF from the entered packing list and upload to Mintsoft.
       const pdfBytes = await buildPackingListPdf({ orderRef: ref, boxes });
       const fileName = `Packing List ${ref}.pdf`;
-      await uploadOrderDocument(loadSettings(), orderId, {
-        fileName,
-        contentType: "application/pdf",
-        bytes: pdfBytes,
-        label: "Packing List",
-        documentTypeName: "boxpackinglist",
-      });
       const blob = new Blob([pdfBytes as BlobPart], { type: "application/pdf" });
       setPdfPreview((prev) => {
         if (prev) URL.revokeObjectURL(prev.url);
         return { url: URL.createObjectURL(blob), bytes: pdfBytes, fileName };
       });
-      toast.success("Packing list PDF generated and uploaded");
-      onSaved?.(boxes.length);
+      setSubmitted(false);
+      toast.success("Packing list generated — review and submit");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to save packing list");
+      toast.error(e instanceof Error ? e.message : "Failed to generate packing list");
     } finally {
       submitInFlightRef.current = false;
       setSubmitting(false);
     }
   };
 
-  const saveAndClose = () => {
-    if (submitting || submitInFlightRef.current) return;
-    void handleSubmit();
+  const handleSubmit = async () => {
+    if (submitInFlightRef.current) return;
+    if (alreadySubmitted || submitted) {
+      toast.error("A packing list has already been submitted for this order");
+      return;
+    }
+    if (!pdfPreview) {
+      toast.error("Generate the packing list first");
+      return;
+    }
+    submitInFlightRef.current = true;
+    setSubmitting(true);
+    try {
+      await uploadOrderDocument(loadSettings(), orderId, {
+        fileName: pdfPreview.fileName,
+        contentType: "application/pdf",
+        bytes: pdfPreview.bytes,
+        label: "Packing List",
+        documentTypeName: "boxpackinglist",
+      });
+      setSubmitted(true);
+      toast.success("Packing list successfully submitted");
+      onSaved?.(boxes.length);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to submit packing list");
+    } finally {
+      submitInFlightRef.current = false;
+      setSubmitting(false);
+    }
   };
 
   return (
