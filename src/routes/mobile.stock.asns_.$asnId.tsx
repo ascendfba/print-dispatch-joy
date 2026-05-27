@@ -728,7 +728,7 @@ function VerifyDrawer({
             <p className="text-xs font-semibold text-muted-foreground mb-2">
               Location <span className="text-rose-600">*</span>{" "}
               <span className="text-muted-foreground/70 font-normal">
-                (scan or type)
+                (scan only)
               </span>
             </p>
             <div className="flex items-center gap-2">
