@@ -520,8 +520,10 @@ function VerifyDrawer({
   const [bbf, setBbf] = useState<string>("");
   const [bbfConfirmed, setBbfConfirmed] = useState(false);
   const [location, setLocation] = useState<string>("");
+  const scannerInputRef = useRef<HTMLInputElement | null>(null);
   const scannerBufferRef = useRef("");
   const scannerLastKeyAtRef = useRef(0);
+  const scannerCommitTimerRef = useRef<number | null>(null);
 
   // Reset whenever a new item is opened.
   const itemKey = item ? String(item.ID ?? "") : "";
@@ -542,16 +544,27 @@ function VerifyDrawer({
   const locationInvalid = !trimmedLocation;
   const scannerReady = !!item && (!requiresBbf || (bbfConfirmed && !bbfInvalid));
 
+  function focusScannerInput() {
+    window.setTimeout(() => {
+      scannerInputRef.current?.focus({ preventScroll: true });
+    }, 0);
+  }
+
   useEffect(() => {
     if (!scannerReady) return;
-    (document.activeElement as HTMLElement | null)?.blur();
+    focusScannerInput();
     const handleScannerKey = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.altKey || event.metaKey) return;
       const target = event.target as HTMLElement | null;
-      if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT") return;
+      const isScannerInput = target === scannerInputRef.current;
+      if (
+        !isScannerInput &&
+        (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT")
+      ) return;
 
       if (event.key === "Enter" || event.key === "Tab") {
         event.preventDefault();
+        if (scannerCommitTimerRef.current) window.clearTimeout(scannerCommitTimerRef.current);
         const scannedLocation = scannerBufferRef.current.trim().toUpperCase();
         if (scannedLocation) {
           setLocation(scannedLocation);
@@ -574,10 +587,21 @@ function VerifyDrawer({
       scannerLastKeyAtRef.current = now;
       scannerBufferRef.current = (scannerBufferRef.current + event.key).toUpperCase().slice(0, 32);
       setLocation(scannerBufferRef.current);
+      if (scannerCommitTimerRef.current) window.clearTimeout(scannerCommitTimerRef.current);
+      scannerCommitTimerRef.current = window.setTimeout(() => {
+        const scannedLocation = scannerBufferRef.current.trim().toUpperCase();
+        if (scannedLocation && resolveLocationId(scannedLocation, locations)) {
+          setLocation(scannedLocation);
+          handleSave(scannedLocation);
+        }
+      }, 350);
     };
 
     document.addEventListener("keydown", handleScannerKey, true);
-    return () => document.removeEventListener("keydown", handleScannerKey, true);
+    return () => {
+      document.removeEventListener("keydown", handleScannerKey, true);
+      if (scannerCommitTimerRef.current) window.clearTimeout(scannerCommitTimerRef.current);
+    };
   }, [scannerReady, bbfInvalid, normalisedBbf, location, qty, locations]);
 
   function handleSave(locationOverride = location) {
@@ -606,8 +630,13 @@ function VerifyDrawer({
   }
 
   return (
-    <Drawer open={!!item} onOpenChange={(o) => !o && onClose()}>
-      <DrawerContent>
+    <Drawer
+      open={!!item}
+      onOpenChange={(o) => !o && onClose()}
+      repositionInputs={false}
+      autoFocus={false}
+    >
+      <DrawerContent className="max-h-[92svh] overflow-y-auto">
         <DrawerHeader className="text-left">
           <DrawerTitle className="text-base line-clamp-2">
             {item?.Title || item?.Description || item?.SKU || "Verify item"}
@@ -680,7 +709,7 @@ function VerifyDrawer({
                     setBbf(next);
                     setBbfConfirmed(validDate);
                     if (validDate) {
-                      setTimeout(() => (document.activeElement as HTMLElement | null)?.blur(), 0);
+                      focusScannerInput();
                     }
                   }}
                   maxLength={10}
@@ -690,7 +719,7 @@ function VerifyDrawer({
                   type="button"
                   onClick={() => {
                     setBbfConfirmed(true);
-                    (document.activeElement as HTMLElement | null)?.blur();
+                    focusScannerInput();
                   }}
                   disabled={!bbf || !normalisedBbf}
                   className="h-12 px-4 bg-[#0099d4] hover:bg-[#0088bc] text-white"
@@ -730,9 +759,21 @@ function VerifyDrawer({
               </span>
             </p>
             <div className="flex items-center gap-2">
+              <input
+                ref={scannerInputRef}
+                aria-hidden="true"
+                tabIndex={-1}
+                inputMode="none"
+                autoComplete="off"
+                className="fixed left-0 top-0 h-px w-px -translate-x-full opacity-0"
+                onFocus={() => {
+                  scannerBufferRef.current = location;
+                }}
+              />
               <div
                 role="status"
                 aria-label="Scanned location"
+                onClick={scannerReady ? focusScannerInput : undefined}
                 className="flex-1 h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background flex items-center"
               >
                 {location || (scannerReady ? "SCAN LOCATION" : "CONFIRM BBF FIRST")}
