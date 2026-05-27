@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronLeft, Truck, Loader2, Package, Search, X, AlertTriangle, Save, PackageCheck, CheckCircle2 } from "lucide-react";
-import { useState } from "react";
+import { ChevronLeft, Truck, Loader2, Package, Search, X, AlertTriangle, Save, PackageCheck, CheckCircle2, Minus, Plus } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -11,6 +11,16 @@ import {
   type MintsoftProduct,
 } from "@/lib/mintsoft";
 import { loadSettings } from "@/lib/storage";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerFooter,
+} from "@/components/ui/drawer";
+import { Button } from "@/components/ui/button";
+
+type VerifiedRow = { receivedQty: number; bbf: string };
 
 export const Route = createFileRoute("/mobile/stock/asns_/$asnId")({
   component: MobileASNDetail,
@@ -20,6 +30,8 @@ function MobileASNDetail() {
   const { asnId } = Route.useParams();
   const id = Number(asnId);
   const [query, setQuery] = useState("");
+  const [verified, setVerified] = useState<Record<string, VerifiedRow>>({});
+  const [openItem, setOpenItem] = useState<MintsoftASNItem | null>(null);
 
   const asnQuery = useQuery({
     queryKey: ["mobile-asn", id],
@@ -111,7 +123,14 @@ function MobileASNDetail() {
             {query.trim() ? "No items match your search" : "No items on this ASN"}
           </div>
         ) : (
-          filtered.map((it, idx) => <ASNItemRow key={it.ID ?? idx} item={it} />)
+          filtered.map((it, idx) => (
+            <ASNItemRow
+              key={it.ID ?? idx}
+              item={it}
+              verified={verified[String(it.ID ?? idx)]}
+              onClick={() => setOpenItem(it)}
+            />
+          ))
         )}
       </div>
 
@@ -119,7 +138,7 @@ function MobileASNDetail() {
       <div className="shrink-0 border-t bg-card px-3 pt-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
         <div className="grid grid-cols-3 gap-2">
           <button
-            onClick={() => toast.info("Saved (stub)")}
+            onClick={() => toast.success(`${Object.keys(verified).length} item(s) saved locally`)}
             className="flex flex-col items-center justify-center gap-1 h-16 rounded-xl border bg-background text-[#0a2e3d] font-semibold text-xs active:bg-muted"
           >
             <Save className="h-6 w-6" strokeWidth={2.25} />
@@ -141,11 +160,34 @@ function MobileASNDetail() {
           </button>
         </div>
       </div>
+
+      <VerifyDrawer
+        item={openItem}
+        existing={openItem ? verified[String(openItem.ID ?? "")] : undefined}
+        onClose={() => setOpenItem(null)}
+        onSave={(row) => {
+          if (!openItem) return;
+          setVerified((prev) => ({
+            ...prev,
+            [String(openItem.ID ?? "")]: row,
+          }));
+          setOpenItem(null);
+          toast.success("Item verified");
+        }}
+      />
     </div>
   );
 }
 
-function ASNItemRow({ item }: { item: MintsoftASNItem }) {
+function ASNItemRow({
+  item,
+  verified,
+  onClick,
+}: {
+  item: MintsoftASNItem;
+  verified?: VerifiedRow;
+  onClick: () => void;
+}) {
   const productQuery = useQuery({
     queryKey: ["product", item.ProductId ?? null],
     queryFn: () =>
@@ -186,10 +228,23 @@ function ASNItemRow({ item }: { item: MintsoftASNItem }) {
       : null;
 
   return (
-    <div className="flex items-start gap-3 rounded-xl border bg-card p-3">
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full text-left flex items-start gap-3 rounded-xl border bg-card p-3 active:bg-muted/60 transition-colors ${
+        verified ? "border-emerald-500 border-2" : ""
+      }`}
+    >
       <ProductImage product={imageProduct} />
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium leading-snug line-clamp-2">{name}</p>
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-sm font-medium leading-snug line-clamp-2">{name}</p>
+          {verified && (
+            <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-700 shrink-0">
+              <CheckCircle2 className="h-3 w-3" /> Verified
+            </span>
+          )}
+        </div>
         <p className="text-[11px] text-muted-foreground mt-0.5 font-mono truncate">
           {sku}
         </p>
@@ -210,14 +265,226 @@ function ASNItemRow({ item }: { item: MintsoftASNItem }) {
           <span className="inline-flex items-center rounded-full px-2 py-0.5 font-medium bg-[#0099d4]/10 text-[#0099d4]">
             Expected {item.ExpectedQuantity ?? 0}
           </span>
-          {item.ReceivedQuantity != null && item.ReceivedQuantity > 0 && (
+          {verified ? (
+            <span className="inline-flex items-center rounded-full px-2 py-0.5 font-medium bg-emerald-100 text-emerald-700">
+              Received {verified.receivedQty}
+              {verified.bbf ? ` · BBF ${verified.bbf}` : ""}
+            </span>
+          ) : item.ReceivedQuantity != null && item.ReceivedQuantity > 0 ? (
             <span className="text-muted-foreground">
               Received {item.ReceivedQuantity}
             </span>
-          )}
+          ) : null}
         </div>
       </div>
-    </div>
+    </button>
+  );
+}
+
+// ---------- BBF helpers ----------
+function productRequiresBbf(p: unknown): boolean {
+  if (!p || typeof p !== "object") return false;
+  for (const [k, v] of Object.entries(p as Record<string, unknown>)) {
+    if (v !== true) continue;
+    const key = k.toLowerCase();
+    if (
+      key.includes("expir") ||
+      key.includes("bestbefore") ||
+      key === "bbe" ||
+      key.startsWith("bbe_") ||
+      key.includes("bbedate") ||
+      key.includes("bbd")
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function normaliseBbf(raw: string): string {
+  const s = (raw ?? "").trim();
+  if (!s) return "";
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (iso) return s;
+  const digits = s.replace(/\D/g, "");
+  let dd = "", mm = "", yyyy = "";
+  if (digits.length === 6) {
+    dd = digits.slice(0, 2); mm = digits.slice(2, 4); yyyy = "20" + digits.slice(4, 6);
+  } else if (digits.length === 8) {
+    dd = digits.slice(0, 2); mm = digits.slice(2, 4); yyyy = digits.slice(4, 8);
+  } else {
+    return "";
+  }
+  const d = Number(dd), m = Number(mm), y = Number(yyyy);
+  if (!d || !m || !y || d > 31 || m > 12) return "";
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return "";
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function VerifyDrawer({
+  item,
+  existing,
+  onClose,
+  onSave,
+}: {
+  item: MintsoftASNItem | null;
+  existing?: VerifiedRow;
+  onClose: () => void;
+  onSave: (row: VerifiedRow) => void;
+}) {
+  const productQuery = useQuery({
+    queryKey: ["product", item?.ProductId ?? null],
+    queryFn: () =>
+      item?.ProductId
+        ? fetchProduct(loadSettings(), item.ProductId)
+        : Promise.resolve(null),
+    enabled: !!item?.ProductId,
+    staleTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+  const requiresBbf = useMemo(
+    () => productRequiresBbf(productQuery.data),
+    [productQuery.data],
+  );
+
+  const expected = item?.ExpectedQuantity ?? 0;
+  const [qty, setQty] = useState<number>(0);
+  const [bbf, setBbf] = useState<string>("");
+
+  // Reset whenever a new item is opened.
+  const itemKey = item ? String(item.ID ?? "") : "";
+  useEffect(() => {
+    if (item) {
+      setQty(existing?.receivedQty ?? expected);
+      setBbf(existing?.bbf ?? "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itemKey]);
+
+  const normalisedBbf = bbf ? normaliseBbf(bbf) : "";
+  const bbfInvalid = requiresBbf && (!bbf || !normalisedBbf);
+
+  function handleSave() {
+    if (qty < 0) {
+      toast.error("Quantity cannot be negative");
+      return;
+    }
+    if (requiresBbf && !normalisedBbf) {
+      toast.error("Enter a valid BBF date (DDMMYY)");
+      return;
+    }
+    onSave({ receivedQty: qty, bbf: normalisedBbf });
+  }
+
+  return (
+    <Drawer open={!!item} onOpenChange={(o) => !o && onClose()}>
+      <DrawerContent>
+        <DrawerHeader className="text-left">
+          <DrawerTitle className="text-base line-clamp-2">
+            {item?.Title || item?.Description || item?.SKU || "Verify item"}
+          </DrawerTitle>
+          {item?.SKU && (
+            <p className="text-xs text-muted-foreground font-mono">{item.SKU}</p>
+          )}
+        </DrawerHeader>
+
+        <div className="px-4 pb-2 space-y-5">
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground mb-2">
+              Received quantity{" "}
+              <span className="text-[#0099d4]">(expected {expected})</span>
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setQty((q) => Math.max(0, q - 1))}
+                className="h-12 w-12 rounded-xl border bg-background flex items-center justify-center active:bg-muted"
+              >
+                <Minus className="h-5 w-5" />
+              </button>
+              <input
+                type="number"
+                inputMode="numeric"
+                value={qty}
+                onChange={(e) => setQty(Math.max(0, Number(e.target.value) || 0))}
+                className="flex-1 h-12 text-center text-lg font-semibold tabular-nums rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
+              />
+              <button
+                type="button"
+                onClick={() => setQty((q) => q + 1)}
+                className="h-12 w-12 rounded-xl border bg-background flex items-center justify-center active:bg-muted"
+              >
+                <Plus className="h-5 w-5" />
+              </button>
+            </div>
+            {qty !== expected && (
+              <p
+                className={`mt-1.5 text-[11px] ${
+                  qty < expected ? "text-amber-600" : "text-rose-600"
+                }`}
+              >
+                {qty < expected
+                  ? `${expected - qty} short of expected`
+                  : `${qty - expected} over expected`}
+              </p>
+            )}
+          </div>
+
+          {requiresBbf && (
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-2">
+                BBF date <span className="text-rose-600">*</span>{" "}
+                <span className="text-muted-foreground/70 font-normal">
+                  (DDMMYY)
+                </span>
+              </p>
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="010126"
+                value={bbf}
+                onChange={(e) => setBbf(e.target.value)}
+                maxLength={10}
+                className="w-full h-12 px-3 text-base tabular-nums rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
+              />
+              <p className="mt-1.5 text-[11px]">
+                {bbf ? (
+                  normalisedBbf ? (
+                    <span className="text-emerald-700">{normalisedBbf}</span>
+                  ) : (
+                    <span className="text-rose-600">Invalid date</span>
+                  )
+                ) : (
+                  <span className="text-muted-foreground">
+                    This SKU requires a best-before date
+                  </span>
+                )}
+              </p>
+            </div>
+          )}
+
+          {productQuery.isLoading && (
+            <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+              <Loader2 className="h-3 w-3 animate-spin" /> Checking SKU requirements…
+            </p>
+          )}
+        </div>
+
+        <DrawerFooter className="pt-2">
+          <Button
+            onClick={handleSave}
+            disabled={bbfInvalid}
+            className="h-14 text-base bg-[#0099d4] hover:bg-[#0088bc] text-white"
+          >
+            <Save className="h-5 w-5 mr-2" /> Save
+          </Button>
+          <Button variant="outline" onClick={onClose} className="h-12">
+            Cancel
+          </Button>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }
 
