@@ -1841,6 +1841,7 @@ export type OrderDocument = {
   fileName?: string;
   contentType?: string;
   documentId?: number;
+  comments?: string;
   bytes: Uint8Array;
 };
 
@@ -1999,6 +2000,7 @@ export async function fetchOrderDocuments(
           doc.ContentType ||
           (bytesLookLikePdf(bytes) ? "application/pdf" : "application/octet-stream"),
         documentId,
+        comments: doc.Comments?.trim() || undefined,
         bytes,
       });
     }

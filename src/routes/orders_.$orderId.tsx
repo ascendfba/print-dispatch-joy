@@ -1542,7 +1542,7 @@ function OrderDocumentsCard({ orderId }: { orderId: number }) {
               pageCount = null;
             }
           }
-          return { label: d.label, fileName: d.fileName || d.label, contentType, url: URL.createObjectURL(blob), size, bytes: d.bytes, pageCount };
+          return { label: d.label, fileName: d.fileName || d.label, contentType, url: URL.createObjectURL(blob), size, bytes: d.bytes, pageCount, comments: d.comments };
         }),
       );
     },
@@ -1620,6 +1620,11 @@ function OrderDocumentsCard({ orderId }: { orderId: number }) {
                         ? ` · ${d.size.kind} (${d.size.widthMm}×${d.size.heightMm} mm)`
                         : ""}
                     </div>
+                    {d.comments && d.comments !== d.label && (
+                      <div className="mt-1 text-xs text-foreground/80 italic whitespace-pre-wrap break-words">
+                        {d.comments}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
