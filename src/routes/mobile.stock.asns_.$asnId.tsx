@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, Truck, Loader2, Package, Search, X, AlertTriangle, Save, PackageCheck, CheckCircle2, Minus, Plus } from "lucide-react";
+import { ChevronLeft, Truck, Loader2, Package, Search, X, AlertTriangle, Save, PackageCheck, CheckCircle2, Minus, Plus, Keyboard } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -498,7 +498,8 @@ function VerifyDrawer({
   const [qty, setQty] = useState<number>(0);
   const [bbf, setBbf] = useState<string>("");
   const [location, setLocation] = useState<string>("");
-  const locationInputRef = useRef<HTMLInputElement | null>(null);
+  const [showLocationKeypad, setShowLocationKeypad] = useState(false);
+  const locationInputRef = useRef<HTMLDivElement | null>(null);
 
   // Reset whenever a new item is opened.
   const itemKey = item ? String(item.ID ?? "") : "";
@@ -507,7 +508,8 @@ function VerifyDrawer({
       setQty(existing?.receivedQty ?? expected);
       setBbf(existing?.bbf ?? "");
       setLocation(existing?.location ?? "");
-      // Auto-focus the location field so HID barcode scanners write into it.
+      setShowLocationKeypad(false);
+      // Focus a non-input scanner target so HID scanners work without opening the device keyboard.
       setTimeout(() => locationInputRef.current?.focus(), 250);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -517,6 +519,23 @@ function VerifyDrawer({
   const bbfInvalid = requiresBbf && (!bbf || !normalisedBbf);
   const trimmedLocation = location.trim();
   const locationInvalid = !trimmedLocation;
+
+  function handleLocationScannerKey(key: string, preventDefault: () => void) {
+    if (key === "Enter" || key === "Tab") {
+      preventDefault();
+      if (!bbfInvalid && location.trim()) handleSave();
+      return;
+    }
+    if (key === "Backspace") {
+      preventDefault();
+      setLocation((prev) => prev.slice(0, -1));
+      return;
+    }
+    if (key.length === 1) {
+      preventDefault();
+      setLocation((prev) => `${prev}${key}`.toUpperCase().slice(0, 32));
+    }
+  }
 
   function handleSave() {
     if (qty < 0) {
