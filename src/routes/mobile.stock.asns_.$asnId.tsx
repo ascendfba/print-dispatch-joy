@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchASN, fetchASNItems, type MintsoftASNItem } from "@/lib/mintsoft";
 import { loadSettings } from "@/lib/storage";
 
-export const Route = createFileRoute("/mobile/stock/asns/$asnId")({
+export const Route = createFileRoute("/mobile/stock/asns_/$asnId")({
   component: MobileASNDetail,
 });
 
