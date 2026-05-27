@@ -656,8 +656,13 @@ function VerifyDrawer({
               className="w-full h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
             />
             <p className="mt-1.5 text-[11px] text-muted-foreground">
-              Scan the location barcode — on-screen keyboard is disabled.
+              Scan the location barcode, or use the keypad below to type manually.
             </p>
+            <OnScreenKeypad
+              value={location}
+              onChange={(v) => setLocation(v.toUpperCase())}
+              maxLength={32}
+            />
           </div>
         </div>
 
