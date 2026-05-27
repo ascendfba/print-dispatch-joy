@@ -1968,6 +1968,8 @@ export async function fetchOrderDocuments(
     return [];
   });
 
+  // Light metadata-only result is exposed via fetchOrderDocumentSummaries below.
+
   const out: OrderDocument[] = [];
   for (const doc of Array.isArray(linkedDocs) ? linkedDocs : []) {
     const documentId = doc.ID;
