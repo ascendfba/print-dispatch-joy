@@ -1,14 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronLeft, Truck, Loader2, Package, Search, X, AlertTriangle, Save, PackageCheck, CheckCircle2, Minus, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   fetchASN,
   fetchASNItems,
   fetchProduct,
+  listWarehouseLocations,
+  receiveASNItem,
+  completeASN,
+  partialCompleteASN,
   type MintsoftASNItem,
   type MintsoftProduct,
+  type MintsoftWarehouseLocation,
 } from "@/lib/mintsoft";
 import { loadSettings } from "@/lib/storage";
 import {
@@ -22,6 +27,32 @@ import { Button } from "@/components/ui/button";
 
 type VerifiedRow = { receivedQty: number; bbf: string; location: string };
 
+function isoToDdmmyyyy(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return iso;
+  const [, y, mo, d] = m;
+  return `${d}${mo}${y}`;
+}
+
+function normLoc(s: string): string {
+  return (s ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function resolveLocationId(
+  input: string,
+  locations: MintsoftWarehouseLocation[],
+): MintsoftWarehouseLocation | null {
+  const target = normLoc(input);
+  if (!target) return null;
+  for (const l of locations) {
+    if (normLoc(l.code ?? "") === target) return l;
+  }
+  for (const l of locations) {
+    if (normLoc(l.name ?? "") === target) return l;
+  }
+  return null;
+}
+
 export const Route = createFileRoute("/mobile/stock/asns_/$asnId")({
   component: MobileASNDetail,
 });
@@ -32,6 +63,8 @@ function MobileASNDetail() {
   const [query, setQuery] = useState("");
   const [verified, setVerified] = useState<Record<string, VerifiedRow>>({});
   const [openItem, setOpenItem] = useState<MintsoftASNItem | null>(null);
+  const [submitting, setSubmitting] = useState<null | "partial" | "full">(null);
+  const queryClient = useQueryClient();
 
   const asnQuery = useQuery({
     queryKey: ["mobile-asn", id],
@@ -53,6 +86,96 @@ function MobileASNDetail() {
 
   const asn = asnQuery.data;
   const items = itemsQuery.data ?? [];
+  const warehouseId = asn?.WarehouseId ?? null;
+
+  const locationsQuery = useQuery({
+    queryKey: ["mobile-wh-locations", warehouseId],
+    queryFn: () =>
+      warehouseId
+        ? listWarehouseLocations(loadSettings(), warehouseId)
+        : Promise.resolve([] as MintsoftWarehouseLocation[]),
+    enabled: !!warehouseId,
+    staleTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  async function bookIn(mode: "partial" | "full") {
+    if (!warehouseId) {
+      toast.error("ASN has no warehouse assigned");
+      return;
+    }
+    const entries = Object.entries(verified);
+    if (entries.length === 0) {
+      toast.error("Verify at least one item first");
+      return;
+    }
+    const locations = locationsQuery.data ?? [];
+    if (locations.length === 0) {
+      toast.error("Warehouse locations not loaded yet");
+      return;
+    }
+    // Resolve all locations up-front
+    const resolved: Array<{
+      item: MintsoftASNItem;
+      row: VerifiedRow;
+      locationId: number;
+    }> = [];
+    for (const [key, row] of entries) {
+      const item = items.find((it) => String(it.ID ?? "") === key);
+      if (!item) continue;
+      const loc = resolveLocationId(row.location, locations);
+      if (!loc) {
+        toast.error(`Unknown location "${row.location}" for ${item.SKU ?? item.Title ?? "item"}`);
+        return;
+      }
+      resolved.push({ item, row, locationId: loc.id });
+    }
+    setSubmitting(mode);
+    const settings = loadSettings();
+    let okCount = 0;
+    const errors: string[] = [];
+    for (const r of resolved) {
+      try {
+        await receiveASNItem(settings, {
+          ASNId: id,
+          ASNDetailId: r.item.ID ?? null,
+          ProductId: r.item.ProductId!,
+          WarehouseId: warehouseId,
+          LocationId: r.locationId,
+          Quantity: r.row.receivedQty,
+          Complete: mode === "full",
+          BestBeforeDate: r.row.bbf ? isoToDdmmyyyy(r.row.bbf) : undefined,
+        });
+        okCount += 1;
+      } catch (e) {
+        errors.push(e instanceof Error ? e.message : String(e));
+      }
+    }
+    try {
+      if (mode === "full") {
+        await completeASN(settings, id);
+      } else {
+        await partialCompleteASN(settings, id);
+      }
+    } catch (e) {
+      errors.push(e instanceof Error ? e.message : String(e));
+    }
+    await queryClient.invalidateQueries({ queryKey: ["mobile-asn", id] });
+    await queryClient.invalidateQueries({ queryKey: ["mobile-asn-items", id] });
+    setSubmitting(null);
+    if (okCount > 0 && errors.length === 0) {
+      toast.success(
+        mode === "full"
+          ? `Booked in ${okCount} line${okCount === 1 ? "" : "s"} and completed ASN`
+          : `Partially booked ${okCount} line${okCount === 1 ? "" : "s"}`,
+      );
+      setVerified({});
+    } else if (okCount > 0) {
+      toast.warning(`Booked ${okCount}/${resolved.length}. ${errors[0]}`);
+    } else {
+      toast.error(errors[0] || "Book in failed");
+    }
+  }
 
   const filtered = query.trim()
     ? items.filter((it) => {
@@ -145,17 +268,27 @@ function MobileASNDetail() {
             Save
           </button>
           <button
-            onClick={() => toast.info("Partial book (stub)")}
-            className="flex flex-col items-center justify-center gap-1 h-16 rounded-xl border-2 border-amber-500 bg-amber-50 text-amber-800 font-semibold text-xs active:bg-amber-100"
+            onClick={() => void bookIn("partial")}
+            disabled={!!submitting || Object.keys(verified).length === 0}
+            className="flex flex-col items-center justify-center gap-1 h-16 rounded-xl border-2 border-amber-500 bg-amber-50 text-amber-800 font-semibold text-xs active:bg-amber-100 disabled:opacity-50"
           >
-            <PackageCheck className="h-6 w-6" strokeWidth={2.25} />
+            {submitting === "partial" ? (
+              <Loader2 className="h-6 w-6 animate-spin" strokeWidth={2.25} />
+            ) : (
+              <PackageCheck className="h-6 w-6" strokeWidth={2.25} />
+            )}
             Partial Book
           </button>
           <button
-            onClick={() => toast.success("Book in (stub)")}
-            className="flex flex-col items-center justify-center gap-1 h-16 rounded-xl bg-[#0099d4] text-white font-semibold text-xs shadow-sm active:bg-[#0088bc]"
+            onClick={() => void bookIn("full")}
+            disabled={!!submitting || Object.keys(verified).length === 0}
+            className="flex flex-col items-center justify-center gap-1 h-16 rounded-xl bg-[#0099d4] text-white font-semibold text-xs shadow-sm active:bg-[#0088bc] disabled:opacity-50"
           >
-            <CheckCircle2 className="h-6 w-6" strokeWidth={2.25} />
+            {submitting === "full" ? (
+              <Loader2 className="h-6 w-6 animate-spin" strokeWidth={2.25} />
+            ) : (
+              <CheckCircle2 className="h-6 w-6" strokeWidth={2.25} />
+            )}
             Book In
           </button>
         </div>
