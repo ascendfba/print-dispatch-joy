@@ -35,6 +35,8 @@ import {
   fetchOrderItems,
   fetchOrderDocuments,
   fetchProduct,
+  fetchOrderDocumentSummaries,
+  fetchOrderDocumentTypes,
   fetchProductBundle,
   fetchProductStock,
   stockMovementIn,
@@ -285,6 +287,37 @@ function OrderDetailPage() {
   const [packingBoxCount, setPackingBoxCount] = useState<number | null>(null);
   const [packingResetKey, setPackingResetKey] = useState(0);
   const [deletingPacking, setDeletingPacking] = useState(false);
+
+  // Detect whether a packing list has already been submitted on this order
+  // (persists across users — once saved in Mintsoft, every dispatcher sees it).
+  const packingListQuery = useQuery({
+    queryKey: ["packing-list-doc", id],
+    queryFn: async () => {
+      const docs = await fetchOrderDocumentSummaries(loadSettings(), id);
+      const types = await fetchOrderDocumentTypes(loadSettings()).catch(() => []);
+      const packingTypeId = types.find(
+        (t) => (t.Name ?? "").trim().toLowerCase() === "boxpackinglist",
+      )?.ID;
+      const match = docs.find((d) => {
+        if (packingTypeId && d.OrderDocumentTypeId === packingTypeId) return true;
+        const name = (d.FileName ?? "").toLowerCase();
+        return /packing\s*list/.test(name);
+      });
+      if (!match) return { exists: false as const, boxCount: 0 };
+      // Box count is embedded in the filename: "Packing List <ref> (N boxes).pdf".
+      const m = /\((\d+)\s*box/i.exec(match.FileName ?? "");
+      const boxCount = m ? Number(m[1]) : 1;
+      return { exists: true as const, boxCount };
+    },
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  useEffect(() => {
+    if (packingListQuery.data?.exists) {
+      setPackingBoxCount(packingListQuery.data.boxCount || 1);
+    }
+  }, [packingListQuery.data]);
 
   // Load order summary from the cached open-orders list (avoids an extra fetch).
   const ordersQuery = useQuery({
@@ -950,35 +983,6 @@ function OrderDetailPage() {
                     </span>
                   )}
                 </Button>
-                {saved && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    title="Delete packing list"
-                    aria-label="Delete packing list"
-                    disabled={deletingPacking || !order}
-                    onClick={() => {
-                      if (!order) return;
-                      if (
-                        !window.confirm(
-                          "Clear the packing list entry and start again?\n\nNote: Mintsoft's API does not support deleting attached documents, so the previous PDF will remain on the order in Mintsoft until removed manually there.",
-                        )
-                      )
-                        return;
-                      setPackingBoxCount(null);
-                      setPackingResetKey((k) => k + 1);
-                      toast.success("Packing list cleared — you can re-enter it now");
-                    }}
-                  >
-                    {deletingPacking ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                  </Button>
-                )}
               </div>
             );
           })()}
@@ -2271,6 +2275,7 @@ function PackingListDialog({
   alreadySubmitted?: boolean;
   onSaved?: (boxCount: number) => void;
 }) {
+  const qc = useQueryClient();
   const [boxCount, setBoxCount] = useState(1);
   const [boxes, setBoxes] = useState<PackingBox[]>([makeEmptyBox()]);
   const [submitting, setSubmitting] = useState(false);
@@ -2455,12 +2460,22 @@ function PackingListDialog({
       );
       return;
     }
+    const overweight = boxes
+      .map((b, i) => ({ i, kg: Number(b.weight) }))
+      .filter((x) => x.kg > 22)
+      .map((x) => x.i + 1);
+    if (overweight.length > 0) {
+      toast.error(
+        `Box ${overweight.join(", ")} exceeds the 22 kg limit — split the contents into more boxes`,
+      );
+      return;
+    }
     submitInFlightRef.current = true;
     setSubmitting(true);
     try {
       const ref = orderNumber ?? `#${orderId}`;
       const pdfBytes = await buildPackingListPdf({ orderRef: ref, boxes });
-      const fileName = `Packing List ${ref}.pdf`;
+      const fileName = `Packing List ${ref} (${boxes.length} boxes).pdf`;
       const blob = new Blob([pdfBytes as BlobPart], { type: "application/pdf" });
       setPdfPreview((prev) => {
         if (prev) URL.revokeObjectURL(prev.url);
@@ -2496,6 +2511,16 @@ function PackingListDialog({
       );
       return;
     }
+    const overweight = boxes
+      .map((b, i) => ({ i, kg: Number(b.weight) }))
+      .filter((x) => x.kg > 22)
+      .map((x) => x.i + 1);
+    if (overweight.length > 0) {
+      toast.error(
+        `Box ${overweight.join(", ")} exceeds the 22 kg limit — split the contents into more boxes`,
+      );
+      return;
+    }
     submitInFlightRef.current = true;
     setSubmitting(true);
     try {
@@ -2509,6 +2534,7 @@ function PackingListDialog({
       setSubmitted(true);
       toast.success("Packing list successfully submitted");
       onSaved?.(boxes.length);
+      qc.invalidateQueries({ queryKey: ["packing-list-doc", orderId] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to submit packing list");
     } finally {
@@ -2649,6 +2675,12 @@ function PackingListDialog({
                   <div className="rounded border border-red-400 bg-red-50 px-2 py-1 text-[11px] font-medium text-red-800">
                     <AlertTriangle className="mr-1 inline h-3 w-3" />
                     Weight is required — enter or confirm below
+                  </div>
+                )}
+                {Number(b.weight) > 22 && (
+                  <div className="rounded border border-red-500 bg-red-100 px-2 py-1 text-[11px] font-semibold text-red-900">
+                    <AlertTriangle className="mr-1 inline h-3 w-3" />
+                    Box exceeds 22 kg limit — split into more boxes before saving
                   </div>
                 )}
                 <div className="flex flex-wrap gap-2">
@@ -2837,7 +2869,8 @@ function PackingListDialog({
                   alreadySubmitted ||
                   submitted ||
                   boxes.some((b) => !(b.length && b.width && b.height)) ||
-                  boxes.some((b) => !(b.weight && Number(b.weight) > 0))
+                  boxes.some((b) => !(b.weight && Number(b.weight) > 0)) ||
+                  boxes.some((b) => Number(b.weight) > 22)
                 }
                 variant={pdfPreview ? "outline" : "default"}
               >
@@ -2851,7 +2884,8 @@ function PackingListDialog({
                     submitting ||
                     alreadySubmitted ||
                     submitted ||
-                    boxes.some((b) => !(b.weight && Number(b.weight) > 0))
+                    boxes.some((b) => !(b.weight && Number(b.weight) > 0)) ||
+                    boxes.some((b) => Number(b.weight) > 22)
                   }
                 >
                   {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
