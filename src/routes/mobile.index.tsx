@@ -6,13 +6,8 @@ import {
   ArrowLeftRight,
   PackagePlus,
   BookOpen,
-  ChevronRight,
-  Loader2,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { listASNs, type MintsoftASN } from "@/lib/mintsoft";
-import { loadSettings } from "@/lib/storage";
 
 export const Route = createFileRoute("/mobile/")({
   component: MobileHome,
