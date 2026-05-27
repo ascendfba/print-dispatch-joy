@@ -523,6 +523,7 @@ function VerifyDrawer({
   const [bbfConfirmed, setBbfConfirmed] = useState(false);
   const [location, setLocation] = useState<string>("");
   const scannerBufferRef = useRef("");
+  const scannerLastKeyAtRef = useRef(0);
 
   // Reset whenever a new item is opened.
   const itemKey = item ? String(item.ID ?? "") : "";
@@ -545,7 +546,6 @@ function VerifyDrawer({
 
   useEffect(() => {
     if (!scannerReady) return;
-    let lastKeyAt = 0;
     const handleScannerKey = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.altKey || event.metaKey) return;
       const target = event.target as HTMLElement | null;
@@ -571,8 +571,8 @@ function VerifyDrawer({
       if (event.key.length !== 1) return;
       event.preventDefault();
       const now = Date.now();
-      if (now - lastKeyAt > 1500) scannerBufferRef.current = "";
-      lastKeyAt = now;
+      if (now - scannerLastKeyAtRef.current > 1500) scannerBufferRef.current = "";
+      scannerLastKeyAtRef.current = now;
       scannerBufferRef.current = (scannerBufferRef.current + event.key).toUpperCase().slice(0, 32);
       setLocation(scannerBufferRef.current);
     };
