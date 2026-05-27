@@ -2000,6 +2000,7 @@ export async function fetchOrderDocuments(
           doc.ContentType ||
           (bytesLookLikePdf(bytes) ? "application/pdf" : "application/octet-stream"),
         documentId,
+        comments: doc.Comments?.trim() || undefined,
         bytes,
       });
     }
