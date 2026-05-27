@@ -984,35 +984,6 @@ function OrderDetailPage() {
                     </span>
                   )}
                 </Button>
-                {saved && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    title="Delete packing list"
-                    aria-label="Delete packing list"
-                    disabled={deletingPacking || !order}
-                    onClick={() => {
-                      if (!order) return;
-                      if (
-                        !window.confirm(
-                          "Clear the packing list entry and start again?\n\nNote: Mintsoft's API does not support deleting attached documents, so the previous PDF will remain on the order in Mintsoft until removed manually there.",
-                        )
-                      )
-                        return;
-                      setPackingBoxCount(null);
-                      setPackingResetKey((k) => k + 1);
-                      toast.success("Packing list cleared — you can re-enter it now");
-                    }}
-                  >
-                    {deletingPacking ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                  </Button>
-                )}
               </div>
             );
           })()}
