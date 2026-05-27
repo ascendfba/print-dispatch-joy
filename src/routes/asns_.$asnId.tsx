@@ -423,6 +423,7 @@ function BookInCard({
             receivedQty: remaining > 0 ? String(remaining) : "",
             locationId: "",
             bbf: "",
+            prefilled: remaining > 0,
           };
         }
       }
