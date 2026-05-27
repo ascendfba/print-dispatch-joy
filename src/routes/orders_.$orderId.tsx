@@ -2461,12 +2461,22 @@ function PackingListDialog({
       );
       return;
     }
+    const overweight = boxes
+      .map((b, i) => ({ i, kg: Number(b.weight) }))
+      .filter((x) => x.kg > 22)
+      .map((x) => x.i + 1);
+    if (overweight.length > 0) {
+      toast.error(
+        `Box ${overweight.join(", ")} exceeds the 22 kg limit — split the contents into more boxes`,
+      );
+      return;
+    }
     submitInFlightRef.current = true;
     setSubmitting(true);
     try {
       const ref = orderNumber ?? `#${orderId}`;
       const pdfBytes = await buildPackingListPdf({ orderRef: ref, boxes });
-      const fileName = `Packing List ${ref}.pdf`;
+      const fileName = `Packing List ${ref} (${boxes.length} boxes).pdf`;
       const blob = new Blob([pdfBytes as BlobPart], { type: "application/pdf" });
       setPdfPreview((prev) => {
         if (prev) URL.revokeObjectURL(prev.url);
