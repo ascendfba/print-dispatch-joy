@@ -19,8 +19,85 @@ export const Route = createFileRoute("/api/amazon-image")({
         // main landing image. Far more accurate than search-result scraping.
         if (asinMatch) {
           const asin = asinMatch[1].toUpperCase();
+          const dpUrl = `https://www.amazon.co.uk/dp/${asin}`;
+          // Try Firecrawl first — it bypasses AWS WAF and renders the page.
+          const firecrawlKey = process.env.FIRECRAWL_API_KEY;
+          if (firecrawlKey) {
+            try {
+              const fc = await fetch("https://api.firecrawl.dev/v2/scrape", {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${firecrawlKey}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  url: dpUrl,
+                  formats: ["html"],
+                  onlyMainContent: false,
+                  location: { country: "GB", languages: ["en-GB"] },
+                }),
+              });
+              if (fc.ok) {
+                const data = (await fc.json()) as {
+                  data?: { html?: string; metadata?: { title?: string } };
+                  html?: string;
+                };
+                const html = data.data?.html ?? data.html ?? "";
+                const title = data.data?.metadata?.title ?? null;
+                if (html && !/awswaf|challenge-container|captcha|robot check/i.test(html)) {
+                  const candidates: { image: string; title: string | null }[] = [];
+                  const seen = new Set<string>();
+                  const dyn = html.match(/id="landingImage"[^>]+data-a-dynamic-image=(?:"([^"]+)"|'([^']+)')/i);
+                  const dynRaw = dyn ? (dyn[1] ?? dyn[2]) : null;
+                  if (dynRaw) {
+                    try {
+                      const obj = JSON.parse(dynRaw.replace(/&quot;/g, '"')) as Record<string, [number, number]>;
+                      const sorted = Object.entries(obj).sort(
+                        (a, b) => b[1][0] * b[1][1] - a[1][0] * a[1][1],
+                      );
+                      for (const [u] of sorted) {
+                        if (!seen.has(u)) {
+                          seen.add(u);
+                          candidates.push({ image: u, title });
+                        }
+                      }
+                    } catch {
+                      // ignore parse errors
+                    }
+                  }
+                  const direct = html.match(/id="landingImage"[^>]+src="([^"]+)"/i);
+                  if (direct && !seen.has(direct[1])) {
+                    seen.add(direct[1]);
+                    candidates.push({ image: direct[1], title });
+                  }
+                  // Fallback: any m.media-amazon image referenced on the page.
+                  if (candidates.length === 0) {
+                    const re = /https:\/\/m\.media-amazon\.com\/images\/I\/[A-Za-z0-9._-]+\.(?:jpg|jpeg|png|webp)/gi;
+                    let m: RegExpExecArray | null;
+                    while ((m = re.exec(html)) && candidates.length < 6) {
+                      if (!seen.has(m[0])) {
+                        seen.add(m[0]);
+                        candidates.push({ image: m[0], title });
+                      }
+                    }
+                  }
+                  if (candidates.length > 0) {
+                    return Response.json({
+                      image: candidates[0].image,
+                      candidates,
+                      source: `firecrawl:amazon.co.uk/dp/${asin}`,
+                      asin,
+                      title,
+                    });
+                  }
+                }
+              }
+            } catch {
+              // fall through to direct fetch / search
+            }
+          }
           try {
-            const dp = await fetch(`https://www.amazon.co.uk/dp/${asin}`, {
+            const dp = await fetch(dpUrl, {
               headers: {
                 "User-Agent": ua,
                 "Accept-Language": "en-GB,en;q=0.9",
