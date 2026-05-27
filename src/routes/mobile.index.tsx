@@ -43,40 +43,6 @@ function MobileHome() {
     },
   ];
 
-  const asnsQuery = useQuery({
-    queryKey: ["mobile-asns"],
-    queryFn: async () => {
-      const settings = loadSettings();
-      if (!settings.mintsoftApiKey && !settings.mintsoftUsername) {
-        throw new Error("Configure Mintsoft in Settings first");
-      }
-      return listASNs(settings);
-    },
-    staleTime: 60_000,
-    refetchOnWindowFocus: false,
-  });
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const dayMs = 86_400_000;
-
-  const dayLabels = ["Today", "Tomorrow"];
-  const dayBorderColors = ["border-l-[#0099d4]", "border-l-[#0a2e3d]"];
-  const dayBadgeColors = ["bg-[#0099d4]/10 text-[#0099d4]", "bg-[#0a2e3d]/10 text-[#0a2e3d]"];
-
-  const dayCards = [0, 1].map((offset) => {
-    const d = new Date(today.getTime() + offset * dayMs);
-    const dStr = d.toDateString();
-    const label = dayLabels[offset];
-    const asns = (asnsQuery.data ?? []).filter((a) => {
-      if (!a.ExpectedDate) return false;
-      const ed = new Date(a.ExpectedDate);
-      ed.setHours(0, 0, 0, 0);
-      return ed.toDateString() === dStr;
-    });
-    return { date: d, label, asns, borderColor: dayBorderColors[offset], badgeColor: dayBadgeColors[offset] };
-  });
-
   return (
     <div className="px-4 py-4 space-y-5">
       {sections.map((s) => (
