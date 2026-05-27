@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronLeft, Search, Truck, Loader2, X, Boxes } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { listASNs, listClients, type MintsoftASN } from "@/lib/mintsoft";
+import { listASNs, listClients, fetchASNItems, type MintsoftASN } from "@/lib/mintsoft";
 import { loadSettings } from "@/lib/storage";
 
 function getSkuCount(asn: MintsoftASN): number | undefined {
@@ -22,6 +22,38 @@ function getSkuCount(asn: MintsoftASN): number | undefined {
   }
   const items = raw["ASNItems"] ?? raw["Items"] ?? raw["Details"];
   if (Array.isArray(items)) return items.length;
+  return undefined;
+}
+
+function getTotalUnits(asn: MintsoftASN): number | undefined {
+  const raw = asn as Record<string, unknown>;
+  // Prefer summing line-item expected quantities when available
+  const items = raw["ASNItems"] ?? raw["Items"] ?? raw["Details"] ?? raw["Lines"];
+  if (Array.isArray(items) && items.length > 0) {
+    let total = 0;
+    let found = false;
+    for (const it of items) {
+      if (!it || typeof it !== "object") continue;
+      const r = it as Record<string, unknown>;
+      const q =
+        r["ExpectedQuantity"] ?? r["Expected"] ?? r["Quantity"] ?? r["Qty"] ?? r["QtyExpected"];
+      const n = typeof q === "number" ? q : typeof q === "string" ? Number(q) : NaN;
+      if (Number.isFinite(n)) {
+        total += n;
+        found = true;
+      }
+    }
+    if (found) return total;
+  }
+  const candidates = ["TotalQuantity", "TotalQty", "TotalUnits", "ExpectedQuantity", "Quantity"];
+  for (const key of candidates) {
+    const v = raw[key];
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    if (typeof v === "string") {
+      const n = Number(v);
+      if (Number.isFinite(n)) return n;
+    }
+  }
   return undefined;
 }
 
@@ -228,6 +260,27 @@ function MobileASNs() {
 }
 
 function ASNCard({ asn, clientName }: { asn: MintsoftASN; clientName: string }) {
+  const itemsQuery = useQuery({
+    queryKey: ["mobile-asn-items", asn.ID],
+    queryFn: async () => {
+      const settings = loadSettings();
+      return fetchASNItems(settings, asn.ID);
+    },
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+  const items = itemsQuery.data ?? [];
+  const skuCountLive = items.length || getSkuCount(asn);
+  const totalUnitsLive =
+    items.length > 0
+      ? items.reduce((sum, it) => {
+          const r = it as unknown as Record<string, unknown>;
+          const q = r["ExpectedQuantity"] ?? r["Quantity"] ?? r["Qty"];
+          const n = typeof q === "number" ? q : typeof q === "string" ? Number(q) : 0;
+          return sum + (Number.isFinite(n) ? n : 0);
+        }, 0)
+      : getTotalUnits(asn);
+
   const expected = asn.ExpectedDate
     ? new Date(asn.ExpectedDate)
     : null;
@@ -296,17 +349,12 @@ function ASNCard({ asn, clientName }: { asn: MintsoftASN; clientName: string }) 
             </span>
           )}
         </div>
-        {(() => {
-          const skuCount = getSkuCount(asn);
-          const qty = asn.TotalQuantity;
-          if (skuCount == null && qty == null) return null;
-          return (
-            <div className="flex items-center gap-3 mt-1 flex-wrap text-[11px] font-medium text-[#0a2e3d]">
-              {skuCount != null && <span>SKU: {skuCount}</span>}
-              {qty != null && <span>Total Units: {qty}</span>}
-            </div>
-          );
-        })()}
+        {(skuCountLive != null || totalUnitsLive != null) && (
+          <div className="flex items-center gap-3 mt-1 flex-wrap text-[11px] font-medium text-[#0a2e3d]">
+            {skuCountLive != null && <span>SKU: {skuCountLive}</span>}
+            {totalUnitsLive != null && <span>Total Units: {totalUnitsLive}</span>}
+          </div>
+        )}
         {(() => {
           const breakdown = getPackageBreakdown(asn);
           if (!breakdown) return null;
