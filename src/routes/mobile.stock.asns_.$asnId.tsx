@@ -660,23 +660,20 @@ function VerifyDrawer({
               </span>
             </p>
             <div className="flex items-center gap-2">
-              <div
+              <input
                 ref={locationInputRef}
-                role="textbox"
-                aria-label="Location barcode scanner input"
-                tabIndex={0}
-                onClick={() => locationInputRef.current?.focus()}
+                type="text"
+                inputMode="none"
+                autoCapitalize="characters"
+                autoComplete="off"
+                placeholder="Scan location barcode"
+                value={location}
+                onFocus={() => locationInputRef.current?.setAttribute("virtualkeyboardpolicy", "manual")}
+                onChange={(e) => setLocation(e.target.value.toUpperCase())}
                 onKeyDown={(e) => handleLocationScannerKey(e.key, () => e.preventDefault())}
-                className="flex-1 h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background flex items-center focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
-              >
-                {location ? (
-                  <span>{location}</span>
-                ) : (
-                  <span className="text-muted-foreground font-sans normal-case tracking-normal">
-                    Scan location barcode
-                  </span>
-                )}
-              </div>
+                maxLength={32}
+                className="flex-1 h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
+              />
               <Button
                 type="button"
                 variant="outline"
