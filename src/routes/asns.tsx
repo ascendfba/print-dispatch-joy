@@ -1,6 +1,6 @@
 import { requireAuth } from "@/lib/require-auth";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,9 +34,10 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Loader2, Plus, RefreshCw, Truck, Zap } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2, Plus, RefreshCw, Truck, Zap } from "lucide-react";
 import {
   createASN,
+  fetchASNItems,
   listASNs,
   listClients,
   listWarehouses,
@@ -69,6 +70,15 @@ function AsnsPage() {
   const [statusTab, setStatusTab] = useState<
     "new" | "partial" | "completed"
   >("new");
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const toggleExpanded = (id: number) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const asnsQuery = useQuery({
     queryKey: ["asns"],
@@ -270,6 +280,7 @@ function AsnsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8" />
                   <TableHead className="w-[160px]">Reference</TableHead>
                   <TableHead className="w-[140px]">PO Ref</TableHead>
                   <TableHead>Client</TableHead>
@@ -283,8 +294,8 @@ function AsnsPage() {
               </TableHeader>
               <TableBody>
                 {filtered.map((a: MintsoftASN) => (
+                  <Fragment key={a.ID}>
                   <TableRow
-                    key={a.ID}
                     className="cursor-pointer"
                     onClick={() =>
                       navigate({
@@ -293,6 +304,24 @@ function AsnsPage() {
                       })
                     }
                   >
+                    <TableCell className="p-0 text-center">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleExpanded(a.ID);
+                        }}
+                        aria-label={expanded.has(a.ID) ? "Hide contents" : "Show contents"}
+                      >
+                        {expanded.has(a.ID) ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </TableCell>
                     <TableCell className="font-medium">
                       <Link
                         to="/asns/$asnId"
@@ -343,6 +372,15 @@ function AsnsPage() {
                       </Button>
                     </TableCell>
                   </TableRow>
+                  {expanded.has(a.ID) ? (
+                    <TableRow className="bg-muted/30 hover:bg-muted/30">
+                      <TableCell />
+                      <TableCell colSpan={9} className="py-3">
+                        <AsnItemsInline asnId={a.ID} />
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                  </Fragment>
                 ))}
               </TableBody>
             </Table>
@@ -459,5 +497,56 @@ function CreateAsnDialog({
         </Button>
       </DialogFooter>
     </DialogContent>
+  );
+}
+
+function AsnItemsInline({ asnId }: { asnId: number }) {
+  const q = useQuery({
+    queryKey: ["asn-items", asnId],
+    queryFn: () => fetchASNItems(loadSettings(), asnId),
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+  if (q.isLoading) {
+    return (
+      <div className="flex items-center text-xs text-muted-foreground">
+        <Loader2 className="mr-2 h-3 w-3 animate-spin" /> Loading items…
+      </div>
+    );
+  }
+  if (q.error) {
+    return (
+      <div className="text-xs text-destructive">
+        {q.error instanceof Error ? q.error.message : "Failed to load items"}
+      </div>
+    );
+  }
+  const items = q.data ?? [];
+  if (items.length === 0) {
+    return <div className="text-xs text-muted-foreground">No items on this ASN.</div>;
+  }
+  return (
+    <div className="rounded-md border bg-background">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[180px]">SKU</TableHead>
+            <TableHead>Item</TableHead>
+            <TableHead className="w-24 text-right">Expected</TableHead>
+            <TableHead className="w-24 text-right">Received</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {items.map((it, i) => (
+            <TableRow key={it.ID ?? `${it.SKU ?? "row"}-${i}`}>
+              <TableCell className="font-mono text-xs">{it.SKU || "—"}</TableCell>
+              <TableCell>{it.Title || it.Description || "—"}</TableCell>
+              <TableCell className="text-right tabular-nums">{it.ExpectedQuantity ?? 0}</TableCell>
+              <TableCell className="text-right tabular-nums">{it.ReceivedQuantity ?? 0}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
