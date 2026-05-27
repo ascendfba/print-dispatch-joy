@@ -546,6 +546,7 @@ function VerifyDrawer({
 
   useEffect(() => {
     if (!scannerReady) return;
+    (document.activeElement as HTMLElement | null)?.blur();
     const handleScannerKey = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.altKey || event.metaKey) return;
       const target = event.target as HTMLElement | null;
