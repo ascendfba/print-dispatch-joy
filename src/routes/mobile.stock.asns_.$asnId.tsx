@@ -666,32 +666,48 @@ function VerifyDrawer({
                 (scan or type)
               </span>
             </p>
-            <input
-              ref={locationInputRef}
-              type="text"
-              inputMode="none"
-              autoCapitalize="characters"
-              autoComplete="off"
-              placeholder="Scan location barcode"
-              value={location}
-              onChange={(e) => setLocation(e.target.value.toUpperCase())}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  if (!bbfInvalid && location.trim()) handleSave();
-                }
-              }}
-              maxLength={32}
-              className="w-full h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
-            />
-            <p className="mt-1.5 text-[11px] text-muted-foreground">
-              Scan the location barcode, or use the keypad below to type manually.
-            </p>
-            <OnScreenKeypad
-              value={location}
-              onChange={(v) => setLocation(v.toUpperCase())}
-              maxLength={32}
-            />
+            <div className="flex items-center gap-2">
+              <div
+                ref={locationInputRef}
+                role="textbox"
+                aria-label="Location barcode scanner input"
+                tabIndex={0}
+                onClick={() => locationInputRef.current?.focus()}
+                onKeyDown={(e) => handleLocationScannerKey(e.key, () => e.preventDefault())}
+                className="flex-1 h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background flex items-center focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
+              >
+                {location ? (
+                  <span>{location}</span>
+                ) : (
+                  <span className="text-muted-foreground font-sans normal-case tracking-normal">
+                    Scan location barcode
+                  </span>
+                )}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label="Open manual location keypad"
+                onClick={() => {
+                  setShowLocationKeypad((show) => !show);
+                  setTimeout(() => locationInputRef.current?.focus(), 0);
+                }}
+                className="h-12 w-12 shrink-0"
+              >
+                <Keyboard className="h-5 w-5" />
+              </Button>
+            </div>
+            {showLocationKeypad && (
+              <OnScreenKeypad
+                value={location}
+                onChange={(v) => {
+                  setLocation(v.toUpperCase());
+                  setTimeout(() => locationInputRef.current?.focus(), 0);
+                }}
+                maxLength={32}
+              />
+            )}
           </div>
         </div>
 
