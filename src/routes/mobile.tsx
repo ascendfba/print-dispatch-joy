@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, Link, useLocation } from "@tanstack/react-router";
-import { Menu, Home, MapPin, Search } from "lucide-react";
+import { Menu, Home, MapPinned, ScanBarcode } from "lucide-react";
 import ascendLogo from "@/assets/ascend-fba-logo.png";
 
 export const Route = createFileRoute("/mobile")({
@@ -34,11 +34,11 @@ function MobileShell() {
       </main>
 
       {/* Bottom nav */}
-      <nav className="shrink-0 border-t bg-card">
+      <nav className="shrink-0 border-t bg-card pb-[env(safe-area-inset-bottom)]">
         <div className="grid grid-cols-3">
-          <BottomItem to="/mobile/locations" label="Location Contents" icon={<MapPin className="h-5 w-5" />} active={isActive("/mobile/locations")} />
-          <BottomItem to="/mobile" label="Home" icon={<Home className="h-5 w-5" />} active={pathname === "/mobile"} />
-          <BottomItem to="/mobile/search" label="Product Search" icon={<Search className="h-5 w-5" />} active={isActive("/mobile/search")} />
+          <BottomItem to="/mobile/locations" label="Locations" icon={<MapPinned className="h-7 w-7" strokeWidth={2.25} />} active={isActive("/mobile/locations")} />
+          <BottomItem to="/mobile" label="Home" icon={<Home className="h-7 w-7" strokeWidth={2.25} />} active={pathname === "/mobile"} />
+          <BottomItem to="/mobile/search" label="Search" icon={<ScanBarcode className="h-7 w-7" strokeWidth={2.25} />} active={isActive("/mobile/search")} />
         </div>
       </nav>
     </div>
@@ -59,8 +59,8 @@ function BottomItem({
   return (
     <Link
       to={to}
-      className={`flex flex-col items-center justify-center gap-1 py-2 text-[11px] ${
-        active ? "text-[#0099d4] font-medium" : "text-muted-foreground"
+      className={`flex flex-col items-center justify-center gap-1 py-3 text-xs font-medium active:bg-muted/60 transition-colors ${
+        active ? "text-[#0099d4]" : "text-muted-foreground"
       }`}
     >
       {icon}
