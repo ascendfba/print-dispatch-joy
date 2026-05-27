@@ -27,6 +27,8 @@ import { Button } from "@/components/ui/button";
 
 type VerifiedRow = { receivedQty: number; bbf: string; location: string };
 
+const mobileVerifiedKey = (asnId: number) => `mobile-asn-verified:${asnId}`;
+
 // Mintsoft accepts ISO YYYY-MM-DD on the ASN receive endpoint. We keep this
 // helper to display the UK date the user expects while the API payload stays
 // in Mintsoft's documented date format.
@@ -69,6 +71,15 @@ function MobileASNDetail() {
   const [openItem, setOpenItem] = useState<MintsoftASNItem | null>(null);
   const [submitting, setSubmitting] = useState<null | "partial" | "full">(null);
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(mobileVerifiedKey(id));
+      setVerified(raw ? (JSON.parse(raw) as Record<string, VerifiedRow>) : {});
+    } catch {
+      setVerified({});
+    }
+  }, [id]);
 
   const asnQuery = useQuery({
     queryKey: ["mobile-asn", id],
@@ -175,6 +186,9 @@ function MobileASNDetail() {
           : `Partially booked ${okCount} line${okCount === 1 ? "" : "s"}`,
       );
       setVerified({});
+      try {
+        localStorage.removeItem(mobileVerifiedKey(id));
+      } catch { /* ignore */ }
       try {
         const raw = localStorage.getItem("mobile.asns.hidden");
         const arr = raw ? (JSON.parse(raw) as number[]) : [];
@@ -313,10 +327,16 @@ function MobileASNDetail() {
         onClose={() => setOpenItem(null)}
         onSave={(row) => {
           if (!openItem) return;
-          setVerified((prev) => ({
-            ...prev,
-            [String(openItem.ID ?? "")]: row,
-          }));
+          setVerified((prev) => {
+            const next = {
+              ...prev,
+              [String(openItem.ID ?? "")]: row,
+            };
+            try {
+              localStorage.setItem(mobileVerifiedKey(id), JSON.stringify(next));
+            } catch { /* ignore */ }
+            return next;
+          });
           setOpenItem(null);
           toast.success("Item verified");
         }}
@@ -502,15 +522,8 @@ function VerifyDrawer({
   const [bbf, setBbf] = useState<string>("");
   const [bbfConfirmed, setBbfConfirmed] = useState(false);
   const [location, setLocation] = useState<string>("");
-  const locationInputRef = useRef<HTMLInputElement | null>(null);
-
-  function focusLocationScanner(delay = 0) {
-    setTimeout(() => {
-      const input = locationInputRef.current;
-      input?.focus({ preventScroll: true });
-      input?.setSelectionRange(input.value.length, input.value.length);
-    }, delay);
-  }
+  const scannerBufferRef = useRef("");
+  const scannerLastKeyAtRef = useRef(0);
 
   // Reset whenever a new item is opened.
   const itemKey = item ? String(item.ID ?? "") : "";
@@ -520,8 +533,7 @@ function VerifyDrawer({
       setBbf(existing?.bbf ?? "");
       setBbfConfirmed(Boolean(existing?.bbf));
       setLocation(existing?.location ?? "");
-      // Keep a real visible input focused so Zebra scanners can inject keystrokes.
-      focusLocationScanner(250);
+      scannerBufferRef.current = existing?.location ?? "";
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemKey]);
@@ -530,15 +542,45 @@ function VerifyDrawer({
   const bbfInvalid = requiresBbf && (!bbf || !normalisedBbf);
   const trimmedLocation = location.trim();
   const locationInvalid = !trimmedLocation;
+  const scannerReady = !!item && (!requiresBbf || (bbfConfirmed && !bbfInvalid));
 
-  function handleLocationScannerKey(key: string, preventDefault: () => void) {
-    if (key === "Enter" || key === "Tab") {
-      preventDefault();
-      const scannedLocation = (locationInputRef.current?.value ?? location).trim().toUpperCase();
-      setLocation(scannedLocation);
-      if (!bbfInvalid && scannedLocation.trim()) handleSave(scannedLocation);
-    }
-  }
+  useEffect(() => {
+    if (!scannerReady) return;
+    (document.activeElement as HTMLElement | null)?.blur();
+    const handleScannerKey = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.altKey || event.metaKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT") return;
+
+      if (event.key === "Enter" || event.key === "Tab") {
+        event.preventDefault();
+        const scannedLocation = scannerBufferRef.current.trim().toUpperCase();
+        if (scannedLocation) {
+          setLocation(scannedLocation);
+          handleSave(scannedLocation);
+        }
+        return;
+      }
+
+      if (event.key === "Backspace") {
+        event.preventDefault();
+        scannerBufferRef.current = scannerBufferRef.current.slice(0, -1);
+        setLocation(scannerBufferRef.current);
+        return;
+      }
+
+      if (event.key.length !== 1) return;
+      event.preventDefault();
+      const now = Date.now();
+      if (now - scannerLastKeyAtRef.current > 1500) scannerBufferRef.current = "";
+      scannerLastKeyAtRef.current = now;
+      scannerBufferRef.current = (scannerBufferRef.current + event.key).toUpperCase().slice(0, 32);
+      setLocation(scannerBufferRef.current);
+    };
+
+    document.addEventListener("keydown", handleScannerKey, true);
+    return () => document.removeEventListener("keydown", handleScannerKey, true);
+  }, [scannerReady, bbfInvalid, normalisedBbf, location, qty, locations]);
 
   function handleSave(locationOverride = location) {
     const saveLocation = locationOverride.trim();
@@ -558,7 +600,7 @@ function VerifyDrawer({
     if (!matched) {
       toast.error(`Location "${saveLocation}" not found in this warehouse`);
       setLocation("");
-      focusLocationScanner(50);
+      scannerBufferRef.current = "";
       return;
     }
     const canonical = matched.code || matched.name || saveLocation;
@@ -635,8 +677,13 @@ function VerifyDrawer({
                   placeholder="010126"
                   value={bbf}
                   onChange={(e) => {
-                    setBbf(e.target.value);
-                    setBbfConfirmed(false);
+                    const next = e.target.value;
+                    const validDate = Boolean(normaliseBbf(next));
+                    setBbf(next);
+                    setBbfConfirmed(validDate);
+                    if (validDate) {
+                      setTimeout(() => (document.activeElement as HTMLElement | null)?.blur(), 0);
+                    }
                   }}
                   maxLength={10}
                   className="flex-1 h-12 px-3 text-base tabular-nums rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
@@ -646,7 +693,6 @@ function VerifyDrawer({
                   onClick={() => {
                     setBbfConfirmed(true);
                     (document.activeElement as HTMLElement | null)?.blur();
-                    focusLocationScanner(50);
                   }}
                   disabled={!bbf || !normalisedBbf}
                   className="h-12 px-4 bg-[#0099d4] hover:bg-[#0088bc] text-white"
@@ -682,26 +728,30 @@ function VerifyDrawer({
             <p className="text-xs font-semibold text-muted-foreground mb-2">
               Location <span className="text-rose-600">*</span>{" "}
               <span className="text-muted-foreground/70 font-normal">
-                (scan or type)
+                (scan only)
               </span>
             </p>
             <div className="flex items-center gap-2">
-              <input
-                ref={locationInputRef}
-                type="text"
-                autoCapitalize="characters"
-                autoComplete="off"
-                aria-label="Location"
-                placeholder="Scan location barcode"
-                value={location}
-                onChange={(e) => {
-                  const next = e.target.value.toUpperCase();
-                  setLocation(next);
-                }}
-                onKeyDown={(e) => handleLocationScannerKey(e.key, () => e.preventDefault())}
-                maxLength={32}
-                className="flex-1 h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
-              />
+              <div
+                role="status"
+                aria-label="Scanned location"
+                className="flex-1 h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background flex items-center"
+              >
+                {location || (scannerReady ? "SCAN LOCATION" : "CONFIRM BBF FIRST")}
+              </div>
+              {location && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    scannerBufferRef.current = "";
+                    setLocation("");
+                  }}
+                  className="h-12 px-3"
+                >
+                  Clear
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -724,61 +774,6 @@ function VerifyDrawer({
 }
 
 type ImageCandidate = { image: string; title?: string | null };
-
-function OnScreenKeypad({
-  value,
-  onChange,
-  maxLength = 32,
-}: {
-  value: string;
-  onChange: (next: string) => void;
-  maxLength?: number;
-}) {
-  const rows = [
-    ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
-    ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
-    ["A", "S", "D", "F", "G", "H", "J", "K", "L", "-"],
-    ["Z", "X", "C", "V", "B", "N", "M", "/", ".", "_"],
-  ];
-  const press = (ch: string) => {
-    if (value.length >= maxLength) return;
-    onChange(value + ch);
-  };
-  return (
-    <div className="mt-2 select-none rounded-xl border bg-muted/40 p-1.5 space-y-1">
-      {rows.map((row, i) => (
-        <div key={i} className="flex gap-1">
-          {row.map((ch) => (
-            <button
-              key={ch}
-              type="button"
-              onClick={() => press(ch)}
-              className="flex-1 h-9 rounded-md bg-background border text-sm font-mono font-semibold active:bg-muted"
-            >
-              {ch}
-            </button>
-          ))}
-        </div>
-      ))}
-      <div className="flex gap-1">
-        <button
-          type="button"
-          onClick={() => onChange("")}
-          className="flex-1 h-9 rounded-md bg-background border text-xs font-medium active:bg-muted"
-        >
-          Clear
-        </button>
-        <button
-          type="button"
-          onClick={() => onChange(value.slice(0, -1))}
-          className="flex-[2] h-9 rounded-md bg-background border text-xs font-medium active:bg-muted"
-        >
-          ⌫ Backspace
-        </button>
-      </div>
-    </div>
-  );
-}
 
 async function fetchImageCandidates(query: string): Promise<ImageCandidate[]> {
   try {
