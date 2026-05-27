@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, Truck, Loader2, Package, Search, X, AlertTriangle, Save, PackageCheck, CheckCircle2, Minus, Plus, Keyboard } from "lucide-react";
+import { ChevronLeft, Truck, Loader2, Package, Search, X, AlertTriangle, Save, PackageCheck, CheckCircle2, Minus, Plus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -502,9 +502,7 @@ function VerifyDrawer({
   const [bbf, setBbf] = useState<string>("");
   const [bbfConfirmed, setBbfConfirmed] = useState(false);
   const [location, setLocation] = useState<string>("");
-  const [showLocationKeypad, setShowLocationKeypad] = useState(false);
   const locationInputRef = useRef<HTMLInputElement | null>(null);
-  const locationScanBufferRef = useRef("");
 
   function focusLocationScanner(delay = 0) {
     setTimeout(() => {
@@ -522,9 +520,7 @@ function VerifyDrawer({
       setBbf(existing?.bbf ?? "");
       setBbfConfirmed(Boolean(existing?.bbf));
       setLocation(existing?.location ?? "");
-      locationScanBufferRef.current = (existing?.location ?? "").toUpperCase();
-      setShowLocationKeypad(false);
-      // Keep a real input focused so the device scanner can type into it.
+      // Keep a real visible input focused so Zebra scanners can inject keystrokes.
       focusLocationScanner(250);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -538,7 +534,7 @@ function VerifyDrawer({
   function handleLocationScannerKey(key: string, preventDefault: () => void) {
     if (key === "Enter" || key === "Tab") {
       preventDefault();
-      const scannedLocation = (locationInputRef.current?.value ?? location).toUpperCase();
+      const scannedLocation = (locationInputRef.current?.value ?? location).trim().toUpperCase();
       setLocation(scannedLocation);
       if (!bbfInvalid && scannedLocation.trim()) handleSave(scannedLocation);
     }
@@ -562,54 +558,12 @@ function VerifyDrawer({
     if (!matched) {
       toast.error(`Location "${saveLocation}" not found in this warehouse`);
       setLocation("");
-      locationScanBufferRef.current = "";
       focusLocationScanner(50);
       return;
     }
     const canonical = matched.code || matched.name || saveLocation;
     onSave({ receivedQty: qty, bbf: normalisedBbf, location: canonical });
   }
-
-  useEffect(() => {
-    if (!item || bbfInvalid || (requiresBbf && !bbfConfirmed)) return;
-
-    const onScannerKey = (event: KeyboardEvent) => {
-      if (event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
-
-      const target = event.target as HTMLElement | null;
-      if (target?.id === "bbf-input") return;
-
-      if (event.key === "Enter" || event.key === "Tab") {
-        event.preventDefault();
-        event.stopPropagation();
-        const scannedLocation = locationScanBufferRef.current.toUpperCase();
-        setLocation(scannedLocation);
-        if (scannedLocation.trim()) handleSave(scannedLocation);
-        return;
-      }
-
-      if (event.key === "Backspace") {
-        event.preventDefault();
-        event.stopPropagation();
-        const next = locationScanBufferRef.current.slice(0, -1);
-        locationScanBufferRef.current = next;
-        setLocation(next);
-        return;
-      }
-
-      if (event.key.length === 1) {
-        event.preventDefault();
-        event.stopPropagation();
-        const next = (locationScanBufferRef.current + event.key).toUpperCase().slice(0, 32);
-        locationScanBufferRef.current = next;
-        setLocation(next);
-      }
-    };
-
-    document.addEventListener("keydown", onScannerKey, true);
-    return () => document.removeEventListener("keydown", onScannerKey, true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemKey, bbfInvalid, requiresBbf, bbfConfirmed, qty, normalisedBbf, locations]);
 
   return (
     <Drawer open={!!item} onOpenChange={(o) => !o && onClose()}>
@@ -735,53 +689,20 @@ function VerifyDrawer({
               <input
                 ref={locationInputRef}
                 type="text"
-                inputMode="none"
                 autoCapitalize="characters"
                 autoComplete="off"
-                aria-label="Location scanner capture"
-                value={locationScanBufferRef.current}
-                tabIndex={-1}
+                aria-label="Location"
+                placeholder="Scan location barcode"
+                value={location}
                 onChange={(e) => {
                   const next = e.target.value.toUpperCase();
-                  locationScanBufferRef.current = next;
                   setLocation(next);
                 }}
                 onKeyDown={(e) => handleLocationScannerKey(e.key, () => e.preventDefault())}
                 maxLength={32}
-                className="sr-only"
+                className="flex-1 h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
               />
-              <div
-                aria-hidden="true"
-                className="flex-1 h-12 px-3 flex items-center text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background"
-              >
-                {location || <span className="font-sans text-muted-foreground normal-case tracking-normal">Scan location barcode</span>}
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                aria-label="Open manual location keypad"
-                onClick={() => {
-                  setShowLocationKeypad((show) => !show);
-                  focusLocationScanner();
-                }}
-                className="h-12 w-12 shrink-0"
-              >
-                <Keyboard className="h-5 w-5" />
-              </Button>
             </div>
-            {showLocationKeypad && (
-              <OnScreenKeypad
-                value={location}
-                onChange={(v) => {
-                  const next = v.toUpperCase();
-                  locationScanBufferRef.current = next;
-                  setLocation(next);
-                  focusLocationScanner();
-                }}
-                maxLength={32}
-              />
-            )}
           </div>
         </div>
 
