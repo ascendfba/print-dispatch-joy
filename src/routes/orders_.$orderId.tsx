@@ -2292,6 +2292,60 @@ async function buildPackingListPdf({
   return await pdf.save();
 }
 
+async function buildBoxLabelsPdf({
+  orderRef,
+  boxCount,
+}: {
+  orderRef: string;
+  boxCount: number;
+}): Promise<Uint8Array> {
+  const { PDFDocument: PDFDoc, StandardFonts, rgb } = await import("pdf-lib");
+  const pdf = await PDFDoc.create();
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+
+  // 50mm x 25mm in PDF points (1mm = 2.8346pt)
+  const MM = 2.8346456693;
+  const pageW = 50 * MM;
+  const pageH = 25 * MM;
+
+  const total = Math.max(1, Math.floor(boxCount));
+  for (let i = 1; i <= total; i++) {
+    const page = pdf.addPage([pageW, pageH]);
+    const refText = orderRef;
+    const boxText = `Box ${i} / ${total}`;
+
+    // Order ref — fit within the label width
+    let refSize = 14;
+    while (refSize > 7 && bold.widthOfTextAtSize(refText, refSize) > pageW - 12) {
+      refSize -= 0.5;
+    }
+    const refW = bold.widthOfTextAtSize(refText, refSize);
+    page.drawText(refText, {
+      x: (pageW - refW) / 2,
+      y: pageH - refSize - 6,
+      size: refSize,
+      font: bold,
+      color: rgb(0, 0, 0),
+    });
+
+    const boxSize = 18;
+    const boxW = bold.widthOfTextAtSize(boxText, boxSize);
+    page.drawText(boxText, {
+      x: (pageW - boxW) / 2,
+      y: 8,
+      size: boxSize,
+      font: bold,
+      color: rgb(0, 0, 0),
+    });
+
+    // Silence unused-var lint for font (kept available for future tweaks)
+    void font;
+  }
+
+  return await pdf.save();
+}
+
 function PackingListDialog({
   open,
   onOpenChange,
