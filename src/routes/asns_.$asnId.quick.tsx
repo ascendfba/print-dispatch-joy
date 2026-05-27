@@ -34,6 +34,8 @@ import {
   type MintsoftProduct,
 } from "@/lib/mintsoft";
 import { loadSettings } from "@/lib/storage";
+import { useProductImage } from "@/lib/useProductImage";
+import { AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/asns_/$asnId/quick")({
   beforeLoad: ({ location }) => requireAuth(location),
@@ -309,15 +311,7 @@ function QuickAsnPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6 p-6">
-            {current.ImageURL ? (
-              <div className="flex justify-center">
-                <img
-                  src={current.ImageURL}
-                  alt={current.Title ?? ""}
-                  className="max-h-48 rounded-md border bg-white object-contain p-2"
-                />
-              </div>
-            ) : null}
+            <QuickProductImage product={current} />
 
             <div className="space-y-2">
               <Label htmlFor="qty" className="text-base">Quantity received</Label>
