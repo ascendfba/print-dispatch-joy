@@ -26,6 +26,7 @@ import {
 import { Button } from "@/components/ui/button";
 
 type VerifiedRow = { receivedQty: number; bbf: string; location: string };
+type ScannerDebugEntry = { id: number; time: string; label: string; detail: string };
 
 const mobileVerifiedKey = (asnId: number) => `mobile-asn-verified:${asnId}`;
 
@@ -521,10 +522,13 @@ function VerifyDrawer({
   const [bbfConfirmed, setBbfConfirmed] = useState(false);
   const [location, setLocation] = useState<string>("");
   const [scannerArmed, setScannerArmed] = useState(false);
+  const [showScannerDebug, setShowScannerDebug] = useState(false);
+  const [scannerDebug, setScannerDebug] = useState<ScannerDebugEntry[]>([]);
   const scannerInputRef = useRef<HTMLInputElement | null>(null);
   const scannerBufferRef = useRef("");
   const scannerLastKeyAtRef = useRef(0);
   const scannerCommitTimerRef = useRef<number | null>(null);
+  const scannerDebugIdRef = useRef(0);
 
   // Reset whenever a new item is opened.
   const itemKey = item ? String(item.ID ?? "") : "";
@@ -535,6 +539,7 @@ function VerifyDrawer({
       setBbfConfirmed(Boolean(existing?.bbf));
       setLocation(existing?.location ?? "");
       setScannerArmed(false);
+      setScannerDebug([]);
       scannerBufferRef.current = existing?.location ?? "";
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -544,25 +549,55 @@ function VerifyDrawer({
   const bbfInvalid = requiresBbf && (!bbf || !normalisedBbf);
   const trimmedLocation = location.trim();
   const locationInvalid = !trimmedLocation;
-  const scannerReady = !!item && (!requiresBbf || (bbfConfirmed && !bbfInvalid));
+  const productRequirementKnown = !item?.ProductId || !productQuery.isLoading;
+  const scannerReady = !!item && productRequirementKnown && (!requiresBbf || (bbfConfirmed && !bbfInvalid));
 
-  function armScanner() {
-    if (!scannerReady) return;
+  function addScannerDebug(label: string, detail = "") {
+    const active = document.activeElement as HTMLElement | null;
+    const activeLabel = active
+      ? `${active.tagName.toLowerCase()}${active.id ? `#${active.id}` : ""}`
+      : "none";
+    const id = scannerDebugIdRef.current + 1;
+    scannerDebugIdRef.current = id;
+    setScannerDebug((entries) => [
+      {
+        id,
+        time: new Date().toLocaleTimeString(),
+        label,
+        detail: `${detail}${detail ? " · " : ""}active=${activeLabel}`,
+      },
+      ...entries,
+    ].slice(0, 12));
+  }
+
+  function armScanner(reason = "manual", attempt = 0) {
+    if (!scannerReady) {
+      addScannerDebug("arm blocked", `reason=${reason} known=${productRequirementKnown} requiresBbf=${requiresBbf} bbfConfirmed=${bbfConfirmed}`);
+      return;
+    }
     setScannerArmed(true);
     scannerLastKeyAtRef.current = 0;
     scannerBufferRef.current = "";
     const input = scannerInputRef.current;
-    if (!input) return;
+    if (!input) {
+      addScannerDebug("arm retry", `reason=${reason} attempt=${attempt}`);
+      if (attempt < 8) window.setTimeout(() => armScanner(reason, attempt + 1), 75);
+      return;
+    }
     input.readOnly = true;
     input.focus({ preventScroll: true });
+    addScannerDebug("armed", `reason=${reason} attempt=${attempt} focused=${document.activeElement === input}`);
     window.setTimeout(() => {
-      if (scannerInputRef.current === input) input.readOnly = false;
+      if (scannerInputRef.current === input) {
+        input.readOnly = false;
+        addScannerDebug("input ready", `reason=${reason}`);
+      }
     }, 80);
   }
 
-  function focusScannerInput() {
+  function focusScannerInput(reason = "focus") {
     window.setTimeout(() => {
-      armScanner();
+      armScanner(reason);
     }, 0);
   }
 
@@ -571,10 +606,12 @@ function VerifyDrawer({
     setScannerArmed(true);
     scannerBufferRef.current = scannedLocation;
     setLocation(scannedLocation);
+    addScannerDebug("buffer", scannedLocation || "empty");
     if (scannerCommitTimerRef.current) window.clearTimeout(scannerCommitTimerRef.current);
     scannerCommitTimerRef.current = window.setTimeout(() => {
       const nextLocation = scannerBufferRef.current.trim().toUpperCase();
       if (nextLocation && resolveLocationId(nextLocation, locations)) {
+        addScannerDebug("auto save", nextLocation);
         handleSave(nextLocation);
       }
     }, 300);
