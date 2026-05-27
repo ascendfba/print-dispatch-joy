@@ -1062,6 +1062,7 @@ function OrderDetailPage() {
         products={productsQuery.data}
         orderId={id}
         orderNumber={orderReference}
+        alreadySubmitted={packingBoxCount !== null}
         onSaved={(count) => setPackingBoxCount(count)}
       />
 
