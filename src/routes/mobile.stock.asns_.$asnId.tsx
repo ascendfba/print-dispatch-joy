@@ -520,7 +520,7 @@ function VerifyDrawer({
   const [bbf, setBbf] = useState<string>("");
   const [bbfConfirmed, setBbfConfirmed] = useState(false);
   const [location, setLocation] = useState<string>("");
-  const scannerInputRef = useRef<HTMLInputElement | null>(null);
+  const scannerInputRef = useRef<HTMLButtonElement | null>(null);
   const scannerBufferRef = useRef("");
   const scannerLastKeyAtRef = useRef(0);
   const scannerCommitTimerRef = useRef<number | null>(null);
