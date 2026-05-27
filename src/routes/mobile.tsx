@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, Link, useLocation } from "@tanstack/react-router";
-import { Menu, Home, MapPin, Search, Warehouse } from "lucide-react";
+import { Menu, Home, MapPin, Search } from "lucide-react";
 import ascendLogo from "@/assets/ascend-fba-logo.png";
 
 export const Route = createFileRoute("/mobile")({
