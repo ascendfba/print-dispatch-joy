@@ -327,7 +327,7 @@ function MobileASNDetail() {
         onClose={() => setOpenItem(null)}
         onSave={(row) => {
           if (!openItem) return;
-          setVerified((prev) => ({
+          setVerified((prev) => {
             const next = {
               ...prev,
               [String(openItem.ID ?? "")]: row,
