@@ -26,6 +26,7 @@ import {
 import { Button } from "@/components/ui/button";
 
 type VerifiedRow = { receivedQty: number; bbf: string; location: string };
+type ScannerDebugEntry = { id: number; time: string; label: string; detail: string };
 
 const mobileVerifiedKey = (asnId: number) => `mobile-asn-verified:${asnId}`;
 
@@ -521,10 +522,19 @@ function VerifyDrawer({
   const [bbfConfirmed, setBbfConfirmed] = useState(false);
   const [location, setLocation] = useState<string>("");
   const [scannerArmed, setScannerArmed] = useState(false);
+  const [showScannerDebug, setShowScannerDebug] = useState(false);
+  const [scannerDebug, setScannerDebug] = useState<ScannerDebugEntry[]>([]);
   const scannerInputRef = useRef<HTMLInputElement | null>(null);
   const scannerBufferRef = useRef("");
+  const scannerArmedRef = useRef(false);
   const scannerLastKeyAtRef = useRef(0);
   const scannerCommitTimerRef = useRef<number | null>(null);
+  const scannerDebugIdRef = useRef(0);
+
+  function setScannerArmedState(next: boolean) {
+    scannerArmedRef.current = next;
+    setScannerArmed(next);
+  }
 
   // Reset whenever a new item is opened.
   const itemKey = item ? String(item.ID ?? "") : "";
@@ -534,7 +544,8 @@ function VerifyDrawer({
       setBbf(existing?.bbf ?? "");
       setBbfConfirmed(Boolean(existing?.bbf));
       setLocation(existing?.location ?? "");
-      setScannerArmed(false);
+      setScannerArmedState(false);
+      setScannerDebug([]);
       scannerBufferRef.current = existing?.location ?? "";
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -544,37 +555,69 @@ function VerifyDrawer({
   const bbfInvalid = requiresBbf && (!bbf || !normalisedBbf);
   const trimmedLocation = location.trim();
   const locationInvalid = !trimmedLocation;
-  const scannerReady = !!item && (!requiresBbf || (bbfConfirmed && !bbfInvalid));
+  const productRequirementKnown = !item?.ProductId || !productQuery.isLoading;
+  const scannerReady = !!item && productRequirementKnown && (!requiresBbf || (bbfConfirmed && !bbfInvalid));
 
-  function armScanner() {
-    if (!scannerReady) return;
-    setScannerArmed(true);
+  function addScannerDebug(label: string, detail = "") {
+    const active = document.activeElement as HTMLElement | null;
+    const activeLabel = active
+      ? `${active.tagName.toLowerCase()}${active.id ? `#${active.id}` : ""}`
+      : "none";
+    const id = scannerDebugIdRef.current + 1;
+    scannerDebugIdRef.current = id;
+    setScannerDebug((entries) => [
+      {
+        id,
+        time: new Date().toLocaleTimeString(),
+        label,
+        detail: `${detail}${detail ? " · " : ""}active=${activeLabel}`,
+      },
+      ...entries,
+    ].slice(0, 12));
+  }
+
+  function armScanner(reason = "manual", attempt = 0) {
+    if (!scannerReady) {
+      addScannerDebug("arm blocked", `reason=${reason} known=${productRequirementKnown} requiresBbf=${requiresBbf} bbfConfirmed=${bbfConfirmed}`);
+      return;
+    }
+    setScannerArmedState(true);
     scannerLastKeyAtRef.current = 0;
     scannerBufferRef.current = "";
     const input = scannerInputRef.current;
-    if (!input) return;
+    if (!input) {
+      addScannerDebug("arm retry", `reason=${reason} attempt=${attempt}`);
+      if (attempt < 8) window.setTimeout(() => armScanner(reason, attempt + 1), 75);
+      return;
+    }
     input.readOnly = true;
     input.focus({ preventScroll: true });
+    addScannerDebug("armed", `reason=${reason} attempt=${attempt} focused=${document.activeElement === input}`);
     window.setTimeout(() => {
-      if (scannerInputRef.current === input) input.readOnly = false;
+      if (scannerInputRef.current === input) {
+        input.readOnly = false;
+        addScannerDebug("input ready", `reason=${reason}`);
+      }
     }, 80);
   }
 
-  function focusScannerInput() {
+  function focusScannerInput(reason = "focus") {
     window.setTimeout(() => {
-      armScanner();
+      armScanner(reason);
     }, 0);
   }
 
   function queueScannerCommit(raw: string) {
     const scannedLocation = raw.trim().toUpperCase();
-    setScannerArmed(true);
+    setScannerArmedState(true);
     scannerBufferRef.current = scannedLocation;
     setLocation(scannedLocation);
+    addScannerDebug("buffer", scannedLocation || "empty");
     if (scannerCommitTimerRef.current) window.clearTimeout(scannerCommitTimerRef.current);
     scannerCommitTimerRef.current = window.setTimeout(() => {
       const nextLocation = scannerBufferRef.current.trim().toUpperCase();
       if (nextLocation && resolveLocationId(nextLocation, locations)) {
+        addScannerDebug("auto save", nextLocation);
         handleSave(nextLocation);
       }
     }, 300);
@@ -582,22 +625,24 @@ function VerifyDrawer({
 
   useEffect(() => {
     if (!scannerReady) return;
-    if (!requiresBbf) focusScannerInput();
+    if (!requiresBbf) focusScannerInput("no-bbf-auto");
     const handleScannerKey = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.altKey || event.metaKey) return;
       const target = event.target as HTMLElement | null;
       const isScannerInput = target === scannerInputRef.current;
       if (
+        !scannerArmedRef.current &&
         !isScannerInput &&
         (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT")
       ) return;
 
-      if (!scannerArmed && !isScannerInput) return;
+      if (!scannerArmedRef.current && !isScannerInput) return;
 
       if (event.key === "Enter" || event.key === "Tab") {
         event.preventDefault();
         if (scannerCommitTimerRef.current) window.clearTimeout(scannerCommitTimerRef.current);
         const scannedLocation = scannerBufferRef.current.trim().toUpperCase();
+        addScannerDebug("submit key", `${event.key} value=${scannedLocation || "empty"}`);
         if (scannedLocation) {
           setLocation(scannedLocation);
           handleSave(scannedLocation);
@@ -616,6 +661,7 @@ function VerifyDrawer({
       const now = Date.now();
       if (now - scannerLastKeyAtRef.current > 1500) scannerBufferRef.current = "";
       scannerLastKeyAtRef.current = now;
+      addScannerDebug("key", event.key);
       queueScannerCommit((scannerBufferRef.current + event.key).slice(0, 64));
     };
 
@@ -646,7 +692,8 @@ function VerifyDrawer({
       return;
     }
     const canonical = matched.code || matched.name || saveLocation;
-    setScannerArmed(false);
+    addScannerDebug("save", canonical);
+    setScannerArmedState(false);
     onSave({ receivedQty: qty, bbf: normalisedBbf, location: canonical });
   }
 
@@ -686,6 +733,7 @@ function VerifyDrawer({
                 inputMode="numeric"
                 value={qty}
                 onChange={(e) => setQty(Math.max(0, Number(e.target.value) || 0))}
+                onFocus={() => setScannerArmedState(false)}
                 className="flex-1 h-12 text-center text-lg font-semibold tabular-nums rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
               />
               <button
@@ -724,13 +772,14 @@ function VerifyDrawer({
                   inputMode="numeric"
                   placeholder="010126"
                   value={bbf}
+                  onFocus={() => setScannerArmedState(false)}
                   onChange={(e) => {
                     const next = e.target.value;
                     const validDate = Boolean(normaliseBbf(next));
                     setBbf(next);
                     setBbfConfirmed(validDate);
                     if (validDate) {
-                      focusScannerInput();
+                      focusScannerInput("bbf-valid");
                     }
                   }}
                   maxLength={10}
@@ -740,7 +789,7 @@ function VerifyDrawer({
                   type="button"
                   onClick={() => {
                     setBbfConfirmed(true);
-                    focusScannerInput();
+                    focusScannerInput("bbf-confirm");
                   }}
                   disabled={!bbf || !normalisedBbf}
                   className="h-12 px-4 bg-[#0099d4] hover:bg-[#0088bc] text-white"
@@ -773,12 +822,21 @@ function VerifyDrawer({
           )}
 
           <div>
-            <p className="text-xs font-semibold text-muted-foreground mb-2">
-              Location <span className="text-rose-600">*</span>{" "}
-              <span className="text-muted-foreground/70 font-normal">
-                {scannerArmed ? "(scan now)" : "(tap to scan)"}
-              </span>
-            </p>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold text-muted-foreground">
+                Location <span className="text-rose-600">*</span>{" "}
+                <span className="text-muted-foreground/70 font-normal">
+                  {scannerArmed ? "(scan now)" : "(tap to scan)"}
+                </span>
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowScannerDebug((v) => !v)}
+                className="rounded-md border px-2 py-1 text-[10px] font-semibold text-muted-foreground active:bg-muted"
+              >
+                Debug
+              </button>
+            </div>
             <div className="flex items-center gap-2">
               <input
                 ref={scannerInputRef}
@@ -794,12 +852,12 @@ function VerifyDrawer({
                     handleSave(scannerBufferRef.current || location);
                   }
                 }}
-                onClick={armScanner}
+                onClick={() => armScanner("tap")}
                 disabled={!scannerReady}
                 placeholder={scannerReady ? (scannerArmed ? "Ready for scan" : "Tap to scan location") : "Confirm BBF first"}
                 className="flex-1 h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4] disabled:text-muted-foreground disabled:bg-muted"
                 onFocus={() => {
-                  if (scannerReady) setScannerArmed(true);
+                  if (scannerReady) setScannerArmedState(true);
                 }}
               />
               {location && (
@@ -809,7 +867,7 @@ function VerifyDrawer({
                   onClick={() => {
                     scannerBufferRef.current = "";
                     setLocation("");
-                    armScanner();
+                    armScanner("clear");
                   }}
                   className="h-12 px-3"
                 >
@@ -817,6 +875,28 @@ function VerifyDrawer({
                 </Button>
               )}
             </div>
+            {showScannerDebug && (
+              <div className="mt-2 rounded-lg border bg-muted/40 p-2 font-mono text-[10px] leading-relaxed text-muted-foreground">
+                <div className="mb-1 grid grid-cols-2 gap-1 font-sans text-[10px] font-semibold text-foreground">
+                  <span>ready: {scannerReady ? "yes" : "no"}</span>
+                  <span>armed: {scannerArmed ? "yes" : "no"}</span>
+                  <span>product: {productRequirementKnown ? "known" : "loading"}</span>
+                  <span>bbf: {requiresBbf ? "required" : "not required"}</span>
+                  <span className="col-span-2 truncate">buffer: {scannerBufferRef.current || "empty"}</span>
+                </div>
+                {scannerDebug.length === 0 ? (
+                  <div>No scanner events yet.</div>
+                ) : (
+                  <div className="max-h-28 space-y-1 overflow-y-auto">
+                    {scannerDebug.map((entry) => (
+                      <div key={entry.id} className="truncate">
+                        {entry.time} {entry.label}: {entry.detail}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
