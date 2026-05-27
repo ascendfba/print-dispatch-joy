@@ -2962,6 +2962,8 @@ function PackingListDialog({
           )}
         </div>
         </div>
+        </>
+        )}
       </DialogContent>
     </Dialog>
   );
