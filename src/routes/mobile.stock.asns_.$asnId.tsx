@@ -530,11 +530,14 @@ function VerifyDrawer({
   function handleLocationScannerKey(key: string, preventDefault: () => void) {
     if (key === "Enter" || key === "Tab") {
       preventDefault();
-      if (!bbfInvalid && location.trim()) handleSave();
+      const scannedLocation = (locationInputRef.current?.value ?? location).toUpperCase();
+      setLocation(scannedLocation);
+      if (!bbfInvalid && scannedLocation.trim()) handleSave(scannedLocation);
     }
   }
 
-  function handleSave() {
+  function handleSave(locationOverride = location) {
+    const saveLocation = locationOverride.trim();
     if (qty < 0) {
       toast.error("Quantity cannot be negative");
       return;
@@ -543,11 +546,11 @@ function VerifyDrawer({
       toast.error("Enter a valid BBF date (DDMMYY)");
       return;
     }
-    if (!trimmedLocation) {
+    if (!saveLocation) {
       toast.error("Scan or enter a location");
       return;
     }
-    onSave({ receivedQty: qty, bbf: normalisedBbf, location: trimmedLocation });
+    onSave({ receivedQty: qty, bbf: normalisedBbf, location: saveLocation });
   }
 
   return (
