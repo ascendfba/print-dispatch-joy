@@ -763,18 +763,7 @@ function StockPage() {
                             )}
                           </TableCell>
                           <TableCell>
-                            {p.image_url ? (
-                              <img
-                                src={p.image_url}
-                                alt={p.sku || ""}
-                                className="h-12 w-12 rounded border border-border object-cover"
-                                loading="lazy"
-                              />
-                            ) : (
-                              <div className="flex h-12 w-12 items-center justify-center rounded border border-dashed border-border text-muted-foreground">
-                                <Package className="h-4 w-4" />
-                              </div>
-                            )}
+                            <StockProductImage product={p} />
                           </TableCell>
                           <TableCell className="font-mono text-sm">
                             {barcode || <span className="text-muted-foreground">—</span>}
