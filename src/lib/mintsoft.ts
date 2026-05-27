@@ -2180,6 +2180,36 @@ export type MintsoftOrderDocumentType = {
   Name?: string | null;
 };
 
+export type MintsoftOrderDocumentSummary = {
+  ID?: number;
+  FileName?: string | null;
+  Comments?: string | null;
+  OrderDocumentTypeId?: number;
+};
+
+/**
+ * Lightweight metadata-only listing of documents attached to an order.
+ * Does NOT download PDF bytes — used for quick existence checks
+ * (e.g. has a packing list already been submitted?).
+ */
+export async function fetchOrderDocumentSummaries(
+  settings: Settings,
+  orderId: number,
+): Promise<MintsoftOrderDocumentSummary[]> {
+  const docs = await authedJson<MintsoftApiOrderDocument[]>(
+    settings,
+    `/api/Order/${orderId}/Documents`,
+  ).catch(() => []);
+  return Array.isArray(docs)
+    ? docs.map((d) => ({
+        ID: d.ID,
+        FileName: d.FileName ?? null,
+        Comments: d.Comments ?? null,
+        OrderDocumentTypeId: d.OrderDocumentTypeId,
+      }))
+    : [];
+}
+
 let orderDocTypeCache: MintsoftOrderDocumentType[] | null = null;
 export async function fetchOrderDocumentTypes(
   settings: Settings,
