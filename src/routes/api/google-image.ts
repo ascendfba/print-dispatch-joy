@@ -69,6 +69,42 @@ export const Route = createFileRoute("/api/google-image")({
         if (!q) return Response.json({ error: "Missing q" }, { status: 400 });
 
         const enc = encodeURIComponent(q);
+        // Firecrawl-powered image search (most reliable from a Worker IP).
+        // We scrape Bing Images via Firecrawl which renders JS and bypasses
+        // most blocks. Google/Bing direct fetch is kept as a final fallback.
+        const firecrawlKey = process.env.FIRECRAWL_API_KEY;
+        if (firecrawlKey) {
+          try {
+            const fc = await fetch("https://api.firecrawl.dev/v2/scrape", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${firecrawlKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                url: `https://www.bing.com/images/search?q=${enc}&form=HDRSC2`,
+                formats: ["html"],
+                onlyMainContent: false,
+                location: { country: "GB", languages: ["en-GB"] },
+              }),
+            });
+            if (fc.ok) {
+              const data = (await fc.json()) as {
+                data?: { html?: string };
+                html?: string;
+              };
+              const html = data.data?.html ?? data.html ?? "";
+              if (html) {
+                const cs = extractBing(html);
+                if (cs.length > 0) {
+                  return Response.json({ image: cs[0].image, candidates: cs });
+                }
+              }
+            }
+          } catch {
+            // fall through to direct fetch
+          }
+        }
         // Try Google Images first.
         const gHtml = await fetchHtml(`https://www.google.com/search?tbm=isch&q=${enc}&hl=en`);
         let candidates: Candidate[] = [];
