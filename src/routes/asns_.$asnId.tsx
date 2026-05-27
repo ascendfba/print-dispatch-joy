@@ -73,6 +73,7 @@ import {
   type MintsoftASNItem,
 } from "@/lib/mintsoft";
 import { loadSettings } from "@/lib/storage";
+import { useProductImage } from "@/lib/useProductImage";
 
 export const Route = createFileRoute("/asns_/$asnId")({
   beforeLoad: ({ location }) => requireAuth(location),
