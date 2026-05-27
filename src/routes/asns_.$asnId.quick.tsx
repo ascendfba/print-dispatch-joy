@@ -392,10 +392,12 @@ function QuickAsnPage() {
   );
 }
 
-function QuickProductImage({ product }: { product: MintsoftProduct | null }) {
+function QuickProductImage({ product }: { product: MintsoftASNItem | null }) {
+  const anyP = product as unknown as Record<string, unknown> | null;
+  const title = (anyP?.Title as string | undefined) ?? (anyP?.Name as string | undefined) ?? "";
   const q = useProductImage({
     imageUrl: product?.ImageURL,
-    name: product?.Title ?? product?.Name,
+    name: title || null,
     description: product?.Description,
     sku: product?.SKU,
     ean: product?.EAN,
@@ -406,7 +408,7 @@ function QuickProductImage({ product }: { product: MintsoftProduct | null }) {
   if (resolved?.url && !resolved.suggested) {
     return (
       <div className="flex justify-center">
-        <img src={resolved.url} alt={product?.Title ?? ""} className={cls} />
+        <img src={resolved.url} alt={title} className={cls} />
       </div>
     );
   }
@@ -424,7 +426,7 @@ function QuickProductImage({ product }: { product: MintsoftProduct | null }) {
       <div className="flex flex-col items-center gap-1">
         <img
           src={resolved.url}
-          alt={`Suggested for ${product?.Title ?? ""}`}
+          alt={`Suggested for ${title}`}
           className={`${cls} border-2 border-orange-500`}
         />
         <div className="flex items-center gap-1 rounded-sm border border-orange-500 bg-orange-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-orange-800 dark:bg-orange-500/15 dark:text-orange-300">
