@@ -216,6 +216,7 @@ type RowState = {
   locationId: string;
   bbf: string;
   confirmed?: boolean;
+  prefilled?: boolean;
 };
 
 type PendingBookingState = {
