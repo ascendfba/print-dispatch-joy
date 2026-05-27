@@ -687,7 +687,6 @@ function VerifyDrawer({
                   onClick={() => {
                     setBbfConfirmed(true);
                     (document.activeElement as HTMLElement | null)?.blur();
-                    focusLocationScanner(50);
                   }}
                   disabled={!bbf || !normalisedBbf}
                   className="h-12 px-4 bg-[#0099d4] hover:bg-[#0088bc] text-white"
@@ -727,22 +726,26 @@ function VerifyDrawer({
               </span>
             </p>
             <div className="flex items-center gap-2">
-              <input
-                ref={locationInputRef}
-                type="text"
-                autoCapitalize="characters"
-                autoComplete="off"
-                aria-label="Location"
-                placeholder="Scan location barcode"
-                value={location}
-                onChange={(e) => {
-                  const next = e.target.value.toUpperCase();
-                  setLocation(next);
-                }}
-                onKeyDown={(e) => handleLocationScannerKey(e.key, () => e.preventDefault())}
-                maxLength={32}
-                className="flex-1 h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
-              />
+              <div
+                role="status"
+                aria-label="Scanned location"
+                className="flex-1 h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background flex items-center"
+              >
+                {location || (scannerReady ? "SCAN LOCATION" : "CONFIRM BBF FIRST")}
+              </div>
+              {location && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    scannerBufferRef.current = "";
+                    setLocation("");
+                  }}
+                  className="h-12 px-3"
+                >
+                  Clear
+                </Button>
+              )}
             </div>
           </div>
         </div>
