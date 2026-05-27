@@ -73,6 +73,7 @@ import {
   type MintsoftASNItem,
 } from "@/lib/mintsoft";
 import { loadSettings } from "@/lib/storage";
+import { useProductImage } from "@/lib/useProductImage";
 
 export const Route = createFileRoute("/asns_/$asnId")({
   beforeLoad: ({ location }) => requireAuth(location),
@@ -1354,94 +1355,34 @@ function ProductCell({
   );
 }
 
-type ImageCandidate = { image: string; title?: string | null };
-
-async function fetchImageCandidates(query: string): Promise<ImageCandidate[]> {
-  try {
-    const r = await fetch(`/api/google-image?q=${encodeURIComponent(query)}`);
-    if (!r.ok) return [];
-    const data = (await r.json()) as {
-      candidates?: ImageCandidate[];
-      image?: string | null;
-    };
-    if (data.candidates && data.candidates.length) return data.candidates;
-    return data.image ? [{ image: data.image, title: null }] : [];
-  } catch {
-    return [];
-  }
-}
-
 function ProductImage({ product }: { product: MintsoftProduct | null }) {
-  const direct = product?.ImageURL || null;
-  const queries = [product?.EAN, product?.UPC, product?.Name]
-    .map((q) => (q ? String(q).trim() : ""))
-    .filter((q) => q.length > 0);
-  const amazonQuery = useQuery({
-    queryKey: ["best-image", product?.SKU ?? product?.Name, queries],
-    queryFn: async () => {
-      const seen = new Set<string>();
-      const candidates: ImageCandidate[] = [];
-      for (const q of queries) {
-        const found = await fetchImageCandidates(q);
-        for (const c of found) {
-          if (!seen.has(c.image)) {
-            seen.add(c.image);
-            candidates.push(c);
-          }
-          if (candidates.length >= 6) break;
-        }
-        if (candidates.length >= 6) break;
-      }
-      if (candidates.length === 0) return null;
-      // Ask Gemini to pick the best match for this product.
-      try {
-        const r = await fetch("/api/pick-product-image", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            product: {
-              name: product?.Name ?? null,
-              sku: product?.SKU ?? null,
-              ean: product?.EAN ?? null,
-              upc: product?.UPC ?? null,
-              description: product?.Description ?? null,
-            },
-            candidates,
-          }),
-        });
-        if (r.ok) {
-          const data = (await r.json()) as { image?: string | null };
-          if (data.image) return data.image;
-          // Gemini explicitly rejected all candidates — don't show a wrong image.
-          return null;
-        }
-      } catch {
-        // fall through to first candidate
-      }
-      return candidates[0].image;
-    },
-    enabled: !direct && queries.length > 0,
-    staleTime: 60 * 60_000,
-    refetchOnWindowFocus: false,
+  const q = useProductImage({
+    imageUrl: product?.ImageURL,
+    name: product?.Name,
+    description: product?.Description,
+    sku: product?.SKU,
+    ean: product?.EAN,
+    upc: product?.UPC,
   });
+  const resolved = q.data;
 
   const cls = "h-20 w-20 shrink-0 rounded-md border bg-muted object-contain";
 
-  if (direct) {
-    return <img src={direct} alt={product?.Name ?? ""} className={cls} loading="lazy" />;
+  if (resolved?.url && !resolved.suggested) {
+    return <img src={resolved.url} alt={product?.Name ?? ""} className={cls} loading="lazy" />;
   }
-  if (amazonQuery.isLoading) {
+  if (q.isLoading) {
     return (
       <div className={`${cls} flex items-center justify-center`}>
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
       </div>
     );
   }
-  if (amazonQuery.data) {
+  if (resolved?.url) {
     return (
       <div className="flex flex-col items-center gap-1">
         <img
-          src={amazonQuery.data}
+          src={resolved.url}
           alt={`Suggested image for ${product?.Name ?? ""}`}
           className={`${cls} border-2 border-orange-500`}
           loading="lazy"

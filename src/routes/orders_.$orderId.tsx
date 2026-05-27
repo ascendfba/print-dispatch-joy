@@ -60,6 +60,7 @@ import { PDFDocument } from "pdf-lib";
 import { scanLabelPdf, buildSkuBarcodeMap } from "@/lib/labelScan";
 import { pickPrinter, printPdfBytes } from "@/lib/printing";
 import { loadSettings } from "@/lib/storage";
+import { useProductImage } from "@/lib/useProductImage";
 import { REWORK_CATALOG, getRate, formatGBP } from "@/lib/rework";
 import { ArrowLeft, ArrowRight, Check, Eye, FileText, Flag, ImageOff, Loader2, MapPin, Minus, Package, Printer, AlertTriangle, ListChecks, Plus, Trash2, Weight } from "lucide-react";
 import {
@@ -82,40 +83,6 @@ export const Route = createFileRoute("/orders_/$orderId")({
   component: OrderDetailPage,
 });
 
-type ImageCandidate = { image: string; title?: string | null };
-
-async function fetchImageCandidates(query: string): Promise<ImageCandidate[]> {
-  try {
-    const r = await fetch(`/api/google-image?q=${encodeURIComponent(query)}`);
-    if (!r.ok) return [];
-    const data = (await r.json()) as {
-      candidates?: ImageCandidate[];
-      image?: string | null;
-    };
-    if (data.candidates && data.candidates.length) return data.candidates;
-    return data.image ? [{ image: data.image, title: null }] : [];
-  } catch {
-    return [];
-  }
-}
-
-const ASIN_RE = /\b(B0[A-Z0-9]{8})\b/i;
-
-async function fetchAmazonCandidates(query: string): Promise<ImageCandidate[]> {
-  try {
-    const r = await fetch(`/api/amazon-image?q=${encodeURIComponent(query)}`);
-    if (!r.ok) return [];
-    const data = (await r.json()) as {
-      candidates?: ImageCandidate[];
-      image?: string | null;
-    };
-    if (data.candidates && data.candidates.length) return data.candidates;
-    return data.image ? [{ image: data.image, title: null }] : [];
-  } catch {
-    return [];
-  }
-}
-
 function ProductImage({
   product,
   scannedBarcode,
@@ -123,83 +90,21 @@ function ProductImage({
   product: MintsoftProduct | null | undefined;
   scannedBarcode?: string | null;
 }) {
-  const direct = product?.ImageURL || null;
-  // Prefer barcodes (unique), then scanned barcode, then product name.
-  // Never use SKU — internal codes match unrelated listings.
-  const queries = [product?.EAN, product?.UPC, scannedBarcode, product?.Name]
-    .map((q) => (q ? String(q).trim() : ""))
-    .filter((q) => q.length > 0);
-
-  // ASINs (Amazon product codes) can hide in SKU, Name, EAN, UPC or scan.
-  // If we spot one, hit Amazon's product page directly — far more accurate
-  // than name-based image search.
-  const asinSource = [
-    product?.SKU,
-    product?.Name,
-    product?.EAN,
-    product?.UPC,
+  const q = useProductImage({
+    imageUrl: product?.ImageURL,
+    name: product?.Name,
+    description: product?.Description,
+    sku: product?.SKU,
+    ean: product?.EAN,
+    upc: product?.UPC,
     scannedBarcode,
-  ]
-    .map((v) => (v ? String(v) : ""))
-    .join(" ");
-  const asin = asinSource.match(ASIN_RE)?.[1]?.toUpperCase() ?? null;
-
-  const amazonQuery = useQuery({
-    queryKey: ["best-image", product?.SKU ?? product?.Name, queries, asin],
-    queryFn: async () => {
-      // ASIN fast-path: skip the noisy search + Gemini picker entirely.
-      if (asin) {
-        const found = await fetchAmazonCandidates(asin);
-        if (found.length > 0) return found[0].image;
-      }
-      const seen = new Set<string>();
-      const candidates: ImageCandidate[] = [];
-      for (const q of queries) {
-        const found = await fetchImageCandidates(q);
-        for (const c of found) {
-          if (!seen.has(c.image)) {
-            seen.add(c.image);
-            candidates.push(c);
-          }
-          if (candidates.length >= 6) break;
-        }
-        if (candidates.length >= 6) break;
-      }
-      if (candidates.length === 0) return null;
-      try {
-        const r = await fetch("/api/pick-product-image", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            product: {
-              name: product?.Name ?? null,
-              sku: product?.SKU ?? null,
-              ean: product?.EAN ?? null,
-              upc: product?.UPC ?? null,
-              description: product?.Description ?? null,
-            },
-            candidates,
-          }),
-        });
-        if (r.ok) {
-          const data = (await r.json()) as { image?: string | null };
-          if (data.image) return data.image;
-          return null;
-        }
-      } catch {
-        // fall through
-      }
-      return candidates[0].image;
-    },
-    enabled: !direct && (queries.length > 0 || !!asin),
-    staleTime: 60 * 60_000,
-    refetchOnWindowFocus: false,
   });
+  const resolved = q.data;
 
-  if (direct) {
+  if (resolved?.url && !resolved.suggested) {
     return (
       <img
-        src={direct}
+        src={resolved.url}
         alt={product?.Name ?? ""}
         className="h-20 w-20 rounded-md border bg-muted object-contain"
         loading="lazy"
@@ -207,7 +112,7 @@ function ProductImage({
     );
   }
 
-  if (amazonQuery.isLoading) {
+  if (q.isLoading) {
     return (
       <div className="flex h-20 w-20 items-center justify-center rounded-md border bg-muted">
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -215,11 +120,11 @@ function ProductImage({
     );
   }
 
-  if (amazonQuery.data) {
+  if (resolved?.url) {
     return (
       <div className="relative">
         <img
-          src={amazonQuery.data}
+          src={resolved.url}
           alt={`Suggested image for ${product?.Name ?? ""}`}
           className="h-20 w-20 rounded-md border-2 border-amber-500/50 bg-muted object-contain"
           loading="lazy"
