@@ -498,6 +498,7 @@ function VerifyDrawer({
   const [qty, setQty] = useState<number>(0);
   const [bbf, setBbf] = useState<string>("");
   const [location, setLocation] = useState<string>("");
+  const locationInputRef = useRef<HTMLInputElement | null>(null);
 
   // Reset whenever a new item is opened.
   const itemKey = item ? String(item.ID ?? "") : "";
@@ -506,6 +507,8 @@ function VerifyDrawer({
       setQty(existing?.receivedQty ?? expected);
       setBbf(existing?.bbf ?? "");
       setLocation(existing?.location ?? "");
+      // Auto-focus the location field so HID barcode scanners write into it.
+      setTimeout(() => locationInputRef.current?.focus(), 250);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemKey]);
@@ -645,6 +648,7 @@ function VerifyDrawer({
               </span>
             </p>
             <input
+              ref={locationInputRef}
               type="text"
               inputMode="none"
               autoCapitalize="characters"
@@ -652,6 +656,12 @@ function VerifyDrawer({
               placeholder="Scan location barcode"
               value={location}
               onChange={(e) => setLocation(e.target.value.toUpperCase())}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (!bbfInvalid && location.trim()) handleSave();
+                }
+              }}
               maxLength={32}
               className="w-full h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
             />
