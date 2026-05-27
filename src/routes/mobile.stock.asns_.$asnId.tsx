@@ -500,9 +500,11 @@ function VerifyDrawer({
   const expected = item?.ExpectedQuantity ?? 0;
   const [qty, setQty] = useState<number>(0);
   const [bbf, setBbf] = useState<string>("");
+  const [bbfConfirmed, setBbfConfirmed] = useState(false);
   const [location, setLocation] = useState<string>("");
   const [showLocationKeypad, setShowLocationKeypad] = useState(false);
   const locationInputRef = useRef<HTMLInputElement | null>(null);
+  const locationScanBufferRef = useRef("");
 
   function focusLocationScanner(delay = 0) {
     setTimeout(() => {
@@ -516,7 +518,9 @@ function VerifyDrawer({
     if (item) {
       setQty(existing?.receivedQty ?? expected);
       setBbf(existing?.bbf ?? "");
+      setBbfConfirmed(Boolean(existing?.bbf));
       setLocation(existing?.location ?? "");
+      locationScanBufferRef.current = (existing?.location ?? "").toUpperCase();
       setShowLocationKeypad(false);
       // Keep a real input focused so the device scanner can type into it.
       focusLocationScanner(250);
@@ -556,12 +560,51 @@ function VerifyDrawer({
     if (!matched) {
       toast.error(`Location "${saveLocation}" not found in this warehouse`);
       setLocation("");
+      locationScanBufferRef.current = "";
       focusLocationScanner(50);
       return;
     }
     const canonical = matched.code || matched.name || saveLocation;
     onSave({ receivedQty: qty, bbf: normalisedBbf, location: canonical });
   }
+
+  useEffect(() => {
+    if (!item || bbfInvalid || (requiresBbf && !bbfConfirmed)) return;
+
+    const onScannerKey = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
+
+      const target = event.target as HTMLElement | null;
+      if (target?.id === "bbf-input") return;
+
+      if (event.key === "Enter" || event.key === "Tab") {
+        event.preventDefault();
+        const scannedLocation = locationScanBufferRef.current.toUpperCase();
+        setLocation(scannedLocation);
+        if (scannedLocation.trim()) handleSave(scannedLocation);
+        return;
+      }
+
+      if (event.key === "Backspace") {
+        event.preventDefault();
+        const next = locationScanBufferRef.current.slice(0, -1);
+        locationScanBufferRef.current = next;
+        setLocation(next);
+        return;
+      }
+
+      if (event.key.length === 1) {
+        event.preventDefault();
+        const next = (locationScanBufferRef.current + event.key).toUpperCase().slice(0, 32);
+        locationScanBufferRef.current = next;
+        setLocation(next);
+      }
+    };
+
+    document.addEventListener("keydown", onScannerKey, true);
+    return () => document.removeEventListener("keydown", onScannerKey, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itemKey, bbfInvalid, requiresBbf, bbfConfirmed, qty, normalisedBbf, locations]);
 
   return (
     <Drawer open={!!item} onOpenChange={(o) => !o && onClose()}>
