@@ -14,7 +14,7 @@ function MobileShell() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       {/* Top bar */}
-      <header className="shrink-0 border-b bg-gradient-to-r from-amber-500 to-orange-500 pt-[env(safe-area-inset-top)]">
+      <header className="shrink-0 border-b bg-gradient-to-r from-[#0a2e3d] via-[#0d3a4d] to-[#0a2e3d] pt-[env(safe-area-inset-top)]">
         <div className="flex items-center justify-between px-4 h-14">
           <button className="p-1 -ml-1 text-white/90">
             <Menu className="h-5 w-5" />
@@ -22,7 +22,7 @@ function MobileShell() {
           <img
             src={ascendLogo}
             alt="Ascend FBA"
-            className="h-7 object-contain"
+            className="h-7 object-contain brightness-0 invert"
           />
           <div className="w-7" />
         </div>
@@ -60,7 +60,7 @@ function BottomItem({
     <Link
       to={to}
       className={`flex flex-col items-center justify-center gap-1 py-2 text-[11px] ${
-        active ? "text-amber-600 font-medium" : "text-muted-foreground"
+        active ? "text-[#0099d4] font-medium" : "text-muted-foreground"
       }`}
     >
       {icon}
