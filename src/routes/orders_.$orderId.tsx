@@ -1022,6 +1022,39 @@ function OrderDetailPage() {
               </div>
             );
           })()}
+          {packingBoxCount !== null && packingBoxCount > 0 && (
+            <Button
+              className="w-full"
+              variant="outline"
+              onClick={async () => {
+                try {
+                  const ref = orderReference ?? `#${id}`;
+                  const bytes = await buildBoxLabelsPdf({
+                    orderRef: ref,
+                    boxCount: packingBoxCount,
+                  });
+                  const settings = loadSettings();
+                  const printer = pickPrinter(settings, "small");
+                  if (!printer) {
+                    throw new Error(
+                      "No small-label printer configured. Set one in Settings.",
+                    );
+                  }
+                  await printPdfBytes(bytes, printer, settings.silentPrint, {
+                    kind: "box-labels",
+                    label: `Box labels ${ref}`,
+                    orderId: String(id),
+                  });
+                  toast.success(`Printed ${packingBoxCount} box label${packingBoxCount === 1 ? "" : "s"}`);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Failed to print box labels");
+                }
+              }}
+            >
+              <Printer className="mr-2 h-4 w-4" />
+              Print box labels ({packingBoxCount})
+            </Button>
+          )}
           {(() => {
             const courier =
               (order as { CourierServiceName?: string } | undefined)?.CourierServiceName ?? "";
@@ -2288,6 +2321,60 @@ async function buildPackingListPdf({
     }
     y -= 6;
   });
+
+  return await pdf.save();
+}
+
+async function buildBoxLabelsPdf({
+  orderRef,
+  boxCount,
+}: {
+  orderRef: string;
+  boxCount: number;
+}): Promise<Uint8Array> {
+  const { PDFDocument: PDFDoc, StandardFonts, rgb } = await import("pdf-lib");
+  const pdf = await PDFDoc.create();
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+
+  // 50mm x 25mm in PDF points (1mm = 2.8346pt)
+  const MM = 2.8346456693;
+  const pageW = 50 * MM;
+  const pageH = 25 * MM;
+
+  const total = Math.max(1, Math.floor(boxCount));
+  for (let i = 1; i <= total; i++) {
+    const page = pdf.addPage([pageW, pageH]);
+    const refText = orderRef;
+    const boxText = `Box ${i} / ${total}`;
+
+    // Order ref — fit within the label width
+    let refSize = 14;
+    while (refSize > 7 && bold.widthOfTextAtSize(refText, refSize) > pageW - 12) {
+      refSize -= 0.5;
+    }
+    const refW = bold.widthOfTextAtSize(refText, refSize);
+    page.drawText(refText, {
+      x: (pageW - refW) / 2,
+      y: pageH - refSize - 6,
+      size: refSize,
+      font: bold,
+      color: rgb(0, 0, 0),
+    });
+
+    const boxSize = 18;
+    const boxW = bold.widthOfTextAtSize(boxText, boxSize);
+    page.drawText(boxText, {
+      x: (pageW - boxW) / 2,
+      y: 8,
+      size: boxSize,
+      font: bold,
+      color: rgb(0, 0, 0),
+    });
+
+    // Silence unused-var lint for font (kept available for future tweaks)
+    void font;
+  }
 
   return await pdf.save();
 }
