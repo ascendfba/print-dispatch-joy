@@ -678,6 +678,10 @@ function VerifyDrawer({
                 autoComplete="off"
                 placeholder="Scan location barcode"
                 value={location}
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  focusLocationScanner();
+                }}
                 onFocus={() => locationInputRef.current?.setAttribute("virtualkeyboardpolicy", "manual")}
                 onChange={(e) => setLocation(e.target.value.toUpperCase())}
                 onKeyDown={(e) => handleLocationScannerKey(e.key, () => e.preventDefault())}
