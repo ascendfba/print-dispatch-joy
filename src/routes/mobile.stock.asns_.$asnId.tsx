@@ -27,6 +27,9 @@ import { Button } from "@/components/ui/button";
 
 type VerifiedRow = { receivedQty: number; bbf: string; location: string };
 
+// Mintsoft accepts ISO YYYY-MM-DD on the ASN receive endpoint. We keep this
+// helper to display the DDMMYYYY equivalent in the UI for clarity, but the
+// value we actually send is the ISO string itself.
 function isoToDdmmyyyy(iso: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
   if (!m) return iso;
@@ -145,7 +148,7 @@ function MobileASNDetail() {
           LocationId: r.locationId,
           Quantity: r.row.receivedQty,
           Complete: mode === "full",
-          BestBeforeDate: r.row.bbf ? isoToDdmmyyyy(r.row.bbf) : undefined,
+          BestBeforeDate: r.row.bbf || undefined,
         });
         okCount += 1;
       } catch (e) {
