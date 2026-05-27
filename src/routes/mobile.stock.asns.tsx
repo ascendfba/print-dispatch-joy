@@ -25,6 +25,38 @@ function getSkuCount(asn: MintsoftASN): number | undefined {
   return undefined;
 }
 
+function getTotalUnits(asn: MintsoftASN): number | undefined {
+  const raw = asn as Record<string, unknown>;
+  // Prefer summing line-item expected quantities when available
+  const items = raw["ASNItems"] ?? raw["Items"] ?? raw["Details"] ?? raw["Lines"];
+  if (Array.isArray(items) && items.length > 0) {
+    let total = 0;
+    let found = false;
+    for (const it of items) {
+      if (!it || typeof it !== "object") continue;
+      const r = it as Record<string, unknown>;
+      const q =
+        r["ExpectedQuantity"] ?? r["Expected"] ?? r["Quantity"] ?? r["Qty"] ?? r["QtyExpected"];
+      const n = typeof q === "number" ? q : typeof q === "string" ? Number(q) : NaN;
+      if (Number.isFinite(n)) {
+        total += n;
+        found = true;
+      }
+    }
+    if (found) return total;
+  }
+  const candidates = ["TotalQuantity", "TotalQty", "TotalUnits", "ExpectedQuantity", "Quantity"];
+  for (const key of candidates) {
+    const v = raw[key];
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    if (typeof v === "string") {
+      const n = Number(v);
+      if (Number.isFinite(n)) return n;
+    }
+  }
+  return undefined;
+}
+
 function getPackageBreakdown(asn: MintsoftASN): string {
   const raw = asn as Record<string, unknown>;
   const counts: Record<string, number> = {};
