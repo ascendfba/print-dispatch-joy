@@ -625,6 +625,25 @@ function VerifyDrawer({
   useEffect(() => {
     if (!scannerReady) return;
     if (!requiresBbf) focusScannerInput("no-bbf-auto");
+    const handleBeforeInput = (event: InputEvent) => {
+      if (!scannerArmedRef.current) return;
+      const data = event.data ?? "";
+      addScannerDebug("beforeinput", data || event.inputType);
+      window.setTimeout(readInputValue, 0);
+    };
+    const handleInput = (event: Event) => {
+      if (!scannerArmedRef.current) return;
+      const target = event.target as HTMLInputElement | null;
+      if (target !== scannerInputRef.current) return;
+      addScannerDebug("input", target?.value ?? "empty");
+      readInputValue();
+    };
+    const handlePaste = (event: ClipboardEvent) => {
+      if (!scannerArmedRef.current) return;
+      const text = event.clipboardData?.getData("text") ?? "";
+      addScannerDebug("paste", text || "empty");
+      if (text) queueScannerCommit(text);
+    };
     const handleScannerKey = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.altKey || event.metaKey) return;
       const target = event.target as HTMLElement | null;
@@ -664,8 +683,14 @@ function VerifyDrawer({
       queueScannerCommit((scannerBufferRef.current + event.key).slice(0, 64));
     };
 
+    document.addEventListener("beforeinput", handleBeforeInput, true);
+    document.addEventListener("input", handleInput, true);
+    document.addEventListener("paste", handlePaste, true);
     document.addEventListener("keydown", handleScannerKey, true);
     return () => {
+      document.removeEventListener("beforeinput", handleBeforeInput, true);
+      document.removeEventListener("input", handleInput, true);
+      document.removeEventListener("paste", handlePaste, true);
       document.removeEventListener("keydown", handleScannerKey, true);
       if (scannerCommitTimerRef.current) window.clearTimeout(scannerCommitTimerRef.current);
     };
