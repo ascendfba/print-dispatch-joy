@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronLeft, Search, Truck, Loader2, X, Boxes } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { listASNs, type MintsoftASN } from "@/lib/mintsoft";
+import { listASNs, listClients, type MintsoftASN } from "@/lib/mintsoft";
 import { loadSettings } from "@/lib/storage";
 
 function getSkuCount(asn: MintsoftASN): number | undefined {
@@ -115,6 +115,29 @@ function MobileASNs() {
     refetchOnWindowFocus: false,
   });
 
+  const clientsQuery = useQuery({
+    queryKey: ["mobile-clients-list"],
+    queryFn: async () => {
+      const settings = loadSettings();
+      if (!settings.mintsoftApiKey && !settings.mintsoftUsername) return [];
+      return listClients(settings);
+    },
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  const clientMap = new Map<number, string>();
+  for (const c of clientsQuery.data ?? []) {
+    const anyC = c as unknown as Record<string, unknown>;
+    const id = Number(anyC["ID"] ?? anyC["Id"] ?? anyC["ClientId"] ?? anyC["ClientID"]);
+    const name =
+      (typeof anyC["Name"] === "string" && anyC["Name"]) ||
+      (typeof anyC["ClientName"] === "string" && anyC["ClientName"]) ||
+      (typeof anyC["CompanyName"] === "string" && anyC["CompanyName"]) ||
+      "";
+    if (Number.isFinite(id) && name) clientMap.set(id, name as string);
+  }
+
   const allAsns = asnsQuery.data ?? [];
 
   const filtered = query.trim()
@@ -185,14 +208,26 @@ function MobileASNs() {
             {query.trim() ? "No ASNs match your search" : "No ASNs found"}
           </div>
         ) : (
-          sorted.map((asn) => <ASNCard key={asn.ID} asn={asn} />)
+          sorted.map((asn) => (
+            <ASNCard
+              key={asn.ID}
+              asn={asn}
+              clientName={
+                (asn.ClientId && clientMap.get(asn.ClientId)) ||
+                (typeof (asn as Record<string, unknown>).ClientName === "string"
+                  ? ((asn as Record<string, unknown>).ClientName as string)
+                  : "") ||
+                ""
+              }
+            />
+          ))
         )}
       </div>
     </div>
   );
 }
 
-function ASNCard({ asn }: { asn: MintsoftASN }) {
+function ASNCard({ asn, clientName }: { asn: MintsoftASN; clientName: string }) {
   const expected = asn.ExpectedDate
     ? new Date(asn.ExpectedDate)
     : null;
@@ -228,9 +263,16 @@ function ASNCard({ asn }: { asn: MintsoftASN }) {
             </span>
           )}
         </div>
-        <p className="text-xs text-muted-foreground truncate">
-          {asn.SupplierName || "—"}
-        </p>
+        {clientName && (
+          <p className="text-xs font-medium text-[#0a2e3d] truncate">
+            {clientName}
+          </p>
+        )}
+        {asn.SupplierName && (
+          <p className="text-xs text-muted-foreground truncate">
+            {asn.SupplierName}
+          </p>
+        )}
         <div className="flex items-center gap-2 mt-1 flex-wrap">
           {expected && (
             <span
@@ -254,23 +296,17 @@ function ASNCard({ asn }: { asn: MintsoftASN }) {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2 mt-1 flex-wrap">
-          {(() => {
-            const skuCount = getSkuCount(asn);
-            const qty = asn.TotalQuantity;
-            if (skuCount != null || qty != null) {
-              const parts: string[] = [];
-              if (skuCount != null) parts.push(`${skuCount} SKU${skuCount === 1 ? "" : "'s"}`);
-              if (qty != null) parts.push(`${qty} QTY`);
-              return (
-                <span className="text-[11px] font-medium text-[#0a2e3d]">
-                  {parts.join(": ")}
-                </span>
-              );
-            }
-            return null;
-          })()}
-        </div>
+        {(() => {
+          const skuCount = getSkuCount(asn);
+          const qty = asn.TotalQuantity;
+          if (skuCount == null && qty == null) return null;
+          return (
+            <div className="flex items-center gap-3 mt-1 flex-wrap text-[11px] font-medium text-[#0a2e3d]">
+              {skuCount != null && <span>SKU: {skuCount}</span>}
+              {qty != null && <span>Total Units: {qty}</span>}
+            </div>
+          );
+        })()}
         {(() => {
           const breakdown = getPackageBreakdown(asn);
           if (!breakdown) return null;
