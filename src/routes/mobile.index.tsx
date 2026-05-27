@@ -21,25 +21,29 @@ export const Route = createFileRoute("/mobile/")({
 type Tile = {
   label: string;
   icon: ReactNode;
+  iconColor: string;
+  bgColor: string;
   to?: string;
 };
 
 function MobileHome() {
-  const sections: { title: string; tiles: Tile[] }[] = [
+  const sections: { title: string; accentColor: string; tiles: Tile[] }[] = [
     {
       title: "Picking",
+      accentColor: "bg-blue-500",
       tiles: [
-        { label: "Order Picking", icon: <ShoppingBag className="h-6 w-6" /> },
-        { label: "View Orders", icon: <ClipboardList className="h-6 w-6" /> },
+        { label: "Order Picking", icon: <ShoppingBag className="h-6 w-6" />, iconColor: "text-blue-600", bgColor: "bg-blue-500/10" },
+        { label: "View Orders", icon: <ClipboardList className="h-6 w-6" />, iconColor: "text-slate-600", bgColor: "bg-slate-500/10" },
       ],
     },
     {
       title: "Inventory Management",
+      accentColor: "bg-emerald-500",
       tiles: [
-        { label: "ASNs", icon: <Truck className="h-6 w-6" />, to: "/mobile/stock/asns" },
-        { label: "Transfer Inventory", icon: <ArrowLeftRight className="h-6 w-6" />, to: "/mobile/stock/transfer" },
-        { label: "Bulk Transfer Inventory", icon: <PackagePlus className="h-6 w-6" /> },
-        { label: "Book Inventory", icon: <BookOpen className="h-6 w-6" /> },
+        { label: "ASNs", icon: <Truck className="h-6 w-6" />, iconColor: "text-amber-600", bgColor: "bg-amber-500/10", to: "/mobile/stock/asns" },
+        { label: "Transfer Inventory", icon: <ArrowLeftRight className="h-6 w-6" />, iconColor: "text-emerald-600", bgColor: "bg-emerald-500/10", to: "/mobile/stock/transfer" },
+        { label: "Bulk Transfer Inventory", icon: <PackagePlus className="h-6 w-6" />, iconColor: "text-teal-600", bgColor: "bg-teal-500/10" },
+        { label: "Book Inventory", icon: <BookOpen className="h-6 w-6" />, iconColor: "text-violet-600", bgColor: "bg-violet-500/10" },
       ],
     },
   ];
@@ -62,6 +66,9 @@ function MobileHome() {
   const dayMs = 86_400_000;
 
   const dayLabels = ["Today", "Tomorrow"];
+  const dayBorderColors = ["border-l-amber-500", "border-l-blue-500"];
+  const dayBadgeColors = ["bg-amber-500/10 text-amber-700", "bg-blue-500/10 text-blue-700"];
+
   const dayCards = [0, 1].map((offset) => {
     const d = new Date(today.getTime() + offset * dayMs);
     const dStr = d.toDateString();
@@ -72,14 +79,17 @@ function MobileHome() {
       ed.setHours(0, 0, 0, 0);
       return ed.toDateString() === dStr;
     });
-    return { date: d, label, asns };
+    return { date: d, label, asns, borderColor: dayBorderColors[offset], badgeColor: dayBadgeColors[offset] };
   });
 
   return (
     <div className="px-4 py-4 space-y-5">
       {sections.map((s) => (
         <section key={s.title}>
-          <h2 className="mb-2 text-sm font-semibold">{s.title}</h2>
+          <div className="flex items-center gap-2 mb-2">
+            <div className={`h-4 w-1 rounded-full ${s.accentColor}`} />
+            <h2 className="text-sm font-semibold">{s.title}</h2>
+          </div>
           <div className="grid grid-cols-3 gap-3">
             {s.tiles.map((t) => (
               <TileCard key={t.label} tile={t} />
@@ -89,7 +99,10 @@ function MobileHome() {
       ))}
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold">ASNs Due</h2>
+        <div className="flex items-center gap-2 mb-2">
+          <div className="h-4 w-1 rounded-full bg-amber-500" />
+          <h2 className="text-sm font-semibold">ASNs Due</h2>
+        </div>
         {asnsQuery.isLoading ? (
           <div className="flex items-center justify-center py-8 text-muted-foreground">
             <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading ASNs…
@@ -102,10 +115,10 @@ function MobileHome() {
           </div>
         ) : (
           <div className="space-y-3">
-            {dayCards.map(({ date, label, asns }) => (
+            {dayCards.map(({ date, label, asns, borderColor, badgeColor }) => (
               <div
                 key={date.toDateString()}
-                className="rounded-xl border bg-card p-3"
+                className={`rounded-xl border bg-card p-3 border-l-4 ${borderColor}`}
               >
                 <div className="flex items-center justify-between mb-2">
                   <div>
@@ -118,7 +131,7 @@ function MobileHome() {
                       })}
                     </p>
                   </div>
-                  <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeColor}`}>
                     {asns.length} ASN{asns.length === 1 ? "" : "s"}
                   </span>
                 </div>
@@ -135,7 +148,7 @@ function MobileHome() {
                         params={{ asnId: String(a.ID) }}
                         className="flex items-center gap-2 rounded-lg p-2 hover:bg-muted/60 transition-colors"
                       >
-                        <Truck className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <Truck className="h-4 w-4 text-amber-500 shrink-0" />
                         <div className="min-w-0 flex-1">
                           <p className="text-xs font-medium truncate">
                             {a.Reference || `#${a.ID}`}
@@ -166,7 +179,9 @@ function MobileHome() {
 function TileCard({ tile }: { tile: Tile }) {
   const inner = (
     <div className="flex flex-col items-center justify-center text-center gap-2 rounded-xl border bg-card aspect-square p-2 active:bg-muted/60">
-      <div className="text-primary">{tile.icon}</div>
+      <div className={`rounded-xl p-2.5 ${tile.bgColor}`}>
+        <div className={tile.iconColor}>{tile.icon}</div>
+      </div>
       <span className="text-[11px] leading-tight font-medium">{tile.label}</span>
     </div>
   );
