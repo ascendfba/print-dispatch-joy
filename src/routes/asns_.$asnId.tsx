@@ -1000,26 +1000,6 @@ function BookInCard({
                           updateRow(key, { receivedQty: e.target.value })
                         }
                       />
-                      {state.prefilled && Number(state.receivedQty) > 0 ? (
-                        <label
-                          className={cn(
-                            "mt-1 flex cursor-pointer items-center gap-1.5 text-[11px]",
-                            state.confirmed
-                              ? "text-emerald-700 dark:text-emerald-400"
-                              : "text-amber-700 dark:text-amber-400",
-                          )}
-                        >
-                          <Checkbox
-                            checked={!!state.confirmed}
-                            onCheckedChange={(v) =>
-                              updateRow(key, { confirmed: v === true })
-                            }
-                          />
-                          <span>
-                            {state.confirmed ? "Verified" : "Tick to verify qty"}
-                          </span>
-                        </label>
-                      ) : null}
                     </TableCell>
                     <TableCell>
                       {(() => {
