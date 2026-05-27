@@ -34,9 +34,10 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Loader2, Plus, RefreshCw, Truck, Zap } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2, Plus, RefreshCw, Truck, Zap } from "lucide-react";
 import {
   createASN,
+  fetchASNItems,
   listASNs,
   listClients,
   listWarehouses,
@@ -69,6 +70,15 @@ function AsnsPage() {
   const [statusTab, setStatusTab] = useState<
     "new" | "partial" | "completed"
   >("new");
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const toggleExpanded = (id: number) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const asnsQuery = useQuery({
     queryKey: ["asns"],
@@ -270,6 +280,7 @@ function AsnsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8" />
                   <TableHead className="w-[160px]">Reference</TableHead>
                   <TableHead className="w-[140px]">PO Ref</TableHead>
                   <TableHead>Client</TableHead>
@@ -283,8 +294,8 @@ function AsnsPage() {
               </TableHeader>
               <TableBody>
                 {filtered.map((a: MintsoftASN) => (
+                  <Fragment key={a.ID}>
                   <TableRow
-                    key={a.ID}
                     className="cursor-pointer"
                     onClick={() =>
                       navigate({
@@ -293,6 +304,24 @@ function AsnsPage() {
                       })
                     }
                   >
+                    <TableCell className="p-0 text-center">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleExpanded(a.ID);
+                        }}
+                        aria-label={expanded.has(a.ID) ? "Hide contents" : "Show contents"}
+                      >
+                        {expanded.has(a.ID) ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </TableCell>
                     <TableCell className="font-medium">
                       <Link
                         to="/asns/$asnId"
@@ -343,6 +372,15 @@ function AsnsPage() {
                       </Button>
                     </TableCell>
                   </TableRow>
+                  {expanded.has(a.ID) ? (
+                    <TableRow className="bg-muted/30 hover:bg-muted/30">
+                      <TableCell />
+                      <TableCell colSpan={9} className="py-3">
+                        <AsnItemsInline asnId={a.ID} />
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                  </Fragment>
                 ))}
               </TableBody>
             </Table>
