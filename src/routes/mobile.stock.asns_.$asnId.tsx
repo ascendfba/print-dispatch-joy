@@ -502,9 +502,7 @@ function VerifyDrawer({
   const [bbf, setBbf] = useState<string>("");
   const [bbfConfirmed, setBbfConfirmed] = useState(false);
   const [location, setLocation] = useState<string>("");
-  const [showLocationKeypad, setShowLocationKeypad] = useState(false);
   const locationInputRef = useRef<HTMLInputElement | null>(null);
-  const locationScanBufferRef = useRef("");
 
   function focusLocationScanner(delay = 0) {
     setTimeout(() => {
@@ -522,9 +520,7 @@ function VerifyDrawer({
       setBbf(existing?.bbf ?? "");
       setBbfConfirmed(Boolean(existing?.bbf));
       setLocation(existing?.location ?? "");
-      locationScanBufferRef.current = (existing?.location ?? "").toUpperCase();
-      setShowLocationKeypad(false);
-      // Keep a real input focused so the device scanner can type into it.
+      // Keep a real visible input focused so Zebra scanners can inject keystrokes.
       focusLocationScanner(250);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -538,7 +534,7 @@ function VerifyDrawer({
   function handleLocationScannerKey(key: string, preventDefault: () => void) {
     if (key === "Enter" || key === "Tab") {
       preventDefault();
-      const scannedLocation = (locationInputRef.current?.value ?? location).toUpperCase();
+      const scannedLocation = (locationInputRef.current?.value ?? location).trim().toUpperCase();
       setLocation(scannedLocation);
       if (!bbfInvalid && scannedLocation.trim()) handleSave(scannedLocation);
     }
@@ -562,7 +558,6 @@ function VerifyDrawer({
     if (!matched) {
       toast.error(`Location "${saveLocation}" not found in this warehouse`);
       setLocation("");
-      locationScanBufferRef.current = "";
       focusLocationScanner(50);
       return;
     }
