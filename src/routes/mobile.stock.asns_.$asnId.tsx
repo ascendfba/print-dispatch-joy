@@ -550,6 +550,19 @@ function VerifyDrawer({
     }, 0);
   }
 
+  function queueScannerCommit(raw: string) {
+    const scannedLocation = raw.trim().toUpperCase();
+    scannerBufferRef.current = scannedLocation;
+    setLocation(scannedLocation);
+    if (scannerCommitTimerRef.current) window.clearTimeout(scannerCommitTimerRef.current);
+    scannerCommitTimerRef.current = window.setTimeout(() => {
+      const nextLocation = scannerBufferRef.current.trim().toUpperCase();
+      if (nextLocation && resolveLocationId(nextLocation, locations)) {
+        handleSave(nextLocation);
+      }
+    }, 300);
+  }
+
   useEffect(() => {
     if (!scannerReady) return;
     focusScannerInput();
@@ -575,8 +588,7 @@ function VerifyDrawer({
 
       if (event.key === "Backspace") {
         event.preventDefault();
-        scannerBufferRef.current = scannerBufferRef.current.slice(0, -1);
-        setLocation(scannerBufferRef.current);
+        queueScannerCommit(scannerBufferRef.current.slice(0, -1));
         return;
       }
 
@@ -585,16 +597,7 @@ function VerifyDrawer({
       const now = Date.now();
       if (now - scannerLastKeyAtRef.current > 1500) scannerBufferRef.current = "";
       scannerLastKeyAtRef.current = now;
-      scannerBufferRef.current = (scannerBufferRef.current + event.key).toUpperCase().slice(0, 32);
-      setLocation(scannerBufferRef.current);
-      if (scannerCommitTimerRef.current) window.clearTimeout(scannerCommitTimerRef.current);
-      scannerCommitTimerRef.current = window.setTimeout(() => {
-        const scannedLocation = scannerBufferRef.current.trim().toUpperCase();
-        if (scannedLocation && resolveLocationId(scannedLocation, locations)) {
-          setLocation(scannedLocation);
-          handleSave(scannedLocation);
-        }
-      }, 350);
+      queueScannerCommit((scannerBufferRef.current + event.key).slice(0, 64));
     };
 
     document.addEventListener("keydown", handleScannerKey, true);
@@ -602,7 +605,7 @@ function VerifyDrawer({
       document.removeEventListener("keydown", handleScannerKey, true);
       if (scannerCommitTimerRef.current) window.clearTimeout(scannerCommitTimerRef.current);
     };
-  }, [scannerReady, bbfInvalid, normalisedBbf, location, qty, locations]);
+  }, [scannerReady, bbfInvalid, normalisedBbf, qty, locations]);
 
   function handleSave(locationOverride = location) {
     const saveLocation = locationOverride.trim();
