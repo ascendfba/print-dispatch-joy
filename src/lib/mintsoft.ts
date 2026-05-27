@@ -1841,6 +1841,7 @@ export type OrderDocument = {
   fileName?: string;
   contentType?: string;
   documentId?: number;
+  comments?: string;
   bytes: Uint8Array;
 };
 
