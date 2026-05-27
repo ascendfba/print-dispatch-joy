@@ -1542,7 +1542,7 @@ function OrderDocumentsCard({ orderId }: { orderId: number }) {
               pageCount = null;
             }
           }
-          return { label: d.label, fileName: d.fileName || d.label, contentType, url: URL.createObjectURL(blob), size, bytes: d.bytes, pageCount };
+          return { label: d.label, fileName: d.fileName || d.label, contentType, url: URL.createObjectURL(blob), size, bytes: d.bytes, pageCount, comments: d.comments };
         }),
       );
     },
