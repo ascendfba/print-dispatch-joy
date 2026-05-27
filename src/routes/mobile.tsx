@@ -1,9 +1,71 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet, Link, useLocation } from "@tanstack/react-router";
+import { Menu, Home, MapPin, Search, Warehouse } from "lucide-react";
 
 export const Route = createFileRoute("/mobile")({
-  component: () => (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <Outlet />
-    </div>
-  ),
+  component: MobileShell,
 });
+
+function MobileShell() {
+  const { pathname } = useLocation();
+  const isActive = (p: string) =>
+    p === "/mobile" ? pathname === "/mobile" : pathname.startsWith(p);
+
+  return (
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
+      {/* Top bar */}
+      <header className="shrink-0 border-b bg-card">
+        <div className="flex items-center justify-between px-4 h-12">
+          <button className="p-1 -ml-1 text-foreground/80">
+            <Menu className="h-5 w-5" />
+          </button>
+          <h1 className="text-base font-semibold">Mintsoft</h1>
+          <div className="w-7" />
+        </div>
+        <div className="px-4 pb-3">
+          <div className="flex items-center justify-center gap-2 rounded-lg bg-muted/60 py-2 text-sm font-medium">
+            <Warehouse className="h-4 w-4 text-primary" />
+            Derby Warehouse
+          </div>
+        </div>
+      </header>
+
+      {/* Content */}
+      <main className="flex-1 overflow-y-auto">
+        <Outlet />
+      </main>
+
+      {/* Bottom nav */}
+      <nav className="shrink-0 border-t bg-card">
+        <div className="grid grid-cols-3">
+          <BottomItem to="/mobile/locations" label="Location Contents" icon={<MapPin className="h-5 w-5" />} active={isActive("/mobile/locations")} />
+          <BottomItem to="/mobile" label="Home" icon={<Home className="h-5 w-5" />} active={pathname === "/mobile"} />
+          <BottomItem to="/mobile/search" label="Product Search" icon={<Search className="h-5 w-5" />} active={isActive("/mobile/search")} />
+        </div>
+      </nav>
+    </div>
+  );
+}
+
+function BottomItem({
+  to,
+  label,
+  icon,
+  active,
+}: {
+  to: string;
+  label: string;
+  icon: React.ReactNode;
+  active: boolean;
+}) {
+  return (
+    <Link
+      to={to}
+      className={`flex flex-col items-center justify-center gap-1 py-2 text-[11px] ${
+        active ? "text-primary font-medium" : "text-muted-foreground"
+      }`}
+    >
+      {icon}
+      <span>{label}</span>
+    </Link>
+  );
+}
