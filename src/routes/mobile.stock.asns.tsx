@@ -1,9 +1,99 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronLeft, Search, Truck, Loader2, X } from "lucide-react";
+import { ChevronLeft, Search, Truck, Loader2, X, Boxes } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { listASNs, type MintsoftASN } from "@/lib/mintsoft";
 import { loadSettings } from "@/lib/storage";
+
+function getSkuCount(asn: MintsoftASN): number | undefined {
+  const raw = asn as Record<string, unknown>;
+  const candidates = [
+    "TotalSKUs", "SKUCount", "LineItemCount", "ItemCount",
+    "NumberOfProducts", "ProductsCount", "TotalProducts",
+    "NumberOfSKUs", "SKUs", "ProductCount",
+  ];
+  for (const key of candidates) {
+    const val = raw[key];
+    if (typeof val === "number" && Number.isFinite(val)) return val;
+    if (typeof val === "string") {
+      const n = Number(val);
+      if (Number.isFinite(n)) return n;
+    }
+  }
+  const items = raw["ASNItems"] ?? raw["Items"] ?? raw["Details"];
+  if (Array.isArray(items)) return items.length;
+  return undefined;
+}
+
+function getPackageBreakdown(asn: MintsoftASN): string {
+  const raw = asn as Record<string, unknown>;
+  const counts: Record<string, number> = {};
+
+  // Try individual count fields first
+  const fieldMappings: Array<[string, string[]]> = [
+    ["Pallet", ["Pallets", "PalletCount", "NumberOfPallets", "TotalPallets", "PalletQty"]],
+    ["Carton", ["Cartons", "CartonCount", "NumberOfCartons", "TotalCartons", "CartonQty", "CartonsQty"]],
+    ["Box", ["Boxes", "BoxCount", "NumberOfBoxes", "TotalBoxes", "BoxQty"]],
+    ["Bag", ["Bags", "BagCount", "NumberOfBags", "TotalBags"]],
+    ["Tote", ["Totes", "ToteCount", "NumberOfTotes", "TotalTotes"]],
+    ["Crate", ["Crates", "CrateCount", "NumberOfCrates", "TotalCrates"]],
+    ["Roll", ["Rolls", "RollCount", "NumberOfRolls", "TotalRolls"]],
+    ["Drum", ["Drums", "DrumCount", "NumberOfDrums", "TotalDrums"]],
+  ];
+
+  for (const [label, keys] of fieldMappings) {
+    for (const key of keys) {
+      const val = raw[key];
+      if (typeof val === "number" && val > 0) {
+        counts[label] = (counts[label] || 0) + val;
+        break;
+      }
+      if (typeof val === "string") {
+        const n = Number(val);
+        if (n > 0) {
+          counts[label] = (counts[label] || 0) + n;
+          break;
+        }
+      }
+    }
+  }
+
+  // Try a Packages / PackageTypes array
+  const packagesArr = raw["Packages"] ?? raw["PackageTypes"] ?? raw["PackageDetails"];
+  if (Array.isArray(packagesArr)) {
+    for (const pkg of packagesArr) {
+      if (!pkg || typeof pkg !== "object") continue;
+      const p = pkg as Record<string, unknown>;
+      const type =
+        (typeof p["Type"] === "string" && p["Type"]) ||
+        (typeof p["PackageType"] === "string" && p["PackageType"]) ||
+        (typeof p["Name"] === "string" && p["Name"]) ||
+        "";
+      const qty =
+        typeof p["Quantity"] === "number" ? p["Quantity"] :
+        typeof p["Count"] === "number" ? p["Count"] :
+        typeof p["Qty"] === "number" ? p["Qty"] :
+        typeof p["Quantity"] === "string" ? Number(p["Quantity"]) :
+        typeof p["Count"] === "string" ? Number(p["Count"]) :
+        typeof p["Qty"] === "string" ? Number(p["Qty"]) :
+        0;
+      if (type && qty > 0) {
+        const key = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+        counts[key] = (counts[key] || 0) + qty;
+      }
+    }
+  }
+
+  // Also try PackageSummary string
+  if (typeof raw["PackageSummary"] === "string" && raw["PackageSummary"]) {
+    return raw["PackageSummary"] as string;
+  }
+
+  const entries = Object.entries(counts).filter(([, n]) => n > 0);
+  if (entries.length === 0) return "";
+  return entries.map(([type, qty]) => `${type.toLowerCase()} x ${qty}`).join(", ");
+}
+
 
 export const Route = createFileRoute("/mobile/stock/asns")({
   component: MobileASNs,
