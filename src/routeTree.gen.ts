@@ -24,6 +24,7 @@ import { Route as FbaCalculatorRouteImport } from './routes/fba-calculator'
 import { Route as DevelopmentRouteImport } from './routes/development'
 import { Route as AsnsRouteImport } from './routes/asns'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MobileIndexRouteImport } from './routes/mobile.index'
 import { Route as OrdersOrderIdRouteImport } from './routes/orders_.$orderId'
 import { Route as DSlugRouteImport } from './routes/d.$slug'
 import { Route as AsnsAsnIdRouteImport } from './routes/asns_.$asnId'
@@ -115,6 +116,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MobileIndexRoute = MobileIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MobileRoute,
+} as any)
 const OrdersOrderIdRoute = OrdersOrderIdRouteImport.update({
   id: '/orders_/$orderId',
   path: '/orders/$orderId',
@@ -203,7 +209,7 @@ export interface FileRoutesByFullPath {
   '/invoice-merger': typeof InvoiceMergerRoute
   '/login': typeof LoginRoute
   '/mfa': typeof MfaRoute
-  '/mobile': typeof MobileRoute
+  '/mobile': typeof MobileRouteWithChildren
   '/mobile-emulator': typeof MobileEmulatorRoute
   '/orders': typeof OrdersRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -220,6 +226,7 @@ export interface FileRoutesByFullPath {
   '/asns/$asnId': typeof AsnsAsnIdRouteWithChildren
   '/d/$slug': typeof DSlugRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/mobile/': typeof MobileIndexRoute
   '/api/public/setup-desktop-bucket': typeof ApiPublicSetupDesktopBucketRoute
   '/api/public/setup-warning-labels-bucket': typeof ApiPublicSetupWarningLabelsBucketRoute
   '/asns/$asnId/quick': typeof AsnsAsnIdQuickRoute
@@ -235,7 +242,6 @@ export interface FileRoutesByTo {
   '/invoice-merger': typeof InvoiceMergerRoute
   '/login': typeof LoginRoute
   '/mfa': typeof MfaRoute
-  '/mobile': typeof MobileRoute
   '/mobile-emulator': typeof MobileEmulatorRoute
   '/orders': typeof OrdersRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -252,6 +258,7 @@ export interface FileRoutesByTo {
   '/asns/$asnId': typeof AsnsAsnIdRouteWithChildren
   '/d/$slug': typeof DSlugRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/mobile': typeof MobileIndexRoute
   '/api/public/setup-desktop-bucket': typeof ApiPublicSetupDesktopBucketRoute
   '/api/public/setup-warning-labels-bucket': typeof ApiPublicSetupWarningLabelsBucketRoute
   '/asns/$asnId/quick': typeof AsnsAsnIdQuickRoute
@@ -268,7 +275,7 @@ export interface FileRoutesById {
   '/invoice-merger': typeof InvoiceMergerRoute
   '/login': typeof LoginRoute
   '/mfa': typeof MfaRoute
-  '/mobile': typeof MobileRoute
+  '/mobile': typeof MobileRouteWithChildren
   '/mobile-emulator': typeof MobileEmulatorRoute
   '/orders': typeof OrdersRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -285,6 +292,7 @@ export interface FileRoutesById {
   '/asns_/$asnId': typeof AsnsAsnIdRouteWithChildren
   '/d/$slug': typeof DSlugRoute
   '/orders_/$orderId': typeof OrdersOrderIdRoute
+  '/mobile/': typeof MobileIndexRoute
   '/api/public/setup-desktop-bucket': typeof ApiPublicSetupDesktopBucketRoute
   '/api/public/setup-warning-labels-bucket': typeof ApiPublicSetupWarningLabelsBucketRoute
   '/asns_/$asnId/quick': typeof AsnsAsnIdQuickRoute
@@ -319,6 +327,7 @@ export interface FileRouteTypes {
     | '/asns/$asnId'
     | '/d/$slug'
     | '/orders/$orderId'
+    | '/mobile/'
     | '/api/public/setup-desktop-bucket'
     | '/api/public/setup-warning-labels-bucket'
     | '/asns/$asnId/quick'
@@ -334,7 +343,6 @@ export interface FileRouteTypes {
     | '/invoice-merger'
     | '/login'
     | '/mfa'
-    | '/mobile'
     | '/mobile-emulator'
     | '/orders'
     | '/reset-password'
@@ -351,6 +359,7 @@ export interface FileRouteTypes {
     | '/asns/$asnId'
     | '/d/$slug'
     | '/orders/$orderId'
+    | '/mobile'
     | '/api/public/setup-desktop-bucket'
     | '/api/public/setup-warning-labels-bucket'
     | '/asns/$asnId/quick'
@@ -383,6 +392,7 @@ export interface FileRouteTypes {
     | '/asns_/$asnId'
     | '/d/$slug'
     | '/orders_/$orderId'
+    | '/mobile/'
     | '/api/public/setup-desktop-bucket'
     | '/api/public/setup-warning-labels-bucket'
     | '/asns_/$asnId/quick'
@@ -399,7 +409,7 @@ export interface RootRouteChildren {
   InvoiceMergerRoute: typeof InvoiceMergerRoute
   LoginRoute: typeof LoginRoute
   MfaRoute: typeof MfaRoute
-  MobileRoute: typeof MobileRoute
+  MobileRoute: typeof MobileRouteWithChildren
   MobileEmulatorRoute: typeof MobileEmulatorRoute
   OrdersRoute: typeof OrdersRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -529,6 +539,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mobile/': {
+      id: '/mobile/'
+      path: '/'
+      fullPath: '/mobile/'
+      preLoaderRoute: typeof MobileIndexRouteImport
+      parentRoute: typeof MobileRoute
+    }
     '/orders_/$orderId': {
       id: '/orders_/$orderId'
       path: '/orders/$orderId'
@@ -637,6 +654,17 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface MobileRouteChildren {
+  MobileIndexRoute: typeof MobileIndexRoute
+}
+
+const MobileRouteChildren: MobileRouteChildren = {
+  MobileIndexRoute: MobileIndexRoute,
+}
+
+const MobileRouteWithChildren =
+  MobileRoute._addFileChildren(MobileRouteChildren)
+
 interface AsnsAsnIdRouteChildren {
   AsnsAsnIdQuickRoute: typeof AsnsAsnIdQuickRoute
 }
@@ -658,7 +686,7 @@ const rootRouteChildren: RootRouteChildren = {
   InvoiceMergerRoute: InvoiceMergerRoute,
   LoginRoute: LoginRoute,
   MfaRoute: MfaRoute,
-  MobileRoute: MobileRoute,
+  MobileRoute: MobileRouteWithChildren,
   MobileEmulatorRoute: MobileEmulatorRoute,
   OrdersRoute: OrdersRoute,
   ResetPasswordRoute: ResetPasswordRoute,
