@@ -1,8 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ShoppingBag,
-  Layers,
-  Package,
+  ClipboardList,
   Truck,
   ArrowLeftRight,
   PackagePlus,
@@ -27,8 +26,7 @@ function MobileHome() {
       title: "Picking",
       tiles: [
         { label: "Order Picking", icon: <ShoppingBag className="h-6 w-6" /> },
-        { label: "Batch Picking", icon: <Layers className="h-6 w-6" /> },
-        { label: "Carton / Pallet Picking", icon: <Package className="h-6 w-6" /> },
+        { label: "View Orders", icon: <ClipboardList className="h-6 w-6" /> },
       ],
     },
     {
