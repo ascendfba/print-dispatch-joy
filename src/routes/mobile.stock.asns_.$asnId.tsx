@@ -580,7 +580,7 @@ function VerifyDrawer({
 
     document.addEventListener("keydown", handleScannerKey, true);
     return () => document.removeEventListener("keydown", handleScannerKey, true);
-  }, [scannerReady, bbfInvalid, location, qty, locations]);
+  }, [scannerReady, bbfInvalid, normalisedBbf, location, qty, locations]);
 
   function handleSave(locationOverride = location) {
     const saveLocation = locationOverride.trim();
