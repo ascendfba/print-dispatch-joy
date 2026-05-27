@@ -2583,13 +2583,43 @@ function PackingListDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            Enter Packing List
+            {alreadySubmitted ? "Packing List (submitted)" : "Enter Packing List"}
           </DialogTitle>
           <DialogDescription>
-            Drag SKUs from the left into a box. Each drop adds qty 1 — edit the qty as needed. A PDF will be generated and attached to the order in Mintsoft as "Packing List".
+            {alreadySubmitted
+              ? "A packing list has already been saved for this order. Below is the PDF that was submitted."
+              : 'Drag SKUs from the left into a box. Each drop adds qty 1 — edit the qty as needed. A PDF will be generated and attached to the order in Mintsoft as "Packing List".'}
           </DialogDescription>
         </DialogHeader>
 
+        {alreadySubmitted ? (
+          <div className="space-y-3">
+            {pdfPreview ? (
+              <>
+                <div className="h-[70vh] rounded-md border overflow-hidden">
+                  <PdfPreview url={pdfPreview.url} fileName={pdfPreview.fileName} />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      window.open(pdfPreview.url, "_blank", "noopener,noreferrer")
+                    }
+                  >
+                    Open in new tab
+                  </Button>
+                  <Button onClick={() => onOpenChange(false)}>Close</Button>
+                </div>
+              </>
+            ) : (
+              <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Loading saved packing list…
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
         {(() => {
           const totalOrdered = orderSkus.reduce((s, x) => s + x.qty, 0);
           const totalPlaced = orderSkus.reduce(
