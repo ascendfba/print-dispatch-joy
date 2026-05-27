@@ -625,6 +625,7 @@ function VerifyDrawer({
       const target = event.target as HTMLElement | null;
       const isScannerInput = target === scannerInputRef.current;
       if (
+        !scannerArmed &&
         !isScannerInput &&
         (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT")
       ) return;
@@ -725,6 +726,7 @@ function VerifyDrawer({
                 inputMode="numeric"
                 value={qty}
                 onChange={(e) => setQty(Math.max(0, Number(e.target.value) || 0))}
+                onFocus={() => setScannerArmed(false)}
                 className="flex-1 h-12 text-center text-lg font-semibold tabular-nums rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
               />
               <button
@@ -763,6 +765,7 @@ function VerifyDrawer({
                   inputMode="numeric"
                   placeholder="010126"
                   value={bbf}
+                  onFocus={() => setScannerArmed(false)}
                   onChange={(e) => {
                     const next = e.target.value;
                     const validDate = Boolean(normaliseBbf(next));
