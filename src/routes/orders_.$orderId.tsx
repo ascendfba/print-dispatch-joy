@@ -294,9 +294,7 @@ function OrderDetailPage() {
     queryKey: ["packing-list-doc", id],
     queryFn: async () => {
       const docs = await fetchOrderDocumentSummaries(loadSettings(), id);
-      const types = await import("@/lib/mintsoft").then((m) =>
-        m.fetchOrderDocumentTypes(loadSettings()).catch(() => []),
-      );
+      const types = await fetchOrderDocumentTypes(loadSettings()).catch(() => []);
       const packingTypeId = types.find(
         (t) => (t.Name ?? "").trim().toLowerCase() === "boxpackinglist",
       )?.ID;
