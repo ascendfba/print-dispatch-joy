@@ -576,7 +576,7 @@ function VerifyDrawer({
 
   useEffect(() => {
     if (!scannerReady) return;
-    focusScannerInput();
+    if (!requiresBbf) focusScannerInput();
     const handleScannerKey = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.altKey || event.metaKey) return;
       const target = event.target as HTMLElement | null;
@@ -585,6 +585,8 @@ function VerifyDrawer({
         !isScannerInput &&
         (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT")
       ) return;
+
+      if (!scannerArmed && !isScannerInput) return;
 
       if (event.key === "Enter" || event.key === "Tab") {
         event.preventDefault();
@@ -616,7 +618,7 @@ function VerifyDrawer({
       document.removeEventListener("keydown", handleScannerKey, true);
       if (scannerCommitTimerRef.current) window.clearTimeout(scannerCommitTimerRef.current);
     };
-  }, [scannerReady, bbfInvalid, normalisedBbf, qty, locations]);
+  }, [scannerReady, scannerArmed, requiresBbf, bbfInvalid, normalisedBbf, qty, locations]);
 
   function handleSave(locationOverride = location) {
     const saveLocation = locationOverride.trim();
@@ -638,6 +640,7 @@ function VerifyDrawer({
       return;
     }
     const canonical = matched.code || matched.name || saveLocation;
+    setScannerArmed(false);
     onSave({ receivedQty: qty, bbf: normalisedBbf, location: canonical });
   }
 
