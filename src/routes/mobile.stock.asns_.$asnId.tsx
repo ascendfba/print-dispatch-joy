@@ -162,6 +162,7 @@ function MobileASNDetail() {
     }
     await queryClient.invalidateQueries({ queryKey: ["mobile-asn", id] });
     await queryClient.invalidateQueries({ queryKey: ["mobile-asn-items", id] });
+    await queryClient.invalidateQueries({ queryKey: ["mobile-asns-list"] });
     setSubmitting(null);
     if (okCount > 0 && errors.length === 0) {
       toast.success(
