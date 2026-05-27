@@ -99,6 +99,23 @@ async function fetchImageCandidates(query: string): Promise<ImageCandidate[]> {
   }
 }
 
+const ASIN_RE = /\b(B0[A-Z0-9]{8})\b/i;
+
+async function fetchAmazonCandidates(query: string): Promise<ImageCandidate[]> {
+  try {
+    const r = await fetch(`/api/amazon-image?q=${encodeURIComponent(query)}`);
+    if (!r.ok) return [];
+    const data = (await r.json()) as {
+      candidates?: ImageCandidate[];
+      image?: string | null;
+    };
+    if (data.candidates && data.candidates.length) return data.candidates;
+    return data.image ? [{ image: data.image, title: null }] : [];
+  } catch {
+    return [];
+  }
+}
+
 function ProductImage({
   product,
   scannedBarcode,
@@ -113,9 +130,28 @@ function ProductImage({
     .map((q) => (q ? String(q).trim() : ""))
     .filter((q) => q.length > 0);
 
+  // ASINs (Amazon product codes) can hide in SKU, Name, EAN, UPC or scan.
+  // If we spot one, hit Amazon's product page directly — far more accurate
+  // than name-based image search.
+  const asinSource = [
+    product?.SKU,
+    product?.Name,
+    product?.EAN,
+    product?.UPC,
+    scannedBarcode,
+  ]
+    .map((v) => (v ? String(v) : ""))
+    .join(" ");
+  const asin = asinSource.match(ASIN_RE)?.[1]?.toUpperCase() ?? null;
+
   const amazonQuery = useQuery({
-    queryKey: ["best-image", product?.SKU ?? product?.Name, queries],
+    queryKey: ["best-image", product?.SKU ?? product?.Name, queries, asin],
     queryFn: async () => {
+      // ASIN fast-path: skip the noisy search + Gemini picker entirely.
+      if (asin) {
+        const found = await fetchAmazonCandidates(asin);
+        if (found.length > 0) return found[0].image;
+      }
       const seen = new Set<string>();
       const candidates: ImageCandidate[] = [];
       for (const q of queries) {
@@ -155,7 +191,7 @@ function ProductImage({
       }
       return candidates[0].image;
     },
-    enabled: !direct && queries.length > 0,
+    enabled: !direct && (queries.length > 0 || !!asin),
     staleTime: 60 * 60_000,
     refetchOnWindowFocus: false,
   });
