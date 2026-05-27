@@ -506,7 +506,6 @@ function VerifyDrawer({
 
   function focusLocationScanner(delay = 0) {
     setTimeout(() => {
-      locationInputRef.current?.setAttribute("virtualkeyboardpolicy", "manual");
       locationInputRef.current?.focus({ preventScroll: true });
     }, delay);
   }
@@ -689,11 +688,7 @@ function VerifyDrawer({
                 autoComplete="off"
                 placeholder="Scan location barcode"
                 value={location}
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  focusLocationScanner();
-                }}
-                onFocus={() => locationInputRef.current?.setAttribute("virtualkeyboardpolicy", "manual")}
+                onClick={() => focusLocationScanner()}
                 onChange={(e) => setLocation(e.target.value.toUpperCase())}
                 onKeyDown={(e) => handleLocationScannerKey(e.key, () => e.preventDefault())}
                 maxLength={32}
