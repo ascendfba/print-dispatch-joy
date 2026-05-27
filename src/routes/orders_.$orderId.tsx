@@ -2337,12 +2337,43 @@ function PackingListDialog({
 
   // Invalidate generated PDF whenever entries change.
   useEffect(() => {
+    if (alreadySubmitted) return;
     setPdfPreview((prev) => {
       if (prev) URL.revokeObjectURL(prev.url);
       return null;
     });
     setSubmitted(false);
-  }, [boxes]);
+  }, [boxes, alreadySubmitted]);
+
+  // When opened for an already-submitted order, load the saved Mintsoft PDF
+  // so the user can view exactly what was previously entered.
+  useEffect(() => {
+    if (!open || !alreadySubmitted) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const docs = await fetchOrderDocuments(loadSettings(), orderId);
+        const match =
+          docs.find((d) => /packing\s*list/i.test(d.fileName ?? d.label ?? "")) ||
+          docs.find((d) => /packing\s*list/i.test(d.label ?? ""));
+        if (!match || cancelled) return;
+        const blob = new Blob([match.bytes as BlobPart], { type: "application/pdf" });
+        setPdfPreview((prev) => {
+          if (prev) URL.revokeObjectURL(prev.url);
+          return {
+            url: URL.createObjectURL(blob),
+            bytes: match.bytes,
+            fileName: match.fileName || "Packing List.pdf",
+          };
+        });
+      } catch (e) {
+        console.warn("[packing-list] failed to load saved PDF", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, alreadySubmitted, orderId]);
 
   const applyBoxCount = (n: number) => {
     const next = Math.max(1, Math.min(50, Math.floor(n || 1)));
@@ -2552,13 +2583,43 @@ function PackingListDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            Enter Packing List
+            {alreadySubmitted ? "Packing List (submitted)" : "Enter Packing List"}
           </DialogTitle>
           <DialogDescription>
-            Drag SKUs from the left into a box. Each drop adds qty 1 — edit the qty as needed. A PDF will be generated and attached to the order in Mintsoft as "Packing List".
+            {alreadySubmitted
+              ? "A packing list has already been saved for this order. Below is the PDF that was submitted."
+              : 'Drag SKUs from the left into a box. Each drop adds qty 1 — edit the qty as needed. A PDF will be generated and attached to the order in Mintsoft as "Packing List".'}
           </DialogDescription>
         </DialogHeader>
 
+        {alreadySubmitted ? (
+          <div className="space-y-3">
+            {pdfPreview ? (
+              <>
+                <div className="h-[70vh] rounded-md border overflow-hidden">
+                  <PdfPreview bytes={pdfPreview.bytes} />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      window.open(pdfPreview.url, "_blank", "noopener,noreferrer")
+                    }
+                  >
+                    Open in new tab
+                  </Button>
+                  <Button onClick={() => onOpenChange(false)}>Close</Button>
+                </div>
+              </>
+            ) : (
+              <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Loading saved packing list…
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
         {(() => {
           const totalOrdered = orderSkus.reduce((s, x) => s + x.qty, 0);
           const totalPlaced = orderSkus.reduce(
@@ -2901,6 +2962,8 @@ function PackingListDialog({
           )}
         </div>
         </div>
+        </>
+        )}
       </DialogContent>
     </Dialog>
   );
