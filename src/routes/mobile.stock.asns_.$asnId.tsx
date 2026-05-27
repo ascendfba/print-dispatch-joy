@@ -619,7 +619,7 @@ function VerifyDrawer({
 
   useEffect(() => {
     if (!scannerReady) return;
-    if (!requiresBbf) focusScannerInput();
+    if (!requiresBbf) focusScannerInput("no-bbf-auto");
     const handleScannerKey = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.altKey || event.metaKey) return;
       const target = event.target as HTMLElement | null;
@@ -635,6 +635,7 @@ function VerifyDrawer({
         event.preventDefault();
         if (scannerCommitTimerRef.current) window.clearTimeout(scannerCommitTimerRef.current);
         const scannedLocation = scannerBufferRef.current.trim().toUpperCase();
+        addScannerDebug("submit key", `${event.key} value=${scannedLocation || "empty"}`);
         if (scannedLocation) {
           setLocation(scannedLocation);
           handleSave(scannedLocation);
@@ -653,6 +654,7 @@ function VerifyDrawer({
       const now = Date.now();
       if (now - scannerLastKeyAtRef.current > 1500) scannerBufferRef.current = "";
       scannerLastKeyAtRef.current = now;
+      addScannerDebug("key", event.key);
       queueScannerCommit((scannerBufferRef.current + event.key).slice(0, 64));
     };
 
