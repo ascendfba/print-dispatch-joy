@@ -16,6 +16,7 @@ import {
   type MintsoftWarehouseLocation,
 } from "@/lib/mintsoft";
 import { loadSettings } from "@/lib/storage";
+import { useProductImage } from "@/lib/useProductImage";
 import {
   Drawer,
   DrawerContent,
