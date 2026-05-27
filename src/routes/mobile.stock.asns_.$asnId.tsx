@@ -713,7 +713,7 @@ function VerifyDrawer({
 
         <DrawerFooter className="pt-2">
           <Button
-            onClick={handleSave}
+            onClick={() => handleSave()}
             disabled={bbfInvalid || locationInvalid}
             className="h-14 text-base bg-[#0099d4] hover:bg-[#0088bc] text-white"
           >
