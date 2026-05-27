@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 
-type VerifiedRow = { receivedQty: number; bbf: string };
+type VerifiedRow = { receivedQty: number; bbf: string; location: string };
 
 export const Route = createFileRoute("/mobile/stock/asns_/$asnId")({
   component: MobileASNDetail,
@@ -269,6 +269,7 @@ function ASNItemRow({
             <span className="inline-flex items-center rounded-full px-2 py-0.5 font-medium bg-emerald-100 text-emerald-700">
               Received {verified.receivedQty}
               {verified.bbf ? ` · BBF ${verified.bbf}` : ""}
+              {verified.location ? ` · ${verified.location}` : ""}
             </span>
           ) : item.ReceivedQuantity != null && item.ReceivedQuantity > 0 ? (
             <span className="text-muted-foreground">
@@ -351,6 +352,7 @@ function VerifyDrawer({
   const expected = item?.ExpectedQuantity ?? 0;
   const [qty, setQty] = useState<number>(0);
   const [bbf, setBbf] = useState<string>("");
+  const [location, setLocation] = useState<string>("");
 
   // Reset whenever a new item is opened.
   const itemKey = item ? String(item.ID ?? "") : "";
@@ -358,12 +360,15 @@ function VerifyDrawer({
     if (item) {
       setQty(existing?.receivedQty ?? expected);
       setBbf(existing?.bbf ?? "");
+      setLocation(existing?.location ?? "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemKey]);
 
   const normalisedBbf = bbf ? normaliseBbf(bbf) : "";
   const bbfInvalid = requiresBbf && (!bbf || !normalisedBbf);
+  const trimmedLocation = location.trim();
+  const locationInvalid = !trimmedLocation;
 
   function handleSave() {
     if (qty < 0) {
@@ -374,7 +379,11 @@ function VerifyDrawer({
       toast.error("Enter a valid BBF date (DDMMYY)");
       return;
     }
-    onSave({ receivedQty: qty, bbf: normalisedBbf });
+    if (!trimmedLocation) {
+      toast.error("Scan or enter a location");
+      return;
+    }
+    onSave({ receivedQty: qty, bbf: normalisedBbf, location: trimmedLocation });
   }
 
   return (
@@ -469,12 +478,34 @@ function VerifyDrawer({
               <Loader2 className="h-3 w-3 animate-spin" /> Checking SKU requirements…
             </p>
           )}
+
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground mb-2">
+              Location <span className="text-rose-600">*</span>{" "}
+              <span className="text-muted-foreground/70 font-normal">
+                (scan or type)
+              </span>
+            </p>
+            <input
+              type="text"
+              inputMode="text"
+              autoCapitalize="characters"
+              placeholder="e.g. A-12-3"
+              value={location}
+              onChange={(e) => setLocation(e.target.value.toUpperCase())}
+              maxLength={32}
+              className="w-full h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
+            />
+            <p className="mt-1.5 text-[11px] text-muted-foreground">
+              Items will be booked into this location.
+            </p>
+          </div>
         </div>
 
         <DrawerFooter className="pt-2">
           <Button
             onClick={handleSave}
-            disabled={bbfInvalid}
+            disabled={bbfInvalid || locationInvalid}
             className="h-14 text-base bg-[#0099d4] hover:bg-[#0088bc] text-white"
           >
             <Save className="h-5 w-5 mr-2" /> Save
