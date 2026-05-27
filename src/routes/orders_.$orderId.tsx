@@ -2836,7 +2836,8 @@ function PackingListDialog({
                   submitting ||
                   alreadySubmitted ||
                   submitted ||
-                  boxes.some((b) => !(b.length && b.width && b.height))
+                  boxes.some((b) => !(b.length && b.width && b.height)) ||
+                  boxes.some((b) => !(b.weight && Number(b.weight) > 0))
                 }
                 variant={pdfPreview ? "outline" : "default"}
               >
