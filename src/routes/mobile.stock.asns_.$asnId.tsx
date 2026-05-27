@@ -822,12 +822,21 @@ function VerifyDrawer({
           )}
 
           <div>
-            <p className="text-xs font-semibold text-muted-foreground mb-2">
-              Location <span className="text-rose-600">*</span>{" "}
-              <span className="text-muted-foreground/70 font-normal">
-                {scannerArmed ? "(scan now)" : "(tap to scan)"}
-              </span>
-            </p>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold text-muted-foreground">
+                Location <span className="text-rose-600">*</span>{" "}
+                <span className="text-muted-foreground/70 font-normal">
+                  {scannerArmed ? "(scan now)" : "(tap to scan)"}
+                </span>
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowScannerDebug((v) => !v)}
+                className="rounded-md border px-2 py-1 text-[10px] font-semibold text-muted-foreground active:bg-muted"
+              >
+                Debug
+              </button>
+            </div>
             <div className="flex items-center gap-2">
               <input
                 ref={scannerInputRef}
@@ -866,6 +875,28 @@ function VerifyDrawer({
                 </Button>
               )}
             </div>
+            {showScannerDebug && (
+              <div className="mt-2 rounded-lg border bg-muted/40 p-2 font-mono text-[10px] leading-relaxed text-muted-foreground">
+                <div className="mb-1 grid grid-cols-2 gap-1 font-sans text-[10px] font-semibold text-foreground">
+                  <span>ready: {scannerReady ? "yes" : "no"}</span>
+                  <span>armed: {scannerArmed ? "yes" : "no"}</span>
+                  <span>product: {productRequirementKnown ? "known" : "loading"}</span>
+                  <span>bbf: {requiresBbf ? "required" : "not required"}</span>
+                  <span className="col-span-2 truncate">buffer: {scannerBufferRef.current || "empty"}</span>
+                </div>
+                {scannerDebug.length === 0 ? (
+                  <div>No scanner events yet.</div>
+                ) : (
+                  <div className="max-h-28 space-y-1 overflow-y-auto">
+                    {scannerDebug.map((entry) => (
+                      <div key={entry.id} className="truncate">
+                        {entry.time} {entry.label}: {entry.detail}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
