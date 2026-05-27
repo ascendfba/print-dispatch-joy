@@ -5,6 +5,20 @@ import { useQuery } from "@tanstack/react-query";
 import { listASNs, listClients, fetchASNItems, type MintsoftASN } from "@/lib/mintsoft";
 import { loadSettings } from "@/lib/storage";
 
+const HIDDEN_ASNS_KEY = "mobile.asns.hidden";
+
+function loadHiddenAsns(): Set<number> {
+  try {
+    const raw = localStorage.getItem(HIDDEN_ASNS_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw) as unknown;
+    if (!Array.isArray(arr)) return new Set();
+    return new Set(arr.map((n) => Number(n)).filter((n) => Number.isFinite(n)));
+  } catch {
+    return new Set();
+  }
+}
+
 function getSkuCount(asn: MintsoftASN): number | undefined {
   const raw = asn as Record<string, unknown>;
   const candidates = [
@@ -133,6 +147,7 @@ export const Route = createFileRoute("/mobile/stock/asns")({
 
 function MobileASNs() {
   const [query, setQuery] = useState("");
+  const [hidden] = useState<Set<number>>(() => loadHiddenAsns());
 
   const asnsQuery = useQuery({
     queryKey: ["mobile-asns-list"],
@@ -184,6 +199,7 @@ function MobileASNs() {
 
   // Hide booked-in / received / completed ASNs
   const activeAsns = filtered.filter((a) => {
+    if (hidden.has(Number(a.ID))) return false;
     const status = (a.Status ?? "").toLowerCase();
     return !status.includes("booked") && !status.includes("received") && !status.includes("complete") && !status.includes("closed") && !status.includes("processed");
   });
