@@ -522,15 +522,7 @@ function VerifyDrawer({
   const [bbf, setBbf] = useState<string>("");
   const [bbfConfirmed, setBbfConfirmed] = useState(false);
   const [location, setLocation] = useState<string>("");
-  const locationInputRef = useRef<HTMLInputElement | null>(null);
-
-  function focusLocationScanner(delay = 0) {
-    setTimeout(() => {
-      const input = locationInputRef.current;
-      input?.focus({ preventScroll: true });
-      input?.setSelectionRange(input.value.length, input.value.length);
-    }, delay);
-  }
+  const scannerBufferRef = useRef("");
 
   // Reset whenever a new item is opened.
   const itemKey = item ? String(item.ID ?? "") : "";
@@ -540,8 +532,7 @@ function VerifyDrawer({
       setBbf(existing?.bbf ?? "");
       setBbfConfirmed(Boolean(existing?.bbf));
       setLocation(existing?.location ?? "");
-      // Keep a real visible input focused so Zebra scanners can inject keystrokes.
-      focusLocationScanner(250);
+      scannerBufferRef.current = existing?.location ?? "";
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemKey]);
@@ -550,15 +541,45 @@ function VerifyDrawer({
   const bbfInvalid = requiresBbf && (!bbf || !normalisedBbf);
   const trimmedLocation = location.trim();
   const locationInvalid = !trimmedLocation;
+  const scannerReady = !!item && (!requiresBbf || (bbfConfirmed && !bbfInvalid));
 
-  function handleLocationScannerKey(key: string, preventDefault: () => void) {
-    if (key === "Enter" || key === "Tab") {
-      preventDefault();
-      const scannedLocation = (locationInputRef.current?.value ?? location).trim().toUpperCase();
-      setLocation(scannedLocation);
-      if (!bbfInvalid && scannedLocation.trim()) handleSave(scannedLocation);
-    }
-  }
+  useEffect(() => {
+    if (!scannerReady) return;
+    let lastKeyAt = 0;
+    const handleScannerKey = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.altKey || event.metaKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.id === "bbf-input") return;
+
+      if (event.key === "Enter" || event.key === "Tab") {
+        event.preventDefault();
+        const scannedLocation = scannerBufferRef.current.trim().toUpperCase();
+        if (scannedLocation) {
+          setLocation(scannedLocation);
+          handleSave(scannedLocation);
+        }
+        return;
+      }
+
+      if (event.key === "Backspace") {
+        event.preventDefault();
+        scannerBufferRef.current = scannerBufferRef.current.slice(0, -1);
+        setLocation(scannerBufferRef.current);
+        return;
+      }
+
+      if (event.key.length !== 1) return;
+      event.preventDefault();
+      const now = Date.now();
+      if (now - lastKeyAt > 1500) scannerBufferRef.current = "";
+      lastKeyAt = now;
+      scannerBufferRef.current = (scannerBufferRef.current + event.key).toUpperCase().slice(0, 32);
+      setLocation(scannerBufferRef.current);
+    };
+
+    document.addEventListener("keydown", handleScannerKey, true);
+    return () => document.removeEventListener("keydown", handleScannerKey, true);
+  }, [scannerReady, bbfInvalid, location, qty, locations]);
 
   function handleSave(locationOverride = location) {
     const saveLocation = locationOverride.trim();
@@ -578,7 +599,7 @@ function VerifyDrawer({
     if (!matched) {
       toast.error(`Location "${saveLocation}" not found in this warehouse`);
       setLocation("");
-      focusLocationScanner(50);
+      scannerBufferRef.current = "";
       return;
     }
     const canonical = matched.code || matched.name || saveLocation;
