@@ -36,6 +36,7 @@ import {
   fetchOrderDocuments,
   fetchProduct,
   fetchOrderDocumentSummaries,
+  fetchOrderDocumentTypes,
   fetchProductBundle,
   fetchProductStock,
   stockMovementIn,
