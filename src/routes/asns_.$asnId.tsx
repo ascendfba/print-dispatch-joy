@@ -216,7 +216,6 @@ type RowState = {
   locationId: string;
   bbf: string;
   confirmed?: boolean;
-  prefilled?: boolean;
 };
 
 type PendingBookingState = {
@@ -423,7 +422,6 @@ function BookInCard({
             receivedQty: remaining > 0 ? String(remaining) : "",
             locationId: "",
             bbf: "",
-            prefilled: remaining > 0,
           };
         }
       }
@@ -469,9 +467,6 @@ function BookInCard({
           patch.bbf !== undefined)
           ? { confirmed: false }
           : {}),
-        // Typing into the qty box clears the "prefilled" flag — once the
-        // user has taken ownership of the value, no verify tick is needed.
-        ...(patch.receivedQty !== undefined ? { prefilled: false } : {}),
       },
     }));
     };
