@@ -400,6 +400,58 @@ function CreateAsnDialog({
   onCreated: () => void;
   warehouses: Array<{ id: number; name: string }>;
 }) {
+}
+
+function AsnItemsInline({ asnId }: { asnId: number }) {
+  const q = useQuery({
+    queryKey: ["asn-items", asnId],
+    queryFn: () => fetchASNItems(loadSettings(), asnId),
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+  if (q.isLoading) {
+    return (
+      <div className="flex items-center text-xs text-muted-foreground">
+        <Loader2 className="mr-2 h-3 w-3 animate-spin" /> Loading items…
+      </div>
+    );
+  }
+  if (q.error) {
+    return (
+      <div className="text-xs text-destructive">
+        {q.error instanceof Error ? q.error.message : "Failed to load items"}
+      </div>
+    );
+  }
+  const items = q.data ?? [];
+  if (items.length === 0) {
+    return <div className="text-xs text-muted-foreground">No items on this ASN.</div>;
+  }
+  return (
+    <div className="rounded-md border bg-background">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[180px]">SKU</TableHead>
+            <TableHead>Item</TableHead>
+            <TableHead className="w-24 text-right">Expected</TableHead>
+            <TableHead className="w-24 text-right">Received</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {items.map((it, i) => (
+            <TableRow key={it.ID ?? `${it.SKU ?? "row"}-${i}`}>
+              <TableCell className="font-mono text-xs">{it.SKU || "—"}</TableCell>
+              <TableCell>{it.Title || it.Description || "—"}</TableCell>
+              <TableCell className="text-right tabular-nums">{it.ExpectedQuantity ?? 0}</TableCell>
+              <TableCell className="text-right tabular-nums">{it.ReceivedQuantity ?? 0}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
   const [reference, setReference] = useState("");
   const [supplierName, setSupplierName] = useState("");
   const [warehouseId, setWarehouseId] = useState<string>("");
