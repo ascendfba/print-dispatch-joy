@@ -2070,28 +2070,42 @@ function WeightEstimateFooter({
 }) {
   const payload = useMemo(
     () =>
-      items.map((it) => ({
-        sku: it.SKU ?? products?.get(it.ProductId)?.SKU ?? undefined,
-        description:
-          products?.get(it.ProductId)?.Name ||
-          products?.get(it.ProductId)?.Description ||
-          undefined,
-        quantity: it.Quantity ?? 0,
-      })),
+      items.map((it) => {
+        const p = products?.get(it.ProductId);
+        // Mintsoft may expose weight in kg (Weight) or grams (WeightGrams).
+        let mintsoftGrams: number | null = null;
+        if (typeof p?.WeightGrams === "number" && p.WeightGrams > 0) {
+          mintsoftGrams = Math.round(p.WeightGrams);
+        } else if (typeof p?.Weight === "number" && p.Weight > 0) {
+          mintsoftGrams = Math.round(p.Weight * 1000);
+        }
+        return {
+          sku: it.SKU ?? p?.SKU ?? null,
+          name: p?.Name ?? null,
+          description: p?.Description ?? null,
+          ean: p?.EAN ?? null,
+          upc: p?.UPC ?? null,
+          quantity: it.Quantity ?? 0,
+          mintsoftGrams,
+        };
+      }),
     [items, products],
   );
 
   const key = useMemo(
     () =>
       payload
-        .map((p) => `${p.sku ?? ""}|${p.quantity}|${(p.description ?? "").slice(0, 40)}`)
+        .map(
+          (p) =>
+            `${p.sku ?? ""}|${p.quantity}|${p.mintsoftGrams ?? ""}|${(p.name ?? p.description ?? "").slice(0, 40)}`,
+        )
         .join(";"),
     [payload],
   );
 
   const estimate = useQuery({
     queryKey: ["weight-estimate", key],
-    enabled: payload.length > 0 && payload.every((p) => !!p.description),
+    enabled: payload.length > 0 && !!products,
     staleTime: 60 * 60_000,
     refetchOnWindowFocus: false,
     queryFn: async () => {
@@ -2121,7 +2135,7 @@ function WeightEstimateFooter({
         ) : estimate.data ? (
           <>
             <span className="font-semibold tabular-nums">{kg} kg</span>
-            <span className="ml-1 text-xs text-muted-foreground">({grams} g · AI estimate)</span>
+            <span className="ml-1 text-xs text-muted-foreground">({grams} g)</span>
           </>
         ) : (
           <span className="text-muted-foreground">—</span>
