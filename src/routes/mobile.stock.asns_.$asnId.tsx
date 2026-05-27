@@ -546,6 +546,7 @@ function VerifyDrawer({
 
   function focusScannerInput() {
     window.setTimeout(() => {
+      scannerBufferRef.current = "";
       scannerInputRef.current?.focus({ preventScroll: true });
     }, 0);
   }
@@ -624,8 +625,6 @@ function VerifyDrawer({
     const matched = resolveLocationId(saveLocation, locations);
     if (!matched) {
       toast.error(`Location "${saveLocation}" not found in this warehouse`);
-      setLocation("");
-      scannerBufferRef.current = "";
       return;
     }
     const canonical = matched.code || matched.name || saveLocation;
