@@ -593,15 +593,26 @@ function VerifyDrawer({
                   (DDMMYY)
                 </span>
               </p>
-              <input
-                type="text"
-                inputMode="numeric"
-                placeholder="010126"
-                value={bbf}
-                onChange={(e) => setBbf(e.target.value)}
-                maxLength={10}
-                className="w-full h-12 px-3 text-base tabular-nums rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  id="bbf-input"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="010126"
+                  value={bbf}
+                  onChange={(e) => setBbf(e.target.value)}
+                  maxLength={10}
+                  className="flex-1 h-12 px-3 text-base tabular-nums rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
+                />
+                <Button
+                  type="button"
+                  onClick={() => (document.activeElement as HTMLElement | null)?.blur()}
+                  disabled={!bbf || !normalisedBbf}
+                  className="h-12 px-4 bg-[#0099d4] hover:bg-[#0088bc] text-white"
+                >
+                  Confirm
+                </Button>
+              </div>
               <p className="mt-1.5 text-[11px]">
                 {bbf ? (
                   normalisedBbf ? (
@@ -635,16 +646,17 @@ function VerifyDrawer({
             </p>
             <input
               type="text"
-              inputMode="text"
+              inputMode="none"
               autoCapitalize="characters"
-              placeholder="e.g. A-12-3"
+              autoComplete="off"
+              placeholder="Scan location barcode"
               value={location}
               onChange={(e) => setLocation(e.target.value.toUpperCase())}
               maxLength={32}
               className="w-full h-12 px-3 text-base font-mono uppercase tracking-wide rounded-xl border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0099d4]"
             />
             <p className="mt-1.5 text-[11px] text-muted-foreground">
-              Items will be booked into this location.
+              Scan the location barcode — on-screen keyboard is disabled.
             </p>
           </div>
         </div>
