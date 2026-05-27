@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, Link, useLocation } from "@tanstack/react-router";
 import { Menu, Home, MapPin, Search, Warehouse } from "lucide-react";
+import ascendLogo from "@/assets/ascend-fba-logo.png";
 
 export const Route = createFileRoute("/mobile")({
   component: MobileShell,
@@ -13,17 +14,21 @@ function MobileShell() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       {/* Top bar */}
-      <header className="shrink-0 border-b bg-card">
-        <div className="flex items-center justify-between px-4 h-12">
-          <button className="p-1 -ml-1 text-foreground/80">
+      <header className="shrink-0 border-b bg-gradient-to-r from-amber-500 to-orange-500">
+        <div className="flex items-center justify-between px-4 h-14">
+          <button className="p-1 -ml-1 text-white/90">
             <Menu className="h-5 w-5" />
           </button>
-          <h1 className="text-base font-semibold">Mintsoft</h1>
+          <img
+            src={ascendLogo}
+            alt="Ascend FBA"
+            className="h-7 object-contain"
+          />
           <div className="w-7" />
         </div>
         <div className="px-4 pb-3">
-          <div className="flex items-center justify-center gap-2 rounded-lg bg-muted/60 py-2 text-sm font-medium">
-            <Warehouse className="h-4 w-4 text-primary" />
+          <div className="flex items-center justify-center gap-2 rounded-lg bg-white/15 backdrop-blur-sm py-2 text-sm font-medium text-white">
+            <Warehouse className="h-4 w-4" />
             Derby Warehouse
           </div>
         </div>
@@ -61,7 +66,7 @@ function BottomItem({
     <Link
       to={to}
       className={`flex flex-col items-center justify-center gap-1 py-2 text-[11px] ${
-        active ? "text-primary font-medium" : "text-muted-foreground"
+        active ? "text-amber-600 font-medium" : "text-muted-foreground"
       }`}
     >
       {icon}
