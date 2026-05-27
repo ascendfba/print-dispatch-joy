@@ -352,6 +352,7 @@ function VerifyDrawer({
   const expected = item?.ExpectedQuantity ?? 0;
   const [qty, setQty] = useState<number>(0);
   const [bbf, setBbf] = useState<string>("");
+  const [location, setLocation] = useState<string>("");
 
   // Reset whenever a new item is opened.
   const itemKey = item ? String(item.ID ?? "") : "";
@@ -359,12 +360,15 @@ function VerifyDrawer({
     if (item) {
       setQty(existing?.receivedQty ?? expected);
       setBbf(existing?.bbf ?? "");
+      setLocation(existing?.location ?? "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemKey]);
 
   const normalisedBbf = bbf ? normaliseBbf(bbf) : "";
   const bbfInvalid = requiresBbf && (!bbf || !normalisedBbf);
+  const trimmedLocation = location.trim();
+  const locationInvalid = !trimmedLocation;
 
   function handleSave() {
     if (qty < 0) {
@@ -375,7 +379,11 @@ function VerifyDrawer({
       toast.error("Enter a valid BBF date (DDMMYY)");
       return;
     }
-    onSave({ receivedQty: qty, bbf: normalisedBbf });
+    if (!trimmedLocation) {
+      toast.error("Scan or enter a location");
+      return;
+    }
+    onSave({ receivedQty: qty, bbf: normalisedBbf, location: trimmedLocation });
   }
 
   return (
