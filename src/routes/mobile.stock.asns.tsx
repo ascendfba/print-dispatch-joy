@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronLeft, Search, Truck, Loader2, X, Boxes } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { listASNs, listClients, type MintsoftASN } from "@/lib/mintsoft";
+import { listASNs, listClients, fetchASNItems, type MintsoftASN } from "@/lib/mintsoft";
 import { loadSettings } from "@/lib/storage";
 
 function getSkuCount(asn: MintsoftASN): number | undefined {
