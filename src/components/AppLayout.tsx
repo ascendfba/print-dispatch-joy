@@ -49,7 +49,8 @@ export function AppLayout() {
   ];
   const authRoutes = ["/login", "/signup", "/forgot-password", "/reset-password"];
   const isAuthRoute = authRoutes.some((r) => pathname === r || pathname.startsWith(r + "/"));
-  if (isAuthRoute) {
+  const isMobileRoute = pathname.startsWith("/mobile");
+  if (isAuthRoute || isMobileRoute) {
     return (
       <div className="min-h-screen bg-background text-foreground">
         <Outlet />
