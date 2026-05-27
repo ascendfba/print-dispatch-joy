@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronLeft, Truck, Loader2, Package, Search, X, AlertTriangle } from "lucide-react";
+import { ChevronLeft, Truck, Loader2, Package, Search, X, AlertTriangle, Save, PackageCheck, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   fetchASN,
   fetchASNItems,
@@ -112,6 +113,33 @@ function MobileASNDetail() {
         ) : (
           filtered.map((it, idx) => <ASNItemRow key={it.ID ?? idx} item={it} />)
         )}
+      </div>
+
+      {/* Fixed action bar */}
+      <div className="shrink-0 border-t bg-card px-3 pt-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            onClick={() => toast.info("Saved (stub)")}
+            className="flex flex-col items-center justify-center gap-1 h-16 rounded-xl border bg-background text-[#0a2e3d] font-semibold text-xs active:bg-muted"
+          >
+            <Save className="h-6 w-6" strokeWidth={2.25} />
+            Save
+          </button>
+          <button
+            onClick={() => toast.info("Partial book (stub)")}
+            className="flex flex-col items-center justify-center gap-1 h-16 rounded-xl border-2 border-amber-500 bg-amber-50 text-amber-800 font-semibold text-xs active:bg-amber-100"
+          >
+            <PackageCheck className="h-6 w-6" strokeWidth={2.25} />
+            Partial Book
+          </button>
+          <button
+            onClick={() => toast.success("Book in (stub)")}
+            className="flex flex-col items-center justify-center gap-1 h-16 rounded-xl bg-[#0099d4] text-white font-semibold text-xs shadow-sm active:bg-[#0088bc]"
+          >
+            <CheckCircle2 className="h-6 w-6" strokeWidth={2.25} />
+            Book In
+          </button>
+        </div>
       </div>
     </div>
   );
