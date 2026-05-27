@@ -5,6 +5,7 @@ import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Popover,
   PopoverContent,
@@ -216,6 +217,7 @@ type RowState = {
   locationId: string;
   bbf: string;
   confirmed?: boolean;
+  prefilled?: boolean;
 };
 
 type PendingBookingState = {
@@ -422,6 +424,7 @@ function BookInCard({
             receivedQty: remaining > 0 ? String(remaining) : "",
             locationId: "",
             bbf: "",
+            prefilled: remaining > 0,
           };
         }
       }
@@ -467,6 +470,9 @@ function BookInCard({
           patch.bbf !== undefined)
           ? { confirmed: false }
           : {}),
+        // Typing into the qty box clears the "prefilled" flag — once the
+        // user has taken ownership of the value, no verify tick is needed.
+        ...(patch.receivedQty !== undefined ? { prefilled: false } : {}),
       },
     }));
     };
@@ -558,6 +564,12 @@ function BookInCard({
       const remaining = Math.max(0, getExpectedQty(item) - effectiveReceived);
       if (!s.locationId) {
         return { rowsToBook: [], error: `Pick a location for ${item.SKU ?? item.Title ?? "item"}` };
+      }
+      if (s.prefilled && !s.confirmed) {
+        return {
+          rowsToBook: [],
+          error: `Tick to verify the prefilled qty for ${item.SKU ?? item.Title ?? "item"}`,
+        };
       }
       const normalisedBbf = normaliseBbf(s.bbf ?? "");
       if (requiresBbfByKey[key]) {
@@ -989,6 +1001,26 @@ function BookInCard({
                           updateRow(key, { receivedQty: e.target.value })
                         }
                       />
+                      {state.prefilled && Number(state.receivedQty) > 0 ? (
+                        <label
+                          className={cn(
+                            "mt-1 flex cursor-pointer items-center gap-1.5 text-[11px]",
+                            state.confirmed
+                              ? "text-emerald-700 dark:text-emerald-400"
+                              : "text-amber-700 dark:text-amber-400",
+                          )}
+                        >
+                          <Checkbox
+                            checked={!!state.confirmed}
+                            onCheckedChange={(v) =>
+                              updateRow(key, { confirmed: v === true })
+                            }
+                          />
+                          <span>
+                            {state.confirmed ? "Verified" : "Tick to verify qty"}
+                          </span>
+                        </label>
+                      ) : null}
                     </TableCell>
                     <TableCell>
                       {(() => {
