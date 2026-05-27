@@ -15,6 +15,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as MobileEmulatorRouteImport } from './routes/mobile-emulator'
+import { Route as MobileRouteImport } from './routes/mobile'
 import { Route as MfaRouteImport } from './routes/mfa'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as InvoiceMergerRouteImport } from './routes/invoice-merger'
@@ -67,6 +68,11 @@ const OrdersRoute = OrdersRouteImport.update({
 const MobileEmulatorRoute = MobileEmulatorRouteImport.update({
   id: '/mobile-emulator',
   path: '/mobile-emulator',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MobileRoute = MobileRouteImport.update({
+  id: '/mobile',
+  path: '/mobile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MfaRoute = MfaRouteImport.update({
@@ -197,6 +203,7 @@ export interface FileRoutesByFullPath {
   '/invoice-merger': typeof InvoiceMergerRoute
   '/login': typeof LoginRoute
   '/mfa': typeof MfaRoute
+  '/mobile': typeof MobileRoute
   '/mobile-emulator': typeof MobileEmulatorRoute
   '/orders': typeof OrdersRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -228,6 +235,7 @@ export interface FileRoutesByTo {
   '/invoice-merger': typeof InvoiceMergerRoute
   '/login': typeof LoginRoute
   '/mfa': typeof MfaRoute
+  '/mobile': typeof MobileRoute
   '/mobile-emulator': typeof MobileEmulatorRoute
   '/orders': typeof OrdersRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -260,6 +268,7 @@ export interface FileRoutesById {
   '/invoice-merger': typeof InvoiceMergerRoute
   '/login': typeof LoginRoute
   '/mfa': typeof MfaRoute
+  '/mobile': typeof MobileRoute
   '/mobile-emulator': typeof MobileEmulatorRoute
   '/orders': typeof OrdersRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -293,6 +302,7 @@ export interface FileRouteTypes {
     | '/invoice-merger'
     | '/login'
     | '/mfa'
+    | '/mobile'
     | '/mobile-emulator'
     | '/orders'
     | '/reset-password'
@@ -324,6 +334,7 @@ export interface FileRouteTypes {
     | '/invoice-merger'
     | '/login'
     | '/mfa'
+    | '/mobile'
     | '/mobile-emulator'
     | '/orders'
     | '/reset-password'
@@ -355,6 +366,7 @@ export interface FileRouteTypes {
     | '/invoice-merger'
     | '/login'
     | '/mfa'
+    | '/mobile'
     | '/mobile-emulator'
     | '/orders'
     | '/reset-password'
@@ -387,6 +399,7 @@ export interface RootRouteChildren {
   InvoiceMergerRoute: typeof InvoiceMergerRoute
   LoginRoute: typeof LoginRoute
   MfaRoute: typeof MfaRoute
+  MobileRoute: typeof MobileRoute
   MobileEmulatorRoute: typeof MobileEmulatorRoute
   OrdersRoute: typeof OrdersRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -451,6 +464,13 @@ declare module '@tanstack/react-router' {
       path: '/mobile-emulator'
       fullPath: '/mobile-emulator'
       preLoaderRoute: typeof MobileEmulatorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mobile': {
+      id: '/mobile'
+      path: '/mobile'
+      fullPath: '/mobile'
+      preLoaderRoute: typeof MobileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mfa': {
@@ -638,6 +658,7 @@ const rootRouteChildren: RootRouteChildren = {
   InvoiceMergerRoute: InvoiceMergerRoute,
   LoginRoute: LoginRoute,
   MfaRoute: MfaRoute,
+  MobileRoute: MobileRoute,
   MobileEmulatorRoute: MobileEmulatorRoute,
   OrdersRoute: OrdersRoute,
   ResetPasswordRoute: ResetPasswordRoute,
@@ -663,3 +684,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
