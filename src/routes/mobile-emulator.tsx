@@ -72,15 +72,20 @@ function MobileEmulatorPage() {
           className="relative bg-black rounded-[2.5rem] shadow-2xl p-3"
           style={{ width: width + 24, height: height + 24 }}
         >
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 w-24 h-6 bg-black rounded-b-2xl z-10" />
-          <iframe
-            key={reloadKey}
-            src={MOBILE_APP_URL}
-            title="Mobile App Emulator"
-            className="w-full h-full rounded-[2rem] bg-white"
-            style={{ width, height }}
-            allow="camera; microphone; geolocation; clipboard-read; clipboard-write"
-          />
+          <div className="relative w-full h-full rounded-[2rem] overflow-hidden bg-white" style={{ width, height }}>
+            {/* Status bar / notch area — reserved so app content doesn't sit under the camera notch */}
+            <div className="absolute top-0 left-0 right-0 h-11 bg-black z-10 flex items-center justify-center">
+              <div className="w-24 h-6 bg-black rounded-b-2xl" />
+            </div>
+            <iframe
+              key={reloadKey}
+              src={MOBILE_APP_URL}
+              title="Mobile App Emulator"
+              className="bg-white block"
+              style={{ width, height: height - 44, marginTop: 44 }}
+              allow="camera; microphone; geolocation; clipboard-read; clipboard-write"
+            />
+          </div>
         </div>
       </div>
     </div>
