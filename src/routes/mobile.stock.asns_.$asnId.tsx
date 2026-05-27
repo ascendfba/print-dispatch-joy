@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronLeft, Truck, Loader2, Package, Search, X, AlertTriangle, Save, PackageCheck, CheckCircle2, Minus, Plus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -354,7 +354,7 @@ function VerifyDrawer({
 
   // Reset whenever a new item is opened.
   const itemKey = item ? String(item.ID ?? "") : "";
-  useMemo(() => {
+  useEffect(() => {
     if (item) {
       setQty(existing?.receivedQty ?? expected);
       setBbf(existing?.bbf ?? "");
